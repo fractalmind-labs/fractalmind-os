@@ -58,13 +58,14 @@ func main() {
 	appJoinHost := flag.Bool("app-join-host", false, "desktop App setup: redeem the invitation from stdin only for this config's organization and local Coordinator binding")
 	hostPublic := flag.Bool("host-public", false, "print this Host's public keys without creating them")
 	removeHostKeys := flag.Bool("remove-host-keys", false, "delete this Host's private keys from the system credential store")
+	discoverOnly := flag.Bool("discover", false, "print this computer's Agent discovery (tmux sessions and Home definitions) as JSON; reads no keys")
 	joinStatus := flag.Bool("host-join-status", false, "query the original Host admission transaction without accessing private keys")
 	newJoinAttempt := flag.Bool("new-host-join-attempt", false, "explicitly prepare another admission after a known terminal original receipt")
 	joinAddress := flag.String("host-address", "", "public Host address for --host-join-status")
 	settleReview := flag.Bool("settle-stopped-review", false, "acknowledge an explicitly stopped expired zero-tool handover review; original signed command is read from stdin")
 	flag.Parse()
 	exclusive := 0
-	for _, set := range []bool{*initHost, *joinHost, *appJoinHost, *joinStatus, *hostPublic, *removeHostKeys, *settleReview} {
+	for _, set := range []bool{*initHost, *joinHost, *appJoinHost, *joinStatus, *hostPublic, *removeHostKeys, *settleReview, *discoverOnly} {
 		if set {
 			exclusive++
 		}
@@ -107,6 +108,14 @@ func main() {
 		return
 	}
 
+	if *discoverOnly {
+		// The same scan the Host reports, for the desktop App on this computer.
+		d := agent.NewScannerAtSocket(cfg.Agents.ScanMethod, cfg.Agents.TmuxSocket).Discover()
+		if err := json.NewEncoder(os.Stdout).Encode(d); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	if *removeHostKeys {
 		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
 		if err != nil {

@@ -531,6 +531,7 @@ pub fn run() {
             local_host::fm_local_host_join,
             local_host::fm_local_host_service,
             local_host::fm_local_host_uninstall,
+            local_host::fm_local_host_discover,
             agents::fm_agent_catalog,
             agents::fm_agent_launchers,
             agents::fm_agent_home_check,

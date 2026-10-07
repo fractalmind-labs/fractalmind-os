@@ -412,6 +412,32 @@ impl Layout {
             serde_json::from_slice(&fs::read(&self.public).ok()?).ok()?;
         valid_public(&value, &key_profile(&self.profile)).then_some(value)
     }
+    /// This computer's Agent discovery, read directly through the bundled
+    /// envd (no coordinator round trip, no keys), with the Host address when
+    /// this profile has one.
+    pub fn discover(&self) -> Result<serde_json::Value, String> {
+        let config = if self.config.is_file() {
+            self.config.to_string_lossy().to_string()
+        } else {
+            "/dev/null".into()
+        };
+        let out = run_envd(
+            self.envd()?,
+            &["--config", &config, "--discover"],
+            None,
+            Duration::from_secs(20),
+        )?
+        .ok()?;
+        let discovery = last_json(&out)?;
+        let host = self.cached_public().and_then(|p| {
+            p.get("host_address")
+                .and_then(|a| a.as_str())
+                .map(String::from)
+        });
+        Ok(
+            serde_json::json!({ "discovery": discovery, "hostAddress": host, "observedAtMs": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0) }),
+        )
+    }
     /// Writes the full public configuration once the chain binding exists.
     pub fn configure(
         &self,
@@ -1128,6 +1154,15 @@ pub async fn fm_local_host_service(
 ) -> Result<(), String> {
     super::main_window(&window)?;
     blocking(move || layout(&app, &profile)?.service(&action)).await
+}
+#[tauri::command]
+pub async fn fm_local_host_discover(
+    window: WebviewWindow,
+    app: AppHandle,
+    profile: String,
+) -> Result<serde_json::Value, String> {
+    super::main_window(&window)?;
+    blocking(move || layout(&app, &profile)?.discover()).await
 }
 #[tauri::command]
 pub async fn fm_local_host_uninstall(

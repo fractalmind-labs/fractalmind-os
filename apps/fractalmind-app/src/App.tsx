@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { normalizeProfile } from "./chain";
+import { withBuiltInUpgrade } from "./deployments";
 import Welcome from "./Welcome";
 import {
   BrandMark,
@@ -75,7 +76,7 @@ const short = (id?: string | null) =>
 function savedProfile() {
   try {
     const text = localStorage.getItem(PROFILE_KEY);
-    return text ? normalizeProfile(JSON.parse(text)) : null;
+    return text ? withBuiltInUpgrade(normalizeProfile(JSON.parse(text))) : null;
   } catch {
     return null;
   }
@@ -1406,7 +1407,14 @@ export function App() {
                         </dd>
                         <dt>{t("控制", "Control")}</dt>
                         <dd>
-                          {agent.control_confirmed ? (
+                          {agent.control_confirmed && agent.runtime === "agent-manager-v1" ? (
+                            <span className="chip ok">
+                              {t(
+                                "agent-manager 控制 · 工具与模型花费由其启动配置决定",
+                                "agent-manager control · tool use and model spending follow its launch configuration",
+                              )}
+                            </span>
+                          ) : agent.control_confirmed ? (
                             <span className="chip warn">
                               {t(
                                 "管理设备已确认 · 待适配器核验",

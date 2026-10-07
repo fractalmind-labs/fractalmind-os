@@ -46,3 +46,36 @@ export async function requestTestFunds(host: string, recipients: string[]) {
   for (const recipient of recipients)
     await requestSuiFromFaucetV2({ host, recipient });
 }
+
+/** A profile saved before a compatible package upgrade keeps calling the old
+ * package. When this build targets the same registry and the same package
+ * lineage (identical original IDs), the saved profile adopts the build's newer
+ * call packages; anything else is left untouched. */
+export function withBuiltInUpgrade<
+  P extends DeploymentProfile & { humanId: string },
+>(profile: P, built: DeploymentProfile | null = builtInDeployment): P {
+  if (
+    !built ||
+    built.network !== profile.network ||
+    built.registryId !== profile.registryId
+  )
+    return profile;
+  const origin = (original?: string, call?: string) => original ?? call;
+  const same =
+    origin(built.originalPackageId, built.packageId) ===
+      origin(profile.originalPackageId, profile.packageId) &&
+    origin(built.originalOkrPackageId, built.okrPackageId) ===
+      origin(profile.originalOkrPackageId, profile.okrPackageId) &&
+    origin(built.originalDirectPackageId, built.directPackageId) ===
+      origin(profile.originalDirectPackageId, profile.directPackageId);
+  if (!same) return profile;
+  return {
+    ...profile,
+    packageId: built.packageId,
+    originalPackageId: built.originalPackageId,
+    okrPackageId: built.okrPackageId,
+    originalOkrPackageId: built.originalOkrPackageId,
+    directPackageId: built.directPackageId,
+    originalDirectPackageId: built.originalDirectPackageId,
+  };
+}
