@@ -14,13 +14,28 @@
     return `<span class="st ${x[0]}">${esc(T(x[1], x[2]))}</span>`;
   };
 
+  /* Instance identity across envd restarts (#67). */
+  function identityLine(i) {
+    if (i.status === 'creating') {
+      const tx = U.latestTx(t => t.kind === 'agent.create' && t.payload.instanceId === i.id);
+      return tx ? `<div class="mt-4">${U.txLine(tx)}</div>` : '';
+    }
+    if (i.needsRebind) {
+      const tx = U.latestTx(t => t.kind === 'agent.rebind' && t.payload.instanceId === i.id && t.state !== 'confirmed');
+      return `<div class="mt-4"><span class="chip warn">${T('服务重启后实例 ID 已变化', 'Instance ID changed after a restart')}</span></div><div class="mt-4">${tx ? U.txLine(tx) : U.btn({ action: 'agent-rebind', data: { id: i.id }, label: T('重新关联', 'Relink'), size: 'sm', perm: 'manage_hosts' })}</div>`;
+    }
+    if (i.identity === 'host-key' || (!i.imported && i.adapter === 'native')) return `<div class="tiny muted mt-4">${T('身份随主机密钥，重启后不变', 'Identity follows the host key; survives restarts')}</div>`;
+    if (i.identity === 'process') return `<div class="tiny muted mt-4">${T('身份随 envd 进程，重启后需重新关联', 'Identity follows the envd process; relink after a restart')}</div>`;
+    return '';
+  }
+
   FM.views.agents = () => {
     const org = O();
     const roles = org.agents.map(a => {
       const insts = org.instances.filter(i => i.agentId === a.id);
       const okrs = org.okrs.filter(o => o.ownerAgentId === a.id && o.lifecycle === 'ACTIVE');
       return `<article class="card"><div class="row between top"><div class="row"><span class="avatar round">${esc(a.name.slice(0, 1))}</span><div><div class="strong">${esc(a.name)}${a.verifier ? ` <span class="chip ok">${T('验证者', 'Verifier')}</span>` : ''}${a.unconstrained ? ` <span class="chip wait">${T('不受约束', 'Unconstrained')}</span>` : ''}</div><div class="small muted">${esc(L(a.role))}</div></div></div><span class="chip outline">${T(`${insts.length} 个实例`, `${insts.length} instances`)}</span></div>
-        <dl class="kv mt-12"><dt>${T('运行时', 'Runtime')}</dt><dd>${esc(a.runtime)}</dd><dt>${T('模型', 'Model')}</dt><dd>${esc(L(a.model))}</dd><dt>${T('能力', 'Capabilities')}</dt><dd><div class="row wrap gap-sm">${(a.capabilities || []).map(c => `<span class="chip">${esc(L(c))}</span>`).join('')}</div></dd><dt>${T('负责', 'Owns')}</dt><dd>${okrs.map(o => `<a href="#/okrs/${esc(o.id)}">${o.priority} ${esc(L(o.title))}</a>`).join('<br>') || '—'}</dd></dl>
+        <dl class="kv mt-12"><dt>${T('运行时', 'Runtime')}</dt><dd>${esc(L(a.runtime))}${a.origin === 'app' ? ` <span class="chip outline">${T('App 创建', 'Created by the app')}</span>` : ''}</dd><dt>${T('模型', 'Model')}</dt><dd>${esc(L(a.model))}</dd><dt>${T('能力', 'Capabilities')}</dt><dd><div class="row wrap gap-sm">${(a.capabilities || []).map(c => `<span class="chip">${esc(L(c))}</span>`).join('')}</div></dd><dt>${T('负责', 'Owns')}</dt><dd>${okrs.map(o => `<a href="#/okrs/${esc(o.id)}">${o.priority} ${esc(L(o.title))}</a>`).join('<br>') || '—'}</dd></dl>
         <div class="snap mt-12 small">${a.unconstrained ? T('只能对话：执行不受 FractalMind 约束，不能承接 OKR；仅管理设备可发送。', 'Chat only: execution is not constrained by FractalMind and it cannot own OKRs; only management devices can message it.') : FM.standingLine(a)}</div>
         <div class="row wrap mt-12">${U.btn({ action: 'open-direct', data: { agent: a.id }, label: T('对话', 'Chat'), icon: 'message', kind: 'primary', size: 'sm' })}${a.unconstrained ? '' : U.btn({ action: 'open', data: { dialog: 'standing', agent: a.id }, label: T('常驻权限', 'Standing permission'), icon: 'shield', size: 'sm' })}${(org.direct[a.id] || { messages: [] }).messages.length ? `<span class="tiny muted">${T(`${org.direct[a.id].messages.length} 条对话`, `${org.direct[a.id].messages.length} messages`)}</span>` : ''}</div></article>`;
     }).join('');
@@ -32,10 +47,10 @@
         <td><a href="#/hosts/${esc(i.hostId)}">${esc(h ? h.name : '—')}</a></td><td class="small">${esc(i.runtime)}</td>
         <td><span class="chip ${M.constrainable(i) ? 'outline' : 'wait'}">${i.adapter === 'tmux-observe' ? T('仅观察', 'Observe only') : i.adapter === 'unconstrained' ? T('不受约束', 'Unconstrained') : T('可控', 'Controllable')}</span></td>
         <td>${instState(i)}</td><td class="small">${okrs.map(o => `${o.priority} ${esc(L(o.title).slice(0, 12))}…`).join('<br>') || '—'}</td>
-        <td class="small">${i.imported === 'observe' ? T('导入 · 仅观察', 'Imported · observe') : i.imported === 'managed' ? T('导入 · 已纳入', 'Imported · managed') : T('App 部署', 'Deployed by app')}${canInclude ? `<div class="mt-4">${U.btn({ action: 'open', data: { dialog: 'include', id: i.id }, label: T('纳入 OKR', 'Add to OKR'), size: 'sm', perm: 'manage_hosts' })}</div>` : ''}</td></tr>`;
+        <td class="small">${i.imported === 'observe' ? T('导入 · 仅观察', 'Imported · observe') : i.imported === 'managed' ? T('导入 · 已纳入', 'Imported · managed') : i.origin === 'app' ? T('App 创建', 'Created by the app') : T('App 部署', 'Deployed by app')}${identityLine(i)}${canInclude && !i.needsRebind ? `<div class="mt-4">${U.btn({ action: 'open', data: { dialog: 'include', id: i.id }, label: T('纳入 OKR', 'Add to OKR'), size: 'sm', perm: 'manage_hosts' })}</div>` : ''}</td></tr>`;
     }).join('');
     return `<div class="page-h"><div><h1>${T('团队与 Agents', 'Team & Agents')}</h1><p class="muted">${T('Agent 角色、运行实例与所在主机。同一角色可以部署在多台主机；命令与授权绑定具体实例。', 'Agent roles, running instances and their hosts. One role can run on several hosts; commands and grants bind a specific instance.')} ${T('可以直接和任一 Agent 对话；没有 OKR 时它按常驻权限行事。', 'You can chat with any Agent directly; without an OKR it acts within its standing permission.')}</p></div>
-        <div class="row">${U.btn({ action: 'open', data: { dialog: 'discover' }, label: T('从 Host 发现 Agent', 'Discover on a host'), icon: 'scan', kind: 'primary' })}</div></div>
+        <div class="row">${U.btn({ action: 'open', data: { dialog: 'discover' }, label: T('从 Host 发现 Agent', 'Discover on a host'), icon: 'scan' })}${U.btn({ action: 'open', data: { dialog: 'agent-create' }, label: T('新建 Agent', 'New Agent'), icon: 'plus', kind: 'primary', perm: 'manage_hosts' })}</div></div>
       <div class="grid-2">${roles}</div>
       <section class="sec"><div class="sec-h"><h2>${T('运行实例', 'Instances')}</h2><span class="small muted">${org.instances.length}</span></div>
         <div class="card flush" style="overflow-x:auto"><table class="table"><thead><tr><th>${T('实例', 'Instance')}</th><th>${T('角色', 'Role')}</th><th>${T('主机', 'Host')}</th><th>${T('运行时', 'Runtime')}</th><th>${T('适配器', 'Adapter')}</th><th>${T('状态', 'Status')}</th><th>OKR</th><th>${T('来源', 'Source')}</th></tr></thead><tbody>${rows}</tbody></table></div></section>
@@ -99,6 +114,68 @@
     };
   };
 
+  /* ------------------------------------------ New / default Agent (#67) */
+
+  const CREATE_ISSUES = {
+    name: ['填写 1–40 个字的名称', 'Enter a name of 1–40 characters'],
+    name_taken: ['已有同名 Agent', 'An Agent already has this name'],
+    workspace: ['选择工作区文件夹', 'Choose a workspace folder'],
+    workspace_taken: ['这台主机上已有 Agent 使用这个工作区', 'Another Agent on this host already uses this workspace'],
+    host_not_local: ['只能在本 App 管理的主机上创建；远程主机需在该主机上运行 FractalMind App', 'Only on a host this App manages; for a remote host, run the FractalMind App on it'],
+    service_stopped: ['本机服务已停止，先启动服务', 'This computer’s service is stopped; start it first'],
+  };
+  const WORKSPACES = ['~/FractalMind/个人组织', '~/FractalMind/notes', '~/code/fractalmind-app'];
+
+  FM.dialogs['agent-create'] = st => {
+    const p = P();
+    const org = O();
+    const svc = M.localServiceFor(p);
+    const setup = st.setup === '1';
+    const created = st.createdId && U.inst(st.createdId);
+    if (created) {
+      const a = U.agent(created.agentId);
+      const confirmed = created.status !== 'creating';
+      return {
+        title: setup ? T('默认 Agent 已就绪', 'Your default Agent is ready') : T('Agent 已创建', 'Agent created'), size: 'sm', sticky: !confirmed,
+        body: confirmed
+          ? `<div class="calm">${icon('check')}<span>${T(`${a.name} 在这台电脑上运行，工作区 ${created.workspace}。`, `${a.name} runs on this computer in ${created.workspace}.`)}</span></div>
+            <dl class="kv"><dt>${T('模型', 'Model')}</dt><dd>${esc(L(a.model))}</dd><dt>${T('常驻权限', 'Standing permission')}</dt><dd>${T('无：没有 OKR 时只对话', 'None: chats only when it has no OKR')}</dd></dl>`
+          : (tx => (tx ? U.txLine(tx) : ''))(U.latestTx(t => t.kind === 'agent.create' && t.payload.instanceId === created.id)),
+        foot: confirmed ? `<button class="btn" data-action="close-dialog">${T('完成', 'Done')}</button>${U.btn({ action: 'go', data: { to: 'okrs/new' }, label: T('创建第一个 OKR', 'Create the first OKR'), kind: 'primary', icon: 'plus' })}` : '',
+      };
+    }
+    const hosts = org.hosts.filter(h => h.status !== 'revoked');
+    const hostId = U.f('agentnew.host', svc.hostId || (hosts[0] || {}).id || '');
+    const input = {
+      name: U.f('agentnew.name', setup ? T('助手', 'Assistant') : ''),
+      role: U.f('agentnew.role', ''),
+      workspace: U.f('agentnew.ws', setup ? WORKSPACES[0] : ''),
+      hostId,
+    };
+    const issues = M.createAgentIssues(p, org, input);
+    const model = svc.model;
+    const tx = U.latestTx(t => t.kind === 'agent.create' && t.state === 'pending');
+    return {
+      title: setup ? T('创建默认 Agent', 'Create your default Agent') : T('新建 Agent', 'New Agent'), size: 'lg',
+      sub: T('由 App 在主机上创建受约束的文件 Agent；没有旧进程需要交接，一次确认即可使用。', 'The App creates a bounded file Agent on the host; with no old process to hand over, one confirmation makes it ready.'),
+      body: `<div class="grid-2"><div class="field"><label for="an-name">${T('名称', 'Name')}</label><input id="an-name" class="input" maxlength="40" data-f="agentnew.name" value="${esc(input.name)}"></div>
+          <div class="field"><label for="an-role">${T('角色说明（可选）', 'Role (optional)')}</label><input id="an-role" class="input" maxlength="80" data-f="agentnew.role" value="${esc(input.role)}" placeholder="${esc(T('通用助手', 'General assistant'))}"></div></div>
+        <div class="field"><label>${T('主机', 'Host')}</label><div class="col">${hosts.map(h => {
+          const local = h.id === svc.hostId;
+          return `<button class="opt" data-action="set-f" data-key="agentnew.host" data-value="${esc(h.id)}" aria-pressed="${h.id === hostId}"${local ? '' : ' disabled'}><span class="ico">${icon(h.kind === 'cloud' ? 'cloud' : 'server')}</span><span class="grow"><span class="strong">${esc(h.name)}</span>${local ? ` <span class="chip brand">${T('这台电脑', 'This computer')}</span>` : ''}<span class="small muted" style="display:block">${local ? T('本 App 管理的后台服务', 'Background service managed by this App') : T('需在该主机上运行 FractalMind App', 'Run the FractalMind App on that host')}</span></span>${U.hostState(h)}</button>`;
+        }).join('')}</div></div>
+        <div class="field"><label>${T('工作区文件夹（Agent 只读写这里）', 'Workspace folder (the Agent reads and writes only here)')}</label><div class="col">${WORKSPACES.map(w => `<button class="opt" data-action="set-f" data-key="agentnew.ws" data-value="${esc(w)}" aria-pressed="${input.workspace === w}"><span class="ico">${icon('folder')}</span><span class="mono">${esc(w)}</span>${w === WORKSPACES[0] ? ` <span class="chip outline">${T('新建', 'New')}</span>` : ''}</button>`).join('')}</div><div class="tiny muted">${T('原型只模拟目录选择，不读取真实文件系统。', 'The prototype simulates the picker and never reads your real file system.')}</div></div>
+        <dl class="kv"><dt>${T('模型', 'Model')}</dt><dd>${esc(L(M.modelLabel(model)))} ${U.btn({ action: 'open', data: { dialog: 'model', back: 'agent-create', setup: st.setup || '' }, label: model ? T('更改', 'Change') : T('连接模型', 'Connect a model'), size: 'sm' })}<div class="tiny muted">${T('模型连接属于主机，这台主机上的 Agent 共用。', 'The model connection belongs to the host; Agents on it share it.')}</div></dd>
+          <dt>${T('能力', 'Capabilities')}</dt><dd>${model ? T('工作区内文本文件读写，由模型生成内容；没有命令执行与网络工具', 'Text files in the workspace, written by the model; no commands or network tools') : T('工作区内文本文件读写，只写 OKR 中写明的内容；没有命令执行与网络工具', 'Text files in the workspace, only content the OKR spells out; no commands or network tools')}</dd>
+          <dt>${T('身份', 'Identity')}</dt><dd>${T('由主机密钥派生，服务重启、注销登录后不变', 'Derived from the host key; unchanged across service restarts and logins')}</dd>
+          <dt>${T('常驻权限', 'Standing permission')}</dt><dd>${T('默认无：没有 OKR 时只对话，不执行动作；之后可调整', 'None by default: without an OKR it only chats; adjust later')}</dd>
+          <dt>${T('费用', 'Fee')}</dt><dd>${T('本设备签一笔交易，预计', 'This device signs one transaction, est.')} <strong>${U.sui(M.FEES['agent.create'])}</strong>${model ? ` · ${T('模型费用由服务商另计', 'model usage is billed by the provider')}` : ''}</dd></dl>
+        ${issues.length ? issues.map(x => `<div class="row small" style="color:var(--danger)">${icon('x', 'sm')}${esc(T(...(CREATE_ISSUES[x] || [x, x])))}</div>`).join('') : ''}
+        ${tx ? U.txLine(tx) : ''}`,
+      foot: `<button class="btn" data-action="close-dialog">${setup ? T('稍后', 'Later') : T('取消', 'Cancel')}</button>${U.btn({ action: 'agent-create-do', label: T('确认并创建', 'Confirm and create'), kind: 'primary', perm: 'manage_hosts', disabled: issues.length > 0 || !!tx, why: T('请先解决上面的问题', 'Resolve the issues above first') })}`,
+    };
+  };
+
   Object.assign(FM.actions, {
     'scan-host': () => {
       const org = O();
@@ -132,6 +209,38 @@
       if (res.ok && res.sessions.some(s => s.key === inst.sessionKey)) { inst.observedAt = U.now(); U.save(); toast(T('已重新观测到该实例。', 'The instance was observed again.'), 'ok'); }
       else toast(T('再次扫描未发现该实例：状态未知，请重新发现。', 'The instance was not found again: status unknown; rediscover it.'), 'warn');
       render();
+    },
+    'agent-create-do': () => {
+      const p = P();
+      const org = O();
+      const svc = M.localServiceFor(p);
+      const setup = ui.dialog && ui.dialog.setup === '1';
+      const input = {
+        name: U.f('agentnew.name', setup ? T('助手', 'Assistant') : ''),
+        role: U.f('agentnew.role', ''),
+        workspace: U.f('agentnew.ws', setup ? WORKSPACES[0] : ''),
+        hostId: U.f('agentnew.host', svc.hostId || ''),
+      };
+      const res = M.createAgent(p, org, input, U.now());
+      if (!res.ok) { toast(T(...(CREATE_ISSUES[res.code] || [res.code, res.code])), 'warn'); return; }
+      ui.dialog.createdId = res.instance.id;
+      U.save();
+      const tx = U.submitTx({ kind: 'agent.create', payload: { instanceId: res.instance.id } }, {
+        onConfirmed: (r, pp) => {
+          if (pp.onboarding) pp.onboarding.agent = true;
+          U.clearForm('agentnew');
+          if (FM.review) FM.review.mark('agent.created');
+        },
+        onFailed: (r, pp) => { M.dropCreatedAgent(pp.data[r.tx.orgId], res.instance.id); if (ui.dialog) ui.dialog.createdId = null; },
+      });
+      if (!tx) { M.dropCreatedAgent(org, res.instance.id); ui.dialog.createdId = null; U.save(); render(); }
+    },
+    'agent-rebind': el => {
+      const id = el.dataset.id;
+      U.submitTx({ kind: 'agent.rebind', payload: { instanceId: id } }, {
+        ok: T('已重新关联：链上登记指向重启后的实例。', 'Relinked: the chain record points to the restarted instance.'),
+        onConfirmed: () => { if (FM.review) FM.review.mark('agent.rebound'); },
+      });
     },
     'include-do': el => {
       const id = el.dataset.id;

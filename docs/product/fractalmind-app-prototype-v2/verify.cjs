@@ -33,6 +33,7 @@ const okrOf = (p, id, orgId) => M.find(p.data[orgId || F.P].okrs, id);
 const krOf = (okr, id) => M.find(okr.krs, id);
 const ctxFor = (p, deviceId, action, orgId, now) => Object.assign(M.can(p, deviceId, orgId || F.P, action, now || T0), { deviceId });
 const approve = (p, id, decision, now, orgId) => M.decide(p, p.data[orgId || F.P], id, decision, ctxFor(p, 'dev-mbp', 'approve', orgId, now), now);
+const L_ = v => (v && typeof v === 'object' ? v.en : v);
 const near = (a, b, eps = 1e-3) => assert.ok(Math.abs(a - b) < eps, `${a} ≉ ${b}`);
 
 /* -------------------------------------------------- Achievement (§8.1) */
@@ -761,6 +762,83 @@ check('organization', 'exports cover one organization, exclude secrets and list 
   assert.ok(!/FMR1|FMI1|codeDigest|digest/.test(json));
   assert.equal(out.manifest.complete, false);
   assert.ok(out.manifest.missing.some(m => m.hostId === 'host-nas'));
+});
+
+/* ------------------------------------------------- Default Agent (#67) */
+
+check('default-agent', 'model connection belongs to the host; a Claude key is only ever a demo stand-in', () => {
+  const p = fresh();
+  const org = personal(p);
+  assert.equal(M.setModelConnection(p, org, { provider: 'anthropic', name: 'Claude Sonnet 5.5' }).code, 'key_required');
+  assert.equal(M.setModelConnection(p, org, { provider: 'anthropic', name: 'gpt-x', demoKey: true }).code, 'invalid_model');
+  assert.equal(M.setModelConnection(p, org, { provider: 'ollama', name: 'qwen2.5-coder:7b' }).ok, true);
+  assert.equal(p.localService.model.keyInKeychain, false, 'a local model has no key');
+  assert.ok(!JSON.stringify(p).match(/sk-ant|api[_-]?key"\s*:/i), 'no key material is stored');
+  assert.equal(M.setModelConnection(p, org, { provider: 'none' }).ok, true);
+  assert.equal(p.localService.model, null);
+  const empty = F.createEmptyProfile({ name: 'N', deviceName: 'Mac', platform: 'macos', orgName: 'O', wallet: {} }, T0, M);
+  assert.equal(M.setModelConnection(empty, null, { provider: 'none' }).code, 'not_installed', 'no host, no model connection');
+});
+
+check('default-agent', 'an App-created Agent needs this computer\'s running service and its own workspace', () => {
+  const p = fresh();
+  const org = personal(p);
+  const svc = p.localService;
+  const base = { name: 'Helper', workspace: '~/FractalMind/new', hostId: svc.hostId };
+  assert.deepEqual(M.createAgentIssues(p, org, base), []);
+  assert.ok(M.createAgentIssues(p, org, Object.assign({}, base, { hostId: 'host-build' })).includes('host_not_local'), 'remote hosts need their own App');
+  assert.ok(M.createAgentIssues(p, org, Object.assign({}, base, { workspace: '~/FractalMind/notes' })).includes('workspace_taken'));
+  assert.ok(M.createAgentIssues(p, org, Object.assign({}, base, { name: 'Builder' })).includes('name_taken'));
+  assert.ok(M.createAgentIssues(p, org, Object.assign({}, base, { name: ' ' })).includes('name'));
+  M.setLocalServiceRunning(p, org, false, T0);
+  assert.ok(M.createAgentIssues(p, org, base).includes('service_stopped'));
+});
+
+check('default-agent', 'creation is one transaction; a failure leaves nothing behind', () => {
+  const p = fresh();
+  const org = personal(p);
+  const before = { agents: org.agents.length, instances: org.instances.length };
+  const res = M.createAgent(p, org, { name: 'Helper', workspace: '~/FractalMind/new', hostId: p.localService.hostId }, T0);
+  assert.equal(res.ok, true);
+  assert.equal(res.instance.status, 'creating');
+  assert.equal(res.instance.identity, 'host-key');
+  assert.equal(res.instance.imported, undefined, 'no observe-only handover for an App-created Agent');
+  assert.deepEqual(res.agent.standing.actions, [], 'no standing actions by default');
+  assert.equal(L_(res.agent.model), 'Claude Sonnet 5.5', 'shows the host\'s model');
+  const tx = M.beginTx(p, { kind: 'agent.create', orgId: F.P, payload: { instanceId: res.instance.id } }, T0).tx;
+  assert.equal(M.commitTx(p, tx.id, T0 + 1000).ok, true);
+  assert.equal(res.instance.status, 'idle');
+  const again = M.beginTx(p, { kind: 'agent.create', orgId: F.P, payload: { instanceId: res.instance.id } }, T0).tx;
+  assert.equal(M.commitTx(p, again.id, T0 + 2000).code, 'not_creating', 'never applied twice');
+  const failed = M.createAgent(p, org, { name: 'Other', workspace: '~/FractalMind/other', hostId: p.localService.hostId }, T0);
+  M.dropCreatedAgent(org, failed.instance.id);
+  assert.equal(org.agents.length, before.agents + 1);
+  assert.equal(org.instances.length, before.instances + 1);
+  M.setModelConnection(p, org, { provider: 'none' });
+  assert.equal(typeof res.agent.model, 'object', 'App-created Agents follow the host\'s model');
+});
+
+check('default-agent', 'a restart keeps host-key identities; process-derived ones need a rebind', () => {
+  const p = fresh();
+  const org = personal(p);
+  const made = M.createAgent(p, org, { name: 'Helper', workspace: '~/FractalMind/new', hostId: p.localService.hostId }, T0).instance;
+  const res = M.restartLocalService(p, org);
+  assert.deepEqual(res.stale, ['inst-files-1']);
+  assert.equal(made.needsRebind, undefined);
+  const tx = M.beginTx(p, { kind: 'agent.rebind', orgId: F.P, payload: { instanceId: 'inst-files-1' } }, T0).tx;
+  assert.equal(M.commitTx(p, tx.id, T0 + 1000).ok, true);
+  assert.equal(M.find(org.instances, 'inst-files-1').needsRebind, false);
+  M.setLocalServiceRunning(p, org, false, T0);
+  assert.equal(M.restartLocalService(p, org).code, 'not_running');
+});
+
+check('default-agent', 'revoking this computer\'s host also drops its model key', () => {
+  const p = fresh();
+  assert.ok(p.localService.model);
+  M.removeLocalService(p);
+  assert.equal(p.localService.model, null);
+  const empty = F.createEmptyProfile({ name: 'N', deviceName: 'Mac', platform: 'macos', orgName: 'O', wallet: {} }, T0, M);
+  assert.deepEqual(empty.onboarding, { host: false, agent: false, okr: false });
 });
 
 /* ------------------------------------------------------------ Fixtures */

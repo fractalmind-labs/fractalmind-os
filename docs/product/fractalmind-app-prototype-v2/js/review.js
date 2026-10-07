@@ -44,14 +44,13 @@
       ],
     },
     {
-      id: 'J1', zh: '安装到首个成果', en: 'Install to first result', dzh: '新身份 → 运行费 → 恢复码 → 空组织 → 第一个 OKR', den: 'New identity → run fee → recovery code → empty org → first OKR',
+      id: 'J1', zh: '安装到首个成果', en: 'Install to first result', dzh: '新身份 → 运行费 → 恢复码 → 执行主机 → 默认 Agent → 第一个 OKR', den: 'New identity → run fee → recovery code → host → default Agent → first OKR',
       start: () => { U.root.activeProfileId = null; U.root.welcome = { mode: 'create', step: 1 }; U.save(); U.go('welcome'); },
       steps: [
         { zh: '创建身份：填写资料、准备运行费、签名提交', en: 'Create the identity: profile, run fee, sign and submit', ev: 'identity.created' },
         { zh: '保存恢复码', en: 'Save the recovery code', ev: 'recovery.set' },
         { zh: '把这台电脑设为执行主机（Host + Coordinator，一次确认）', en: 'Use this computer as the execution host (Host + Coordinator, one confirmation)', ev: 'onboard.host' },
-        { zh: '选择项目目录', en: 'Choose a project folder', ev: 'onboard.workspace' },
-        { zh: '配置模型', en: 'Configure a model', ev: 'onboard.model' },
+        { zh: '创建默认 Agent（名称、工作区、模型；一次确认）', en: 'Create the default Agent (name, workspace, model; one confirmation)', ev: 'agent.created' },
         { zh: '创建并激活第一个 OKR', en: 'Create and activate the first OKR', ev: 'okr.activated' },
       ],
     },

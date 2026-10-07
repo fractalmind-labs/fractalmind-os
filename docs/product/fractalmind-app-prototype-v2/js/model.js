@@ -888,12 +888,111 @@
     return { ok: true, binding: b };
   }
 
+  /* Model connection (issue #67): one per host, because envd has one model
+   * configuration per process; every Agent on that host shares it. The API key
+   * lives only in this computer's system keychain. The prototype never accepts
+   * a real key: `demoKey` stands in for "a key was saved to the keychain". */
+  const MODEL_LIMITS = { maxRequests: 12, maxTokens: 2048, timeoutSeconds: 30 };
+  const MODEL_CHOICES = {
+    anthropic: ['Claude Sonnet 5.5', 'Claude Haiku 4.5', 'Claude Opus 5.5'],
+    ollama: ['qwen2.5-coder:7b', 'llama3.2:3b'],
+  };
+  function setModelConnection(profile, org, input) {
+    const svc = localServiceFor(profile);
+    if (svc.state === 'not_installed') return { ok: false, code: 'not_installed' };
+    const provider = input && input.provider;
+    if (provider === 'none') svc.model = null;
+    else if (provider === 'anthropic' || provider === 'ollama') {
+      if (!MODEL_CHOICES[provider].includes(input.name)) return { ok: false, code: 'invalid_model' };
+      if (provider === 'anthropic' && input.demoKey !== true) return { ok: false, code: 'key_required' };
+      svc.model = { provider, name: input.name, keyInKeychain: provider === 'anthropic', limits: Object.assign({}, MODEL_LIMITS) };
+    } else return { ok: false, code: 'invalid_model' };
+    // Agents created on this host show the host's current model.
+    if (org) org.agents.forEach(a => { if (a.origin === 'app' && a.hostId === svc.hostId) a.model = modelLabel(svc.model); });
+    return { ok: true, model: svc.model };
+  }
+  function modelLabel(model) {
+    return model ? `${model.name}${model.provider === 'ollama' ? ' · Ollama' : ''}` : { zh: '未连接模型 · 只做明确内容的文件任务', en: 'No model · explicit file tasks only' };
+  }
+
+  /* App-created Agents (issue #67): a bounded file Agent on a host this App
+   * runs. No old process exists, so there is no observe-only handover; the
+   * instance identity derives from the host key and survives restarts. */
+  function createAgentIssues(profile, org, input) {
+    const svc = localServiceFor(profile);
+    const issues = [];
+    const name = String((input && input.name) || '').trim();
+    const ws = String((input && input.workspace) || '').trim();
+    if (!name || name.length > 40) issues.push('name');
+    if (!ws) issues.push('workspace');
+    if (!input || input.hostId !== svc.hostId) issues.push('host_not_local');
+    else if (svc.state !== 'running') issues.push('service_stopped');
+    else if (org.instances.some(i => i.hostId === input.hostId && i.workspace === ws && i.status !== 'revoked')) issues.push('workspace_taken');
+    if (org.agents.some(a => a.name === name)) issues.push('name_taken');
+    return issues;
+  }
+  function createAgent(profile, org, input, now) {
+    const issues = createAgentIssues(profile, org, input);
+    if (issues.length) return { ok: false, code: issues[0], issues };
+    const svc = localServiceFor(profile);
+    const name = input.name.trim();
+    const ws = input.workspace.trim();
+    const agent = {
+      id: nextId(profile, 'agent'), name, role: input.role ? String(input.role).trim() : { zh: '通用助手', en: 'General assistant' },
+      runtime: { zh: 'FractalMind 文件 Agent', en: 'FractalMind file Agent' }, model: modelLabel(svc.model), origin: 'app', hostId: svc.hostId,
+      capabilities: svc.model ? [{ zh: '工作区文件读写', en: 'Workspace files' }, { zh: '模型生成内容', en: 'Model-written content' }] : [{ zh: '工作区文件读写', en: 'Workspace files' }],
+      standing: { version: 1, actions: [], dailyBudget: 0, spentToday: 0, dayStart: now - (now % DAY), confirmedAt: now },
+    };
+    const inst = {
+      id: nextId(profile, 'inst'), name: name.toLowerCase().replace(/\s+/g, '-'), agentId: agent.id, hostId: svc.hostId,
+      sessionKey: `native:${ws}`, runtime: 'bounded-process-v1', adapter: 'native', identity: 'host-key', origin: 'app',
+      workspace: ws, status: 'creating', okrIds: [],
+    };
+    org.agents.push(agent);
+    org.instances.push(inst);
+    if (!org.workspaces.some(w => w.path === ws)) org.workspaces.push({ id: nextId(profile, 'ws'), name: ws.split('/').pop() || ws, path: ws, hostIds: [svc.hostId], access: 'read_write', importedAt: now, files: [] });
+    return { ok: true, agent, instance: inst };
+  }
+  function confirmCreateAgent(org, instanceId) {
+    const inst = find(org.instances, instanceId);
+    if (!inst || inst.status !== 'creating') return { ok: false, code: 'not_creating' };
+    inst.status = 'idle';
+    return { ok: true };
+  }
+  /** Removes an Agent whose creation transaction did not confirm. */
+  function dropCreatedAgent(org, instanceId) {
+    const inst = find(org.instances, instanceId);
+    if (!inst) return;
+    org.instances = org.instances.filter(i => i.id !== inst.id);
+    org.agents = org.agents.filter(a => a.id !== inst.agentId);
+  }
+
+  /** Restarting the service keeps host-key identities; instances whose ID
+   * derives from the envd process (discovered, J11) need a device-signed rebind. */
+  function restartLocalService(profile, org) {
+    const svc = localServiceFor(profile);
+    if (svc.state !== 'running') return { ok: false, code: 'not_running' };
+    const stale = [];
+    org.instances.forEach(i => {
+      if (i.hostId === svc.hostId && i.identity === 'process') { i.needsRebind = true; stale.push(i.id); }
+    });
+    return { ok: true, stale };
+  }
+  function confirmRebind(org, instanceId) {
+    const inst = find(org.instances, instanceId);
+    if (!inst || !inst.needsRebind) return { ok: false, code: 'not_stale' };
+    inst.needsRebind = false;
+    return { ok: true };
+  }
+
   /** Revoking this computer's host also uninstalls its service and keys. */
   function removeLocalService(profile) {
     const svc = localServiceFor(profile);
     svc.state = 'not_installed';
     svc.keys = false;
     svc.hostId = null;
+    // The model key entry goes with the service.
+    svc.model = null;
     return { ok: true };
   }
 
@@ -1118,7 +1217,7 @@
     'host.prepare': 1500000, 'binding.update': 700000,
     'host.revoke': 600000, 'device.grant': 800000, 'device.revoke': 500000, 'recovery.set': 700000,
     'recovery.apply': 1500000, 'agent.import': 700000, 'agent.include': 900000, 'memory.write': 600000,
-    'memory.archive': 400000, 'agent.policy': 600000,
+    'memory.archive': 400000, 'agent.policy': 600000, 'agent.create': 800000, 'agent.rebind': 600000,
   };
   const FAIL_FEE = 600000;
   const feeFor = kind => FEES[kind] || 500000;
@@ -1236,6 +1335,8 @@
       case 'recovery.set': return setRecovery(profile, { digest: p.digest, network: p.network }, now);
       case 'recovery.apply': return applyRecovery(profile, { digest: p.digest }, p.device, now);
       case 'agent.import': return confirmImport(org, p.instanceId, now);
+      case 'agent.create': return confirmCreateAgent(org, p.instanceId, now);
+      case 'agent.rebind': return confirmRebind(org, p.instanceId, now);
       case 'agent.include': return includeInOkr(profile, org, p.instanceId, p.okrId, p.checks, now);
       case 'memory.write': {
         const m = find(org.memories, p.memoryId);
@@ -1669,6 +1770,8 @@
     assignIssues, reassign, hostCommand, ackCommand,
     inviteStatus, createInvite, redeemProof, redeemInvite, revokeInvite, connectHost, revokeHost,
     ENDPOINT_SCOPES, validEndpoint, localServiceFor, setLocalServiceRunning, updateBinding, removeLocalService,
+    MODEL_LIMITS, MODEL_CHOICES, setModelConnection, modelLabel, createAgentIssues, createAgent, confirmCreateAgent, dropCreatedAgent,
+    restartLocalService, confirmRebind,
     deviceActive, actionsForRole, can, createPairing, pairingStatus, approvePairing, confirmGrant, syncData, revokeDevice,
     B32, makeRecoveryCode, parseRecoveryCode, lookupRecovery, setRecovery, applyRecovery,
     feeFor, canPay, beginTx, commitTx, queryTx,

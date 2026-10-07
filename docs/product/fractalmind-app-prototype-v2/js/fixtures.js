@@ -88,6 +88,9 @@
       { id: 'inst-builder-2', name: 'builder-2', agentId: 'agent-builder', hostId: 'host-build', runtime: 'Claude Code 2.4', adapter: 'native', status: 'idle', workspace: '/srv/work/fractalmind-mobile', sessionKey: 'fm:builder-2', okrIds: [] },
       { id: 'inst-tester-2', name: 'tester-2', agentId: 'agent-tester', hostId: 'host-gpu', runtime: 'Codex CLI 0.9', adapter: 'native', status: 'idle', workspace: '/srv/work/fractalmind-mobile', sessionKey: 'fm:tester-2', okrIds: [] },
       { id: 'inst-desktop-1', name: 'claude-desktop', agentId: 'agent-desktop', hostId: 'host-mbp', runtime: 'Claude Desktop', adapter: 'unconstrained', status: 'idle', workspace: '—', sessionKey: 'cdp:claude-desktop', okrIds: [] },
+      // envd's built-in file Agent, discovered and imported by hand (J11). Its ID
+      // derives from the envd process, so a service restart needs a rebind (#67).
+      { id: 'inst-files-1', name: 'files', agentId: 'agent-researcher', hostId: 'host-mbp', runtime: 'bounded-process-v1', adapter: 'native', identity: 'process', status: 'idle', workspace: '~/FractalMind/notes', sessionKey: 'native:files', imported: 'observe', observedAt: now - 3 * DAY, okrIds: [] },
     ];
 
     const alpha = {
@@ -482,7 +485,7 @@
       txs: [],
       onboarding: null,
       // envd on this MacBook: Host + Coordinator background service (issue #64).
-      localService: { state: 'running', hostId: 'host-mbp', bindingId: 'bind-home', startAtLogin: true, keys: true },
+      localService: { state: 'running', hostId: 'host-mbp', bindingId: 'bind-home', startAtLogin: true, keys: true, model: { provider: 'anthropic', name: 'Claude Sonnet 5.5', keyInKeychain: true, limits: { maxRequests: 12, maxTokens: 2048, timeoutSeconds: 30 } } },
     };
   }
 
@@ -510,8 +513,8 @@
       epoch: 0,
       data: { [orgId]: data },
       txs: [],
-      onboarding: { workspace: false, host: false, model: false, okr: false },
-      localService: { state: 'not_installed', hostId: null, bindingId: null, startAtLogin: true, keys: false },
+      onboarding: { host: false, agent: false, okr: false },
+      localService: { state: 'not_installed', hostId: null, bindingId: null, startAtLogin: true, keys: false, model: null },
     };
   }
 
