@@ -1,4 +1,5 @@
 import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
+import { Transaction, coinWithBalance } from "@mysten/sui/transactions";
 import {
   CoordinatorBindingBcs,
   HostIndexBcs,
@@ -44,6 +45,8 @@ export type HostOperation =
       ttlMinutes: 15 | 60 | 1440;
       membershipDays: number;
       observationHours: number;
+      /** Local setup: send the joining Host its own Gas in the same PTB. */
+      fund?: { address: string; mist: string };
     }
   | { kind: "revoke-invite"; targetId: string }
   | { kind: "revoke-member"; targetId: string };
@@ -60,6 +63,8 @@ export type HostDirectory = {
 const id = /^0x[0-9a-f]{64}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const day = 86400000n;
+/** A setup transfer never exceeds 1 SUI. */
+export const MAX_HOST_FUNDING = 1_000_000_000n;
 function bad(): never {
   throw new HostAdmissionError("invalid_source");
 }
@@ -100,7 +105,11 @@ function invitationInput(input: Extract<HostOperation, { kind: "invite" }>) {
     input.membershipDays > 90 ||
     !Number.isInteger(input.observationHours) ||
     input.observationHours < 1 ||
-    input.observationHours > input.membershipDays * 24
+    input.observationHours > input.membershipDays * 24 ||
+    (input.fund &&
+      (!id.test(input.fund.address) ||
+        !/^[1-9][0-9]{0,9}$/.test(input.fund.mist) ||
+        BigInt(input.fund.mist) > MAX_HOST_FUNDING))
   )
     throw new HostAdmissionError("invalid_input");
   return input;
@@ -375,8 +384,15 @@ export class HostAdmission {
         authority.clockMs +
         BigInt(operation.ttlMinutes) * 60000n
       ).toString();
+      const tx = new Transaction();
+      if (operation.fund)
+        tx.transferObjects(
+          [coinWithBalance({ balance: BigInt(operation.fund.mist) })],
+          operation.fund.address,
+        );
       transaction = api.createInvite({
         ...args,
+        tx,
         bindingId: operation.bindingId,
         proofPublicKey: material.publicKey,
         expiresAtMs,
@@ -405,6 +421,11 @@ export class HostAdmission {
         requestId,
         transaction,
         gasBudget: 200000000n,
+        // Only the explicit Host funding may move SUI out of this device.
+        maxSuiSpend:
+          operation.kind === "invite" && operation.fund
+            ? BigInt(operation.fund.mist)
+            : 0n,
       });
       this.plans.set(quote, {
         operation,

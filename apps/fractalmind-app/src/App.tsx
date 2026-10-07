@@ -49,6 +49,7 @@ const DeviceAccess = lazy(() => import("./DeviceAccess"));
 const PairingFlow = lazy(() => import("./PairingFlow"));
 const HostAccess = lazy(() => import("./HostAccess"));
 const HostObservations = lazy(() => import("./HostObservations"));
+const LocalHostCard = lazy(() => import("./LocalHostCard"));
 const AgentCheckpointView = lazy(() => import("./AgentCheckpointView"));
 const HandoverFlow = lazy(() => import("./HandoverFlow"));
 const OkrContinuation = lazy(() => import("./OkrContinuation"));
@@ -1163,6 +1164,26 @@ export function App() {
         )}
         {page === "hosts" && snapshot && (
           <>
+            {isTauri() && (
+              <Suspense fallback={null}>
+                <LocalHostCard
+                  key={JSON.stringify([profile, snapshot.organization.objectId])}
+                  profile={{
+                    ...profile,
+                    chainIdentifier:
+                      data.identity?.chainIdentifier ?? profile.chainIdentifier,
+                  }}
+                  organizationId={snapshot.organization.objectId}
+                  deviceProfile={
+                    device.session.state === "unlocked"
+                      ? device.session.profile
+                      : null
+                  }
+                  t={t}
+                  onChanged={data.refresh}
+                />
+              </Suspense>
+            )}
             <Suspense
               fallback={
                 <p>{t("加载主机接入入口…", "Loading Host onboarding…")}</p>
