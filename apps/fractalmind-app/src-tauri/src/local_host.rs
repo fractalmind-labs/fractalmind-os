@@ -143,6 +143,25 @@ fn q(value: &str) -> String {
     // JSON strings are valid YAML double-quoted scalars.
     serde_json::to_string(value).expect("string serializes")
 }
+fn hex_of(value: Option<&serde_json::Value>, len: usize) -> bool {
+    value.and_then(|v| v.as_str()).is_some_and(|s| {
+        s.len() == len
+            && s.bytes()
+                .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+    })
+}
+/// envd's `--init-host` output: this profile's address and 32-byte keys.
+fn valid_public(value: &serde_json::Value, profile: &str) -> bool {
+    value.get("profile").and_then(|p| p.as_str()) == Some(profile)
+        && value
+            .get("host_address")
+            .and_then(|a| a.as_str())
+            .is_some_and(|a| {
+                a.starts_with("0x") && hex_of(Some(&serde_json::Value::String(a[2..].into())), 64)
+            })
+        && hex_of(value.get("signing_public_key"), 64)
+        && hex_of(value.get("encryption_public_key"), 64)
+}
 pub fn key_profile(profile: &str) -> String {
     format!("app-{profile}")
 }
@@ -211,6 +230,9 @@ pub struct Layout {
     pub profile: String,
     pub config: PathBuf,
     pub record: PathBuf,
+    /// Host public keys saved on first creation, so the App never needs the
+    /// credential store (and its OS prompt) just to know the Host address.
+    pub public: PathBuf,
     pub workspace: PathBuf,
     pub log: PathBuf,
     pub label: String,
@@ -252,6 +274,7 @@ impl Layout {
             profile: profile.into(),
             config: root.join("sentinel.yaml"),
             record: root.join("local-host.json"),
+            public: root.join("host-public.json"),
             workspace: root.join("workspace"),
             log,
             label,
@@ -340,6 +363,12 @@ impl Layout {
                 render_keys_config(&self.profile, network).as_bytes(),
             )?;
         }
+        if let Some(public) = self.cached_public() {
+            return Ok(public);
+        }
+        // Only the first time: envd creates (or reads) the keys, which the OS
+        // may ask the person to allow. The background service then reads
+        // them once per start; the App reads only the saved public part.
         let config = self.config.to_string_lossy().to_string();
         let out = run_envd(
             self.envd()?,
@@ -349,12 +378,19 @@ impl Layout {
         )?
         .ok()?;
         let public = last_json(&out)?;
-        if public.get("profile").and_then(|p| p.as_str())
-            != Some(key_profile(&self.profile).as_str())
-        {
+        if !valid_public(&public, &key_profile(&self.profile)) {
             return Err("EnvdOutputInvalid".into());
         }
+        write_private(
+            &self.public,
+            &serde_json::to_vec_pretty(&public).map_err(|_| "LocalHostUnavailable")?,
+        )?;
         Ok(public)
+    }
+    fn cached_public(&self) -> Option<serde_json::Value> {
+        let value: serde_json::Value =
+            serde_json::from_slice(&fs::read(&self.public).ok()?).ok()?;
+        valid_public(&value, &key_profile(&self.profile)).then_some(value)
     }
     /// Writes the full public configuration once the chain binding exists.
     pub fn configure(
@@ -461,7 +497,7 @@ impl Layout {
             )?
             .ok()?;
         }
-        for path in [&self.record, &self.config] {
+        for path in [&self.record, &self.config, &self.public] {
             match fs::remove_file(path) {
                 Ok(()) => {}
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
@@ -1199,6 +1235,34 @@ mod tests {
             ),
             "\"C:\\FM\\fractalmind-envd.exe\" --config \"C:\\Users\\u\\cfg.yaml\""
         );
+    }
+    #[test]
+    fn public_keys_are_cached_after_the_first_read() {
+        let dir = std::env::temp_dir().join(format!("fm-public-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        // No envd: any attempt to read the credential store would fail.
+        let layout = Layout::new("testnet", &dir, &dir, &dir, None).unwrap();
+        assert_eq!(layout.keys("testnet"), Err("EnvdUnavailable".to_string()));
+        let public = serde_json::json!({
+            "format": "1", "profile": "app-testnet",
+            "host_address": format!("0x{}", "a".repeat(64)),
+            "signing_public_key": "b".repeat(64), "encryption_public_key": "c".repeat(64),
+        });
+        write_private(&layout.public, public.to_string().as_bytes()).unwrap();
+        assert_eq!(layout.keys("testnet").unwrap(), public);
+        for bad in [
+            serde_json::json!({ "profile": "app-other", "host_address": format!("0x{}", "a".repeat(64)), "signing_public_key": "b".repeat(64), "encryption_public_key": "c".repeat(64) }),
+            serde_json::json!({ "profile": "app-testnet", "host_address": "0x12", "signing_public_key": "b".repeat(64), "encryption_public_key": "c".repeat(64) }),
+            serde_json::json!({ "profile": "app-testnet", "host_address": format!("0x{}", "a".repeat(64)), "signing_public_key": "B".repeat(64), "encryption_public_key": "c".repeat(64) }),
+        ] {
+            write_private(&layout.public, bad.to_string().as_bytes()).unwrap();
+            assert_eq!(
+                layout.keys("testnet"),
+                Err("EnvdUnavailable".to_string()),
+                "{bad}"
+            );
+        }
+        fs::remove_dir_all(&dir).unwrap();
     }
     #[test]
     fn last_json_line_wins() {
