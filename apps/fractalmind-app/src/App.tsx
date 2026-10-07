@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { normalizeProfile } from "./chain";
+import { withBuiltInUpgrade } from "./deployments";
 import Welcome from "./Welcome";
 import {
   BrandMark,
@@ -75,7 +76,7 @@ const short = (id?: string | null) =>
 function savedProfile() {
   try {
     const text = localStorage.getItem(PROFILE_KEY);
-    return text ? normalizeProfile(JSON.parse(text)) : null;
+    return text ? withBuiltInUpgrade(normalizeProfile(JSON.parse(text))) : null;
   } catch {
     return null;
   }

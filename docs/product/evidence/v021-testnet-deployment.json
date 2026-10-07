@@ -11,10 +11,11 @@
   "deployment": {
     "network": "testnet",
     "rpcUrl": "https://fullnode.testnet.sui.io:443",
-    "packageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95",
+    "packageId": "0x4c0cb05c43ef5c45720b1e584ce78f39047b006e63c7e20a0a3cd6615c4dc32c",
     "okrPackageId": "0x120eb48c3b9c2a28451bea22c42b28bd3d3749526c4cc6f86701de0a697a7fe7",
     "directPackageId": "0x1977842bde7e0aa412aa39feac5edd3c69c72335942f801c84517387281e3a17",
-    "registryId": "0xe4405efce88948122a5ea2e1bf61523b4bad1e4e155dad0c8cef61867f7b7ca2"
+    "registryId": "0xe4405efce88948122a5ea2e1bf61523b4bad1e4e155dad0c8cef61867f7b7ca2",
+    "originalPackageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95"
   },
   "identityRegistryId": "0x267faa6a730523fc8d6b12c5a6a426bfefeed16aa3718f03bdee9e05fd962e0b",
   "identityInitialization": "atomic_with_core_publish",
@@ -46,5 +47,19 @@
     "identity registry resolves from ProtocolRegistry",
     "validateCreationDeployment passes"
   ],
-  "privateKeysInRecord": false
+  "privateKeysInRecord": false,
+  "upgrades": [
+    {
+      "date": "2026-10-07",
+      "package": "protocol",
+      "version": 2,
+      "policy": "compatible",
+      "packageId": "0x4c0cb05c43ef5c45720b1e584ce78f39047b006e63c7e20a0a3cd6615c4dc32c",
+      "originalPackageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95",
+      "digest": "2U3wAsueMmV434et7zzBggUcyYt1DL3sEVtm3oJ2G2JE",
+      "actualGasMist": "707898740",
+      "reason": "#70: agent-manager-v1 runtime; import_agent may confirm control for agent-manager Homes",
+      "notes": "okr and direct-agent still link protocol v1 and are upgraded with #70 phase 2"
+    }
+  ]
 }
