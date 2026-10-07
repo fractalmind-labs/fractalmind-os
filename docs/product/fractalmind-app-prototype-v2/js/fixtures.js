@@ -64,7 +64,7 @@
     const grant = (days, desktop) => ({ actions: ['execute'], desktop: !!desktop, expiresAt: now + days * DAY });
     d.hosts = [
       { id: 'host-mini', name: 'Mac mini M4', kind: 'local', location: L('家中书房', 'Home office'), os: 'macOS 15.6', arch: 'arm64', status: 'online', accepting: true, desktop: 'supported', lastHeartbeatAt: now - 20e3, cpu: 38, mem: 61, sampledAt: now - 20e3, bindingId: 'bind-home', membership: member('invite', now - 36 * DAY), grant: grant(6, true) },
-      { id: 'host-mbp', name: 'MacBook Pro 14', kind: 'local', location: L('随身', 'With me'), os: 'macOS 15.6', arch: 'arm64', status: 'online', accepting: true, desktop: 'supported', lastHeartbeatAt: now - 8e3, cpu: 22, mem: 54, sampledAt: now - 8e3, bindingId: 'bind-home', isThisDevice: true, roles: ['host', 'coordinator'], membership: member('bootstrap', now - 40 * DAY), grant: grant(6, true) },
+      { id: 'host-mbp', name: 'MacBook Pro 14', kind: 'local', location: L('随身', 'With me'), os: 'macOS 15.6', arch: 'arm64', status: 'online', accepting: true, desktop: 'supported', lastHeartbeatAt: now - 8e3, cpu: 22, mem: 54, sampledAt: now - 8e3, bindingId: 'bind-home', isThisDevice: true, roles: ['host', 'coordinator'], membership: member('bootstrap', now - 40 * DAY), grant: grant(6, true), launchers: localLaunchers(), folders: localFolders() },
       { id: 'host-nas', name: 'Home NAS', kind: 'local', location: L('家中机柜', 'Home rack'), os: 'Ubuntu 24.04', arch: 'x86_64', status: 'offline', accepting: true, desktop: 'headless', lastHeartbeatAt: now - 47 * MIN, cpu: 71, mem: 83, sampledAt: now - 47 * MIN, bindingId: 'bind-home', membership: member('invite', now - 20 * DAY), grant: grant(3, false) },
       { id: 'host-pi', name: 'Raspberry Pi 5', kind: 'local', location: L('客厅', 'Living room'), os: 'Ubuntu 24.04', arch: 'arm64', status: 'online', accepting: false, maintenance: true, desktop: 'headless', lastHeartbeatAt: now - 31e3, cpu: 6, mem: 18, sampledAt: now - 31e3, bindingId: 'bind-home', membership: member('review', now - 26 * DAY), grant: grant(2, false) },
       { id: 'host-build', name: 'Build Server', kind: 'cloud', location: L('法兰克福', 'Frankfurt'), os: 'Ubuntu 22.04', arch: 'x86_64', status: 'online', accepting: true, desktop: 'headless', lastHeartbeatAt: now - 12e3, cpu: 64, mem: 47, sampledAt: now - 12e3, bindingId: 'bind-cloud', membership: member('invite', now - 12 * DAY), grant: grant(4, false) },
@@ -510,7 +510,7 @@
       epoch: 0,
       data: { [orgId]: data },
       txs: [],
-      onboarding: { workspace: false, host: false, model: false, okr: false },
+      onboarding: { host: false, agent: false, okr: false },
       localService: { state: 'not_installed', hostId: null, bindingId: null, startAtLogin: true, keys: false },
     };
   }
@@ -526,24 +526,54 @@
   }
 
   /** Sessions an authorized host would report when scanned (J11 demo observations). */
-  function observedSessions(now) {
+  /** Agent launchers installed on this computer and their profiles. The
+   * profile decides the model (e.g. Codex `--profile x` → ~/.codex/x.config.toml). */
+  function localLaunchers() {
+    return [
+      { id: 'codex', name: 'Codex CLI', profiles: [
+        { id: 'main', model: L('ornith · 局域网 Mac Studio', 'ornith · LAN Mac Studio') },
+        { id: 'default', model: 'gpt-6.1-sol' },
+      ] },
+      { id: 'claude', name: 'Claude Code', profiles: [{ id: 'default', model: L('账号默认模型', 'Account default model') }] },
+    ];
+  }
+  /** Folder states the host reports before anything is written (demo). */
+  function localFolders() {
     return {
+      '~/work-assistant': 'agent_home', '~/research-desk': 'agent_home', '~/code/trading-bot': 'agent_home', '~/home-assistant': 'agent_home',
+      '~/agents/empty': 'empty', '~/Documents': 'not_empty', '~/code/fractalmind-app': 'not_empty',
+    };
+  }
+
+  function observedSessions(now) {
+    const seen = {
       'host-mini': [
         { key: 'tmux:claude-refactor', name: 'claude-refactor', runtime: 'Claude Code 2.4', adapter: 'native', workspace: '~/code/fractalmind-app', identity: 'verified', agentId: 'agent-builder', startedAt: now - 3 * HOUR, task: L('重构设置页的表单校验', 'Refactoring settings form validation') },
         { key: 'tmux:codex-docs', name: 'codex-docs', runtime: 'Codex CLI 0.9', adapter: 'tmux-observe', workspace: '~/code/fractalmind-docs', identity: 'verified', startedAt: now - 50 * MIN, task: L('更新文档站链接', 'Updating docs site links') },
       ],
       'host-mbp': [
-        { key: 'tmux:claude-refactor', name: 'claude-refactor', runtime: 'Claude Code 2.4', adapter: 'native', workspace: '~/code/fractalmind-app', identity: 'unverified', startedAt: now - 20 * MIN, task: L('未知（身份未核实）', 'Unknown (identity not verified)') },
+        { key: 'tmux:main', name: 'main', runtime: 'Codex CLI', adapter: 'tmux-observe', workspace: '~/work-assistant', identity: 'verified', startedAt: now - 13 * DAY, task: L('工作助理：日程、调研与员工 Agent 调度', 'Work assistant: schedule, research and employee dispatch'),
+          agentFile: { name: 'main', namespace: null, description: L('工作助理', 'Work assistant'), launcher: 'codex', profile: 'main', model: L('ornith · 局域网 Mac Studio', 'ornith · LAN Mac Studio'), skills: 32, subAgents: 10, heartbeat: { cron: '0 * * * *', by: 'crontab' }, rom: null } },
+        { key: 'tmux:research--main', name: 'research--main', runtime: 'Codex CLI', adapter: 'tmux-observe', workspace: '~/research-desk', identity: 'verified', startedAt: now - 2 * HOUR, task: L('早晚研究报告与预警', 'Morning and evening research reports and alerts'),
+          agentFile: { name: 'main', namespace: 'research', description: L('研究员', 'Researcher'), launcher: 'codex', profile: 'research', model: L('ornith · 局域网 Mac Studio', 'ornith · LAN Mac Studio'), skills: 30, subAgents: 0, heartbeat: { schedules: 5, by: 'crontab' }, rom: null } },
+        { key: 'tmux:trading-bot--main', name: 'trading-bot--main', runtime: 'Codex CLI', adapter: 'tmux-observe', workspace: '~/code/trading-bot', identity: 'verified', startedAt: now - 10 * DAY, task: L('模拟盘交易与风控心跳', 'Paper trading and risk heartbeat'),
+          agentFile: { name: 'main', namespace: 'trading-bot', description: L('交易机器人', 'Trading bot'), launcher: 'codex', profile: 'main', model: L('ornith · 局域网 Mac Studio', 'ornith · LAN Mac Studio'), skills: 13, subAgents: 0, heartbeat: { cron: '*/5 * * * *', by: 'project-script' }, rom: null } },
+        { key: 'tmux:home--main', name: 'home--main', runtime: 'Codex CLI', adapter: 'tmux-observe', workspace: '~/home-assistant', identity: 'verified', startedAt: now - 16 * DAY, task: L('家庭助手', 'Household assistant'),
+          agentFile: { name: 'main', namespace: 'home', description: L('家庭助手', 'Household assistant'), launcher: 'codex', profile: 'default', model: 'gpt-6.1-sol', skills: 12, subAgents: 2, heartbeat: { cron: '11 * * * *', by: 'codex-app' }, rom: { id: 'hermes-agent', version: '0.1.0' } } },
       ],
       'host-build': [
         { key: 'tmux:tester-1', name: 'tester-1', runtime: 'Codex CLI 0.9', adapter: 'native', workspace: '/srv/work/fractalmind-mobile', identity: 'verified', agentId: 'agent-tester', startedAt: now - 5 * DAY, task: L('OKR：让手机可靠接手桌面任务', 'OKR: Make phone handoff reliable') },
       ],
-      'host-gpu': [],
+      'host-gpu': [
+        { key: 'tmux:claude-refactor', name: 'claude-refactor', runtime: 'Claude Code 2.4', adapter: 'native', workspace: '~/code/fractalmind-app', identity: 'unverified', startedAt: now - 20 * MIN, task: L('未知（身份未核实）', 'Unknown (identity not verified)') },
+      ],
       'host-pi': [],
       'host-labs-ci': [],
       'host-labs-gpu': [],
     };
+    seen.thisDevice = seen['host-mbp'];
+    return seen;
   }
 
-  return { L, P, LABS, DEMO_RECOVERY_BODY, demoRecoveryCode, emptyOrgData, createDemoProfile, createEmptyProfile, networkDirectory, observedSessions };
+  return { L, P, LABS, DEMO_RECOVERY_BODY, demoRecoveryCode, emptyOrgData, createDemoProfile, createEmptyProfile, networkDirectory, observedSessions, localLaunchers, localFolders };
 });

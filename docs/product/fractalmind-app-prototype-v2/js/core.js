@@ -33,7 +33,7 @@
   function seedRoot(now) {
     const demo = F.createDemoProfile(now, M);
     return {
-      schema: 'fm-prototype-v2', version: 3, rev: 0, seededAt: now,
+      schema: 'fm-prototype-v2', version: 4, rev: 0, seededAt: now,
       activeProfileId: demo.id, profiles: { [demo.id]: demo },
       faults: { nextTxFail: false, rpcDown: false, coordinatorDown: false, networkFail: false },
       network: F.networkDirectory(now, M),
@@ -42,7 +42,7 @@
   }
 
   let root = read(STATE_KEY);
-  if (!root || root.schema !== 'fm-prototype-v2' || root.version !== 3) root = seedRoot(Date.now());
+  if (!root || root.schema !== 'fm-prototype-v2' || root.version !== 4) root = seedRoot(Date.now());
 
   const prefs = Object.assign({ locale: 'zh-CN', theme: 'system' }, read(PREFS_KEY) || {});
 
@@ -347,6 +347,7 @@
     'recovery.apply': ['使用恢复码恢复', 'Recover with a recovery code'],
     'agent.import': ['导入 Agent（仅观察）', 'Import Agent (observe only)'],
     'agent.include': ['授权 Agent 纳入 OKR', 'Authorize Agent for an OKR'],
+    'agent.create': ['创建 Agent', 'Create an Agent'],
     'agent.policy': ['更新 Agent 常驻权限', 'Update Agent standing permission'],
     'memory.write': ['写入记忆', 'Write memory'],
     'memory.archive': ['归档记忆', 'Archive memory'],

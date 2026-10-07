@@ -888,6 +888,124 @@
     return { ok: true, binding: b };
   }
 
+  /* Agents (issue #67). An Agent is a Home directory with Agent OS files and
+   * skills; its AGENTS.md frontmatter names it and says how to launch it
+   * (launcher + profile, which decides the model) and when it wakes up
+   * (heartbeat / schedules). agent-manager runs it in tmux as `<name>--main`.
+   * A new Agent is created from a ROM (roms/agent-os-roms/roms). */
+  const CORE_FILES = ['SYSTEM.md', 'SOUL.md', 'AGENTS.md', 'USER.md', 'HEARTBEAT.md', 'OKR.md', 'okrs/Candidate.md', 'memory/index.md'];
+  const ROMS = [
+    {
+      id: 'hermes-agent', family: 'personal-home', version: '0.1.0', compat: 'fully-compatible', heartbeat: 'proactive',
+      desc: { zh: '温和、以工具执行为主的个人与家庭助手；心跳与 dream 维护，先做后问。', en: 'A warm, tool-driven personal and household operator; heartbeat and dream maintenance, acts before asking.' },
+      files: CORE_FILES.concat(['DREAM.md', 'TODO.md', 'MEMORY.md', 'TOOLS.md', 'IDENTITY.md']),
+      included: [], optional: [],
+    },
+    {
+      id: 'manager-heavy-core', family: 'manager-heavy', version: '0.6.0', compat: 'fully-compatible', heartbeat: 'proactive',
+      desc: { zh: '以管理为先：多 Agent 协调、OKR 驱动执行、TODO 优先的心跳与 dream 维护边界。', en: 'Manager-first: multi-Agent coordination, OKR-driven execution, TODO-first heartbeat and dream boundaries.' },
+      files: CORE_FILES.concat(['DREAM.md', 'TODO.md', 'MEMORY.md', 'TOOLS.md']),
+      included: ['agent-manager', 'team-manager'], optional: ['agent-calendar', 'turbo-frequency', 'notifier'],
+    },
+    {
+      id: 'mentor-coordinator-core', family: 'manager-heavy', version: '0.1.0', compat: 'draft-compatible', heartbeat: 'proactive',
+      desc: { zh: '导师带领的协调型工作区：TODO 优先心跳、文件记忆，发送后核验。', en: 'Mentor-led coordination: TODO-first heartbeat, file memory, verify after sending.' },
+      files: ['SYSTEM.md', 'SOUL.md', 'AGENTS.md', 'USER.md', 'HEARTBEAT.md', 'TODO.md', 'OKR.md'],
+      included: ['agent-manager', 'planning-with-files', 'slack-workspace-inspector', 'sentry-event-query', 'use-fractalbot'], optional: [],
+    },
+    {
+      id: 'trinity', family: 'manager-heavy', version: '0.1.0', compat: 'draft-compatible', heartbeat: 'proactive',
+      desc: { zh: '“AI 员工”：关注指定会话与线程，严格跟进，以证据交付。', en: 'An “AI employee” for watched threads: strict follow-up and evidence-driven delivery.' },
+      files: ['SYSTEM.md', 'SOUL.md', 'AGENTS.md', 'USER.md', 'HEARTBEAT.md', 'TODO.md', 'OKR.md', 'okrs/Candidate.md'],
+      included: ['agent-manager', 'use-fractalbot', 'turbo-frequency'], optional: [],
+    },
+  ];
+  const AGENT_NAME = /^[a-z][a-z0-9-]{1,30}$/;
+  const HOME_PATH = /^(~|\/)[^\s]*[^/\s]$/;
+
+  /** What the host reports about a folder before anything is written. */
+  function homeState(host, path) {
+    const known = ((host && host.folders) || {})[path];
+    if (known) return known;
+    return HOME_PATH.test(path || '') ? 'new' : 'invalid';
+  }
+  function createAgentIssues(profile, org, input) {
+    const svc = localServiceFor(profile);
+    const issues = [];
+    const host = find(org.hosts, input && input.hostId);
+    const name = String((input && input.name) || '').trim();
+    const home = String((input && input.home) || '').trim();
+    if (!AGENT_NAME.test(name)) issues.push('name');
+    else if (org.agents.some(a => String(a.namespace || a.name).toLowerCase() === name)) issues.push('name_taken');
+    const state = homeState(host, home);
+    if (!home || state === 'invalid') issues.push('home');
+    else if (state === 'agent_home') issues.push('home_is_agent');
+    else if (state === 'not_empty') issues.push('home_not_empty');
+    else if (org.agents.some(a => a.home === home && a.hostId === (input && input.hostId))) issues.push('home_taken');
+    const rom = ROMS.find(r => r.id === (input && input.romId));
+    if (!rom) issues.push('rom');
+    else if ((input.optionalSkills || []).some(k => !rom.optional.includes(k))) issues.push('skills');
+    if (!input || input.hostId !== svc.hostId) issues.push('host_not_local');
+    else if (svc.state !== 'running') issues.push('service_stopped');
+    const launcher = ((host && host.launchers) || []).find(l => l.id === (input && input.launcher));
+    if (!launcher || !launcher.profiles.some(pr => pr.id === input.profileId)) issues.push('launcher');
+    return issues;
+  }
+  /** The AGENTS.md frontmatter the App writes into the new Home. */
+  function agentFrontmatter(input) {
+    const rom = ROMS.find(r => r.id === input.romId) || {};
+    const args = input.profileId && input.profileId !== 'default' ? ['--profile', input.profileId] : [];
+    return [
+      '---', `name: main`, `namespace: ${input.name}`, 'working_directory: ${REPO_ROOT}', `launcher: ${input.launcher}`,
+      `launcher_args: [${args.map(a => JSON.stringify(a)).join(', ')}]`,
+      `rom: { name: ${rom.id}, version: ${rom.version} }`,
+      `skills: [${(rom.included || []).concat(input.optionalSkills || []).join(', ')}]`,
+      'heartbeat:', '  cron: "0 * * * *"', '  session_mode: auto', '  enabled: true', '---',
+    ].join('\n');
+  }
+  function createAgent(profile, org, input, now) {
+    const issues = createAgentIssues(profile, org, input);
+    if (issues.length) return { ok: false, code: issues[0], issues };
+    const host = find(org.hosts, input.hostId);
+    const rom = ROMS.find(r => r.id === input.romId);
+    const launcher = host.launchers.find(l => l.id === input.launcher);
+    const prof = launcher.profiles.find(pr => pr.id === input.profileId);
+    const name = input.name.trim();
+    const home = input.home.trim();
+    const skills = rom.included.concat(input.optionalSkills || []);
+    const agent = {
+      id: nextId(profile, 'agent'), name, namespace: name, role: rom.desc, origin: 'app', hostId: host.id, home,
+      rom: { id: rom.id, version: rom.version }, runtime: launcher.name, launcher: launcher.id, profileId: prof.id, model: prof.model,
+      skills, heartbeat: { cron: '0 * * * *', by: 'agent-manager' },
+      capabilities: skills.length ? skills.map(k => ({ zh: k, en: k })) : [{ zh: 'Agent OS 文件', en: 'Agent OS files' }],
+      standing: { version: 1, actions: [], dailyBudget: 0, spentToday: 0, dayStart: now - (now % DAY), confirmedAt: now },
+    };
+    const inst = {
+      id: nextId(profile, 'inst'), name: 'main', agentId: agent.id, hostId: host.id, sessionKey: `tmux:${name}--main`,
+      runtime: launcher.name, adapter: 'native', origin: 'app', workspace: home, status: 'creating', okrIds: [],
+    };
+    org.agents.push(agent);
+    org.instances.push(inst);
+    host.folders = Object.assign({}, host.folders, { [home]: 'agent_home' });
+    if (!org.workspaces.some(w => w.path === home)) org.workspaces.push({ id: nextId(profile, 'ws'), name, path: home, hostIds: [host.id], access: 'read_write', importedAt: now, files: rom.files.slice(0, 4) });
+    return { ok: true, agent, instance: inst, files: rom.files, skills, frontmatter: agentFrontmatter(input) };
+  }
+  function confirmCreateAgent(org, instanceId) {
+    const inst = find(org.instances, instanceId);
+    if (!inst || inst.status !== 'creating') return { ok: false, code: 'not_creating' };
+    inst.status = 'running';
+    return { ok: true };
+  }
+  /** A creation that did not confirm leaves no Agent and frees its Home. */
+  function dropCreatedAgent(org, instanceId) {
+    const inst = find(org.instances, instanceId);
+    if (!inst) return;
+    const host = find(org.hosts, inst.hostId);
+    if (host && host.folders) delete host.folders[inst.workspace];
+    org.instances = org.instances.filter(i => i.id !== inst.id);
+    org.agents = org.agents.filter(a => a.id !== inst.agentId);
+  }
+
   /** Revoking this computer's host also uninstalls its service and keys. */
   function removeLocalService(profile) {
     const svc = localServiceFor(profile);
@@ -1118,7 +1236,7 @@
     'host.prepare': 1500000, 'binding.update': 700000,
     'host.revoke': 600000, 'device.grant': 800000, 'device.revoke': 500000, 'recovery.set': 700000,
     'recovery.apply': 1500000, 'agent.import': 700000, 'agent.include': 900000, 'memory.write': 600000,
-    'memory.archive': 400000, 'agent.policy': 600000,
+    'memory.archive': 400000, 'agent.policy': 600000, 'agent.create': 800000,
   };
   const FAIL_FEE = 600000;
   const feeFor = kind => FEES[kind] || 500000;
@@ -1236,6 +1354,7 @@
       case 'recovery.set': return setRecovery(profile, { digest: p.digest, network: p.network }, now);
       case 'recovery.apply': return applyRecovery(profile, { digest: p.digest }, p.device, now);
       case 'agent.import': return confirmImport(org, p.instanceId, now);
+      case 'agent.create': return confirmCreateAgent(org, p.instanceId, now);
       case 'agent.include': return includeInOkr(profile, org, p.instanceId, p.okrId, p.checks, now);
       case 'memory.write': {
         const m = find(org.memories, p.memoryId);
@@ -1371,7 +1490,9 @@
     if (!host) return { ok: false, code: 'missing' };
     if (!host.membership || host.membership.state !== 'active') return { ok: false, code: 'not_authorized' };
     if (host.status !== 'online') return { ok: false, code: 'offline' };
-    const sessions = (observed[hostId] || []).map(s => Object.assign({}, s, {
+    // This computer reports the same running Agents whichever identity set it up.
+    const seen = observed[hostId] || (host.isThisDevice ? observed.thisDevice : null) || [];
+    const sessions = seen.map(s => Object.assign({}, s, {
       hostId, observedAt: now,
       importedAs: (org.instances.find(i => i.hostId === hostId && i.sessionKey === s.key) || {}).id || null,
     }));
@@ -1381,8 +1502,23 @@
   function importObserve(profile, org, session, now) {
     if (org.instances.some(i => i.hostId === session.hostId && i.sessionKey === session.key)) return { ok: false, code: 'duplicate' };
     if (session.identity !== 'verified') return { ok: false, code: 'identity_unverified' };
+    let agentId = session.agentId || null;
+    const def = session.agentFile;
+    if (!agentId && def) {
+      // A running Agent brings its own definition: name, Home, launcher,
+      // schedule and (if recorded) ROM. Its employee Agents stay on the host.
+      const agent = {
+        id: nextId(profile, 'agent'), name: def.namespace || def.name, namespace: def.namespace || null, role: def.description || { zh: '已有 Agent', en: 'Existing Agent' },
+        origin: 'imported', hostId: session.hostId, home: session.workspace, rom: def.rom || null, runtime: session.runtime, launcher: def.launcher, profileId: def.profile || 'default',
+        model: def.model, skills: [], skillCount: def.skills || 0, heartbeat: def.heartbeat || null, subAgents: def.subAgents || 0,
+        capabilities: [{ zh: `${def.skills || 0} 个技能`, en: `${def.skills || 0} skills` }],
+        standing: { version: 1, actions: [], dailyBudget: 0, spentToday: 0, dayStart: now - (now % DAY), confirmedAt: now },
+      };
+      org.agents.push(agent);
+      agentId = agent.id;
+    }
     const inst = {
-      id: nextId(profile, 'inst'), name: session.name, agentId: session.agentId || null, hostId: session.hostId,
+      id: nextId(profile, 'inst'), name: session.name, agentId, hostId: session.hostId,
       sessionKey: session.key, runtime: session.runtime, model: session.model || null, adapter: session.adapter,
       workspace: session.workspace, status: 'importing', imported: 'observe', observedAt: session.observedAt, okrIds: [],
     };
@@ -1669,6 +1805,7 @@
     assignIssues, reassign, hostCommand, ackCommand,
     inviteStatus, createInvite, redeemProof, redeemInvite, revokeInvite, connectHost, revokeHost,
     ENDPOINT_SCOPES, validEndpoint, localServiceFor, setLocalServiceRunning, updateBinding, removeLocalService,
+    ROMS, homeState, createAgentIssues, agentFrontmatter, createAgent, confirmCreateAgent, dropCreatedAgent,
     deviceActive, actionsForRole, can, createPairing, pairingStatus, approvePairing, confirmGrant, syncData, revokeDevice,
     B32, makeRecoveryCode, parseRecoveryCode, lookupRecovery, setRecovery, applyRecovery,
     feeFor, canPay, beginTx, commitTx, queryTx,

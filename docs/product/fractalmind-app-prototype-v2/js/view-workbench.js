@@ -610,16 +610,15 @@
       <span class="avatar sm round" style="background:${done ? 'var(--ok)' : 'var(--surface-3)'};color:${done ? '#fff' : 'var(--text-2)'}">${done ? icon('check', 'xs') : n}</span>
       <div class="grow"><div class="strong">${esc(T(zh, en))}</div><div class="small muted">${esc(T(dzh, den))}</div></div>
       ${done ? `<span class="st ok">${icon('check')}${T('完成', 'Done')}</span>` : action}</div>`;
-    const ws = org.workspaces[0];
+    const agent = org.agents.find(a => a.origin === 'app' || a.origin === 'imported');
     return `<section class="card accent">
       <div class="card-h"><h2>${icon('sparkle', 'sm')}${T('开始你的第一个成果', 'Get to your first result')}</h2><span class="chip">${T('空组织 · 不继承任何示例数据', 'Empty organization · nothing inherited')}</span></div>
       <div class="list">
-        ${step(ob.workspace, 1, '选择项目目录', 'Choose a project folder', ws ? `${ws.path} · ${T('已授权读写', 'read/write granted')}` : '导入前先预览现有配置；取消不会修改原文件。', ws ? `${ws.path} · read/write granted` : 'Preview existing configuration first; cancelling changes no files.', U.btn({ action: 'open', data: { dialog: 'workspace' }, label: T('选择目录', 'Choose folder'), size: 'sm', kind: 'primary' }))}
-        ${step(ob.host, 2, '把这台电脑设为执行主机', 'Use this computer as an execution host', '后台服务同时承担 Host 与 Coordinator 角色，一次确认完成准入。', 'A background service runs the Host and Coordinator roles; one confirmation completes admission.', U.btn({ action: 'open', data: { dialog: 'bootstrap' }, label: T('设为执行主机', 'Set up'), size: 'sm', kind: 'primary', perm: 'manage_hosts' }))}
-        ${step(ob.model, 3, '配置模型', 'Configure a model', '验证可用性，了解计费来源与已知限制。', 'Verify it works and see the billing source and limits.', U.btn({ action: 'open', data: { dialog: 'model' }, label: T('配置模型', 'Configure'), size: 'sm', kind: ob.host ? 'primary' : '', disabled: !ob.host, why: T('先准备执行主机', 'Prepare a host first') }))}
-        ${step(ob.okr, 4, '创建第一个 OKR', 'Create your first OKR', 'Agent 协助拟定量化成功标准与结果型 KR，你确认边界后激活。', 'The Agent drafts quantified criteria and result KRs; you confirm limits, then activate.', U.btn({ action: 'go', data: { to: 'okrs/new' }, label: T('新建 OKR', 'New OKR'), size: 'sm', kind: ob.model ? 'primary' : '', disabled: !ob.model, why: T('先配置模型', 'Configure a model first') }))}
+        ${step(ob.host, 1, '把这台电脑设为执行主机', 'Use this computer as an execution host', '后台服务同时承担 Host 与 Coordinator 角色，一次确认完成准入。', 'A background service runs the Host and Coordinator roles; one confirmation completes admission.', U.btn({ action: 'open', data: { dialog: 'bootstrap' }, label: T('设为执行主机', 'Set up'), size: 'sm', kind: 'primary', perm: 'manage_hosts' }))}
+        ${step(ob.agent, 2, '添加 Agent', 'Add an Agent', agent ? `${agent.name} · ${agent.home || ''}` : '新建：名称、Home 目录与 ROM；或导入这台电脑上已在运行的 Agent。', agent ? `${agent.name} · ${agent.home || ''}` : 'Create one (name, Home directory, ROM) or import an Agent already running on this computer.', `<div class="row">${U.btn({ action: 'open', data: { dialog: 'discover', host: (M.localServiceFor(p).hostId || '') }, label: T('导入', 'Import'), size: 'sm', disabled: !ob.host, why: T('先准备执行主机', 'Prepare a host first') })}${U.btn({ action: 'open', data: { dialog: 'agent-create', setup: '1' }, label: T('新建 Agent', 'New Agent'), size: 'sm', kind: ob.host ? 'primary' : '', disabled: !ob.host, why: T('先准备执行主机', 'Prepare a host first'), perm: 'manage_hosts' })}</div>`)}
+        ${step(ob.okr, 3, '创建第一个 OKR', 'Create your first OKR', 'Agent 协助拟定量化成功标准与结果型 KR，你确认边界后激活。', 'The Agent drafts quantified criteria and result KRs; you confirm limits, then activate.', U.btn({ action: 'go', data: { to: 'okrs/new' }, label: T('新建 OKR', 'New OKR'), size: 'sm', kind: ob.agent ? 'primary' : '', disabled: !ob.agent, why: T('先添加 Agent', 'Add an Agent first') }))}
       </div>
-      <div class="note mt-12">${icon('info')}<div>${T('没有项目时可使用明确标记的示例工作区。依赖安装或模型鉴权失败时，已完成的步骤会保留。', 'Without a project, use a clearly labeled sample workspace. Completed steps are kept if installs or model auth fail.')}</div></div>
+      <div class="note mt-12">${icon('info')}<div>${T('Agent 的 Home 是它的工作目录：ROM 文件、技能、记忆与 OKR 投影都在这里。中途退出时，已完成的步骤会保留。', 'An Agent’s Home is its working directory: ROM files, skills, memory and the OKR projection live there. Completed steps are kept if you stop midway.')}</div></div>
     </section>`;
   }
 

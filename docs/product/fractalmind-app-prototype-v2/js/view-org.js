@@ -93,12 +93,15 @@
       <div class="note mt-12">${icon('info')}<div>${T('Workspace 指向实际项目目录，不是另一种组织。现有 Agent OS 文件（OKR.md、memory/ 等）是链上记录的投影，编辑需版本校验。', 'A workspace points to a real project folder; it is not another kind of organization. Agent OS files (OKR.md, memory/…) project chain records and are version-checked on edit.')}</div></div></section>`;
   }
 
+  /** Launchers installed on this computer (#67). A launcher's own profile
+   * decides the model; the App never reads its accounts or keys. */
   function runtime() {
-    const p = P();
-    const ok = !p.onboarding || p.onboarding.model;
-    return `<section class="card"><div class="card-h"><h2>${T('默认兼容运行时', 'Default runtime')}</h2><span class="chip ${ok ? 'ok' : 'warn'}">${ok ? T('已验证', 'Verified') : T('未配置', 'Not configured')}</span></div>
-      <dl class="kv"><dt>${T('运行时', 'Runtime')}</dt><dd>Claude Code 2.4 · ${T('三桌面可用', 'all three desktops')}</dd><dt>${T('模型账号', 'Model account')}</dt><dd>${T('你的账号（由你提供和授权，可随时撤销）', 'Your account (you provide and authorize it; revocable)')}</dd><dt>${T('计费来源', 'Billing')}</dt><dd>${T('模型费用由模型服务商计费，与链上运行费分开显示', 'Billed by the model provider, shown separately from chain run fees')}</dd><dt>${T('已知限制', 'Known limits')}</dt><dd>${T('tmux 观察适配器不支持暂停与约束；手机不在本地运行完整 Agent', 'The tmux observe adapter cannot pause or take constraints; phones do not run full Agents locally')}</dd></dl>
-      <div class="card-f" style="justify-content:flex-start">${U.btn({ action: 'open', data: { dialog: 'model' }, label: ok ? T('重新验证', 'Verify again') : T('配置模型', 'Configure model'), icon: 'check', kind: ok ? '' : 'primary' })}</div></section>`;
+    const svc = M.localServiceFor(P());
+    const host = U.host(svc.hostId);
+    const launchers = (host && host.launchers) || [];
+    return `<section class="card"><div class="card-h"><h2>${T('Agent 启动器', 'Agent launchers')}</h2><span class="chip ${launchers.length ? 'ok' : 'warn'}">${launchers.length ? T('这台电脑', 'This computer') : T('还不是执行主机', 'Not a host yet')}</span></div>
+      ${launchers.length ? `<dl class="kv">${launchers.map(l => `<dt>${esc(l.name)}</dt><dd>${l.profiles.map(pr => `<span class="mono">${esc(pr.id)}</span> · ${esc(L(pr.model))}`).join('<br>')}</dd>`).join('')}</dl>` : `<div class="small muted">${T('把这台电脑设为执行主机后，这里列出已安装的启动器（Codex CLI、Claude Code 等）及其配置。', 'After this computer becomes an execution host, its launchers (Codex CLI, Claude Code…) and profiles appear here.')}</div>`}
+      <div class="tiny muted mt-8">${T('Agent 的 AGENTS.md 选择启动器与配置；模型、账号与密钥由启动器自己管理，模型费用由服务商计费，与链上运行费分开。', 'Each Agent’s AGENTS.md picks a launcher and profile; models, accounts and keys stay with the launcher, and model usage is billed by the provider, separately from chain fees.')}</div></section>`;
   }
 
   function connections() {
@@ -234,14 +237,6 @@
     };
   };
 
-  FM.dialogs.model = st => ({
-    title: T('配置模型', 'Configure a model'), size: 'sm',
-    body: `<div class="col">${[['demo', '演示模型（不需要密钥）', 'Demo model (no key needed)'], ['account', '使用我已登录的 CLI 账号', 'Use my signed-in CLI account'], ['local', '本地模型', 'Local model']].map(([k, zh, en]) => `<button class="opt" data-action="set-f" data-key="model.pick" data-value="${k}" aria-pressed="${U.f('model.pick', 'demo') === k}"><span class="ico">${icon(k === 'local' ? 'cpu' : 'sparkle')}</span><span class="strong">${esc(T(zh, en))}</span></button>`).join('')}</div>
-      ${st.verified ? `<div class="note ok">${icon('check')}<div>${T('可用性已验证。计费由模型服务商负责，与链上运行费分开。', 'Verified. Billing is by the model provider, separate from chain run fees.')}</div></div>` : ''}
-      <div class="tiny muted">${T('原型不会要求或保存任何真实 API 密钥。', 'The prototype never asks for or stores a real API key.')}</div>`,
-    foot: st.verified ? `<button class="btn primary" data-action="close-dialog">${T('完成', 'Done')}</button>` : `<button class="btn" data-action="close-dialog">${T('取消', 'Cancel')}</button><button class="btn primary" data-action="model-verify">${T('验证可用性', 'Verify')}</button>`,
-  });
-
   Object.assign(FM.actions, {
     'ws-import': () => {
       const p = P();
@@ -256,14 +251,6 @@
       ui.dialog = null;
       toast(T('已导入并授权读写。原文件未被修改。', 'Imported with read/write access. No files were changed.'), 'ok');
       if (FM.review) FM.review.mark('onboard.workspace');
-      render();
-    },
-    'model-verify': () => {
-      const p = P();
-      if (p.onboarding) p.onboarding.model = true;
-      U.save();
-      ui.dialog.verified = true;
-      if (FM.review) FM.review.mark('onboard.model');
       render();
     },
   });
@@ -317,7 +304,9 @@
         ${st.err ? `<div class="note danger">${icon('x')}<div>${esc(st.err)} ${T('已完成的步骤会保留；继续时先查询原交易，不会重复提交。', 'Completed steps are kept; continuing queries the original transaction and never resubmits.')}</div></div>` : ''}
         ${done >= BOOT_STEPS.length ? `<div class="calm">${icon('check')}<span>${T(`这台电脑已是执行主机，Coordinator 入口 ${endpoint}（${scopeText}）。`, `This computer is an execution host; coordinator endpoint ${endpoint} (${scopeText}).`)}</span></div>` : ''}`,
       foot: done >= BOOT_STEPS.length
-        ? `<button class="btn primary" data-action="close-dialog">${T('完成', 'Done')}</button>`
+        ? (O().agents.some(a => a.hostId === svcNow.hostId)
+          ? `<button class="btn primary" data-action="close-dialog">${T('完成', 'Done')}</button>`
+          : `<button class="btn" data-action="close-dialog">${T('稍后', 'Later')}</button>${U.btn({ action: 'open', data: { dialog: 'discover', host: svcNow.hostId }, label: T('导入已运行的 Agent', 'Import a running Agent') })}${U.btn({ action: 'open', data: { dialog: 'agent-create', setup: '1' }, label: T('下一步：新建 Agent', 'Next: create an Agent'), kind: 'primary', perm: 'manage_hosts' })}`)
         : `${st.err ? `<button class="btn" data-action="close-dialog">${T('稍后继续', 'Continue later')}</button>${U.btn({ action: 'bootstrap-next', label: T('继续', 'Continue'), kind: 'primary', disabled: !!st.busy })}` : ''}`,
     };
   };
@@ -380,11 +369,10 @@
           r.host.isThisDevice = true;
           r.host.roles = ['host', 'coordinator'];
           M.localServiceFor(pp).hostId = r.host.id;
-          if (!o.agents.length) {
-            o.agents.push({ id: 'agent-builder', name: 'Builder', role: { zh: '构建与交付', en: 'Build and deliver' }, runtime: 'Claude Code', model: 'Claude Sonnet 5.5', capabilities: [{ zh: '文件读写', en: 'Files' }, { zh: '命令执行', en: 'Commands' }], standing: { version: 1, actions: [], dailyBudget: 200, spentToday: 0, dayStart: 0, confirmedAt: U.now() } });
-            o.agents.push({ id: 'agent-reviewer', name: 'Reviewer', role: { zh: '独立验证', en: 'Independent verification' }, runtime: 'Claude Code', model: 'Claude Opus 5.5', verifier: true, capabilities: [{ zh: '只读检查', en: 'Read-only checks' }], standing: { version: 1, actions: [], dailyBudget: 200, spentToday: 0, dayStart: 0, confirmedAt: U.now() } });
-          }
-          o.instances.push({ id: M.nextId(pp, 'inst'), name: 'builder-1', agentId: 'agent-builder', hostId: r.host.id, runtime: 'Claude Code 2.4', adapter: 'native', status: 'idle', workspace: (o.workspaces[0] || {}).path || '', sessionKey: 'fm:builder-1', okrIds: [] });
+          // The host reports its launchers and folder states; Agents are added
+          // explicitly afterwards (create from a ROM, or import a running one).
+          r.host.launchers = U.F.localLaunchers();
+          r.host.folders = U.F.localFolders();
           o.workspaces.forEach(w => { if (!w.hostIds.includes(r.host.id)) w.hostIds.push(r.host.id); });
           if (pp.onboarding) pp.onboarding.host = true;
           if (FM.review) FM.review.mark('onboard.host');

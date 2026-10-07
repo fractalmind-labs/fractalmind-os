@@ -633,9 +633,9 @@ check('discovery', 'scan, observe-only import, duplicates and unverified identit
   const inst = M.importObserve(p, org, mini[0], T0).instance;
   assert.equal(inst.imported, 'observe');
   assert.equal(M.importObserve(p, org, mini[0], T0).code, 'duplicate');
-  const mbp = M.scanHost(org, 'host-mbp', seen, T0).sessions;
-  assert.equal(mbp[0].name, mini[0].name);
-  assert.equal(M.importObserve(p, org, mbp[0], T0).code, 'identity_unverified', 'same name on another host is not merged');
+  const gpu = M.scanHost(org, 'host-gpu', seen, T0).sessions;
+  assert.equal(gpu[0].name, mini[0].name);
+  assert.equal(M.importObserve(p, org, gpu[0], T0).code, 'identity_unverified', 'same name on another host is not merged');
   assert.equal(M.scanHost(org, 'host-build', seen, T0).sessions[0].importedAs, 'inst-tester-1');
 });
 check('discovery', 'only constraint-capable, freshly observed instances join an OKR', () => {
@@ -761,6 +761,106 @@ check('organization', 'exports cover one organization, exclude secrets and list 
   assert.ok(!/FMR1|FMI1|codeDigest|digest/.test(json));
   assert.equal(out.manifest.complete, false);
   assert.ok(out.manifest.missing.some(m => m.hostId === 'host-nas'));
+});
+
+/* -------------------------------------------- Create and import (#67) */
+
+check('agents', 'the ROM catalog matches roms/agent-os-roms manifests', () => {
+  const dir = path.join(__dirname, '../../../roms/agent-os-roms/roms');
+  const names = fs.readdirSync(dir).filter(d => fs.existsSync(path.join(dir, d, 'manifest.yaml'))).sort();
+  assert.deepEqual(M.ROMS.map(r => r.id).sort(), names);
+  M.ROMS.forEach(r => {
+    const text = fs.readFileSync(path.join(dir, r.id, 'manifest.yaml'), 'utf8');
+    assert.equal(text.match(/^rom_version:\s*(\S+)/m)[1], r.version, `${r.id} version`);
+    assert.equal(text.match(/^rom_family:\s*(\S+)/m)[1], r.family, `${r.id} family`);
+    assert.equal(text.match(/^compatibility_status:\s*(\S+)/m)[1], r.compat, `${r.id} compatibility`);
+    const block = (key) => {
+      const m = text.match(new RegExp(`^${key}:\\n((?:[ ]+.*\\n)+)`, 'm'));
+      return m ? m[1] : '';
+    };
+    const files = (text.match(/creates_files:\n((?:\s+- .*\n)+)/) || [])[1].match(/- (\S+)/g).map(x => x.slice(2));
+    assert.deepEqual([...r.files].sort(), files.sort(), `${r.id} install files`);
+    const skillNames = b => [...b.matchAll(/^  - (?:name: )?([\w-]+)\s*$/gm)].map(x => x[1]);
+    assert.deepEqual(r.included, skillNames(block('included_skills')), `${r.id} included skills`);
+    assert.deepEqual(r.optional, skillNames(block('optional_skills')), `${r.id} optional skills`);
+  });
+});
+
+check('agents', 'a new Agent needs a name, an empty or new Home and a ROM on this computer', () => {
+  const p = fresh();
+  const org = personal(p);
+  const base = { name: 'writer', home: '~/agents/writer', romId: 'manager-heavy-core', hostId: p.localService.hostId, launcher: 'codex', profileId: 'main' };
+  assert.deepEqual(M.createAgentIssues(p, org, base), []);
+  const issue = (patch, code) => assert.ok(M.createAgentIssues(p, org, Object.assign({}, base, patch)).includes(code), code);
+  issue({ name: 'Writer' }, 'name');
+  issue({ name: 'builder' }, 'name_taken');
+  issue({ home: '' }, 'home');
+  issue({ home: '~/work-assistant' }, 'home_is_agent');
+  issue({ home: '~/Documents' }, 'home_not_empty');
+  issue({ romId: '' }, 'rom');
+  issue({ romId: 'trinity', optionalSkills: ['notifier'] }, 'skills');
+  issue({ hostId: 'host-build' }, 'host_not_local');
+  issue({ launcher: 'codex', profileId: 'nope' }, 'launcher');
+  assert.deepEqual(M.createAgentIssues(p, org, Object.assign({}, base, { home: '~/agents/empty' })), [], 'an empty folder is fine');
+  M.setLocalServiceRunning(p, org, false, T0);
+  issue({}, 'service_stopped');
+});
+
+check('agents', 'creation installs the ROM in one transaction; a failure leaves nothing behind', () => {
+  const p = fresh();
+  const org = personal(p);
+  const before = { agents: org.agents.length, instances: org.instances.length };
+  const input = { name: 'writer', home: '~/agents/writer', romId: 'manager-heavy-core', optionalSkills: ['notifier'], hostId: p.localService.hostId, launcher: 'codex', profileId: 'main' };
+  const res = M.createAgent(p, org, input, T0);
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.skills, ['agent-manager', 'team-manager', 'notifier']);
+  assert.ok(res.files.includes('SOUL.md') && res.files.includes('okrs/Candidate.md'));
+  assert.match(res.frontmatter, /namespace: writer/);
+  assert.match(res.frontmatter, /launcher_args: \["--profile", "main"\]/);
+  assert.match(res.frontmatter, /rom: \{ name: manager-heavy-core, version: 0\.6\.0 \}/);
+  assert.equal(res.instance.sessionKey, 'tmux:writer--main');
+  assert.deepEqual(res.agent.standing.actions, [], 'no standing actions by default');
+  assert.equal(M.createAgentIssues(p, org, Object.assign({}, input, { name: 'other' }))[0], 'home_is_agent', 'the Home is now an Agent Home');
+  const tx = M.beginTx(p, { kind: 'agent.create', orgId: F.P, payload: { instanceId: res.instance.id } }, T0).tx;
+  assert.equal(M.commitTx(p, tx.id, T0 + 1000).ok, true);
+  assert.equal(res.instance.status, 'running');
+  const again = M.beginTx(p, { kind: 'agent.create', orgId: F.P, payload: { instanceId: res.instance.id } }, T0).tx;
+  assert.equal(M.commitTx(p, again.id, T0 + 2000).code, 'not_creating', 'never applied twice');
+  const failed = M.createAgent(p, org, Object.assign({}, input, { name: 'other', home: '~/agents/other' }), T0);
+  M.dropCreatedAgent(org, failed.instance.id);
+  assert.equal(org.agents.length, before.agents + 1);
+  assert.equal(org.instances.length, before.instances + 1);
+  assert.deepEqual(M.createAgentIssues(p, org, Object.assign({}, input, { name: 'other', home: '~/agents/other' })), [], 'a failed creation frees its Home');
+});
+
+check('agents', 'importing a running Agent takes its definition from AGENTS.md', () => {
+  const p = fresh();
+  const org = personal(p);
+  const sessions = M.scanHost(org, 'host-mbp', F.observedSessions(T0), T0).sessions;
+  const research = sessions.find(x => x.key === 'tmux:research--main');
+  const res = M.importObserve(p, org, research, T0);
+  const agent = M.find(org.agents, res.instance.agentId);
+  assert.equal(agent.name, 'research');
+  assert.equal(agent.home, '~/research-desk');
+  assert.equal(agent.profileId, 'research');
+  assert.equal(agent.rom, null, 'no ROM recorded');
+  assert.equal(res.instance.imported, 'observe');
+  assert.equal(M.importObserve(p, org, research, T0).code, 'duplicate');
+  const home = sessions.find(x => x.key === 'tmux:home--main');
+  assert.deepEqual(M.find(org.agents, M.importObserve(p, org, home, T0).instance.agentId).rom, { id: 'hermes-agent', version: '0.1.0' });
+  const main = sessions.find(x => x.key === 'tmux:main');
+  const mainAgent = M.find(org.agents, M.importObserve(p, org, main, T0).instance.agentId);
+  assert.equal(mainAgent.subAgents, 10, 'employee Agents are listed, not imported');
+  assert.equal(org.instances.filter(i => i.workspace === '~/work-assistant').length, 1);
+  const fresh2 = F.emptyOrgData();
+  fresh2.hosts.push({ id: 'host-new', status: 'online', isThisDevice: true, membership: { state: 'active' } });
+  assert.equal(M.scanHost(fresh2, 'host-new', F.observedSessions(T0), T0).sessions.length, 4, 'a new identity sees this computer\'s running Agents');
+});
+
+check('agents', 'new identities start with no Agents; onboarding tracks host, Agent and OKR', () => {
+  const empty = F.createEmptyProfile({ name: 'N', deviceName: 'Mac', platform: 'macos', orgName: 'O', wallet: {} }, T0, M);
+  assert.deepEqual(empty.onboarding, { host: false, agent: false, okr: false });
+  assert.equal(Object.values(empty.data)[0].agents.length, 0);
 });
 
 /* ------------------------------------------------------------ Fixtures */
