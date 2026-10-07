@@ -16,6 +16,7 @@ import type { ConnectionProfile, Membership } from "./domain";
 import { agentDiscovery, type DiscoveredInstance } from "./agent-discovery";
 import { definitionName, type AgentDefinition } from "./agents";
 import { LocalHostNative } from "./local-host";
+import { deviceGrant } from "./device-grant";
 import {
   BatchImport,
   BatchImportError,
@@ -74,27 +75,6 @@ const sui = (mist: string | bigint) => {
   return `${whole}.${frac} SUI`;
 };
 
-async function grantFor(
-  chain: ChainReadSession,
-  device: string,
-  organizationId: string,
-  actions: number[],
-) {
-  const human = await chain.human();
-  const candidates = human.grants.value?.filter(
-    (g) =>
-      g.device === device &&
-      !g.revoked &&
-      g.generation === human.human.generation &&
-      actions.every((a) => g.actions.includes(a)) &&
-      BigInt(g.expires_at_ms) > human.clockMs &&
-      (g.org_scope === null || g.org_scope === organizationId),
-  );
-  const scoped = candidates?.filter((g) => g.org_scope === organizationId),
-    usable = scoped?.length ? scoped : candidates;
-  if (usable?.length !== 1) throw new DeviceIdentityError("invalid_grant");
-  return usable[0].id;
-}
 
 /** Import running Agents (J11, #70): this computer is read directly and
  * listed at once; remote hosts are scanned through their coordinator. Tick
@@ -218,7 +198,7 @@ export default function AgentDiscover({
         (c, a) => invoke(c, a),
         deviceProfile,
       );
-      const grantId = await grantFor(
+      const grantId = await deviceGrant(
         chain,
         signer.device.address,
         organizationId,
@@ -272,7 +252,7 @@ export default function AgentDiscover({
       (c, a) => invoke(c, a),
       deviceProfile!,
     );
-    const grantId = await grantFor(
+    const grantId = await deviceGrant(
       chain,
       signer.device.address,
       organizationId,

@@ -91,6 +91,12 @@ const icons: Record<string, ReactNode> = {
       <path d="M8.5 20.5h7M12 16.5v4" />
     </>
   ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.2-4.2" />
+    </>
+  ),
   grid: (
     <>
       <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" />

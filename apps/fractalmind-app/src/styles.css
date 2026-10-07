@@ -220,6 +220,11 @@ button.okr-card:hover:not(:disabled) { background: var(--surface); border-color:
 .okr-card .bar { display: block; }
 button.back { min-height: 0; margin-bottom: 10px; color: var(--text-3); font-weight: 500; font-size: 13px; }
 button.back:hover:not(:disabled) { background: none; border: 0; color: var(--text); }
+/* Hosts & compute (#73): tabs and list rows are buttons in the App. */
+button.tab:hover:not(:disabled) { background: none; border-color: transparent; }
+button.tab[aria-selected="true"], button.tab[aria-selected="true"]:hover:not(:disabled) { border-bottom-color: var(--brand); }
+button.item { width: 100%; border: 0; border-radius: 8px; background: none; text-align: left; font-weight: 400; }
+.search .i .nav-icon { width: 16px; height: 16px; }
 .kr .trust-ladder { margin: 6px 0 0; }
 .kr-metric .m-l { display: inline-block; }
 .detail-side .card h3, .detail .card-h h3 { margin: 0; }
