@@ -214,3 +214,38 @@ test("notifications come from chain facts, newest first", async () => {
   );
   assert.equal(items.find((x) => x.icon === "trend")?.zh, "Goal · KR1 测得 5");
 });
+
+test("an agent-manager Agent is found by its Home after its session restarts", async () => {
+  const { matchLocal } = await import("../src/v2/local-agents");
+  const home = "ab".repeat(32);
+  const session = (instanceId: string, workspaceHash: string, agent = true) =>
+    ({
+      instanceId,
+      workspaceHash,
+      state: "observed",
+      agent: agent ? { home: "/h", name: "main" } : null,
+    }) as never;
+  const chainAgent = {
+    instance_id: "tmux-old",
+    runtime: "agent-manager-v1",
+    workspace_hash: Array(32).fill(0xab),
+  };
+  const now = [
+    session("tmux-new", home),
+    session("tmux-other", "cd".repeat(32)),
+  ];
+  assert.equal(
+    (matchLocal(now, chainAgent) as { instanceId: string }).instanceId,
+    "tmux-new",
+  );
+  // Other runtimes stay bound to the exact instance.
+  assert.equal(
+    matchLocal(now, { ...chainAgent, runtime: "tmux-observe" }),
+    null,
+  );
+  // A plain tmux session in the same folder is not an agent-manager Home.
+  assert.equal(
+    matchLocal([session("tmux-new", home, false)], chainAgent),
+    null,
+  );
+});

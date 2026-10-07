@@ -7,7 +7,7 @@ import { useDialogs } from "../dialogs";
 import { Btn, Empty, Icon, date, shortId, useLang, useT } from "../ui";
 import { okrTitle } from "../model";
 import { agentName, hostName } from "../../display";
-import { useLocalSessions } from "../local-agents";
+import { matchLocal, useLocalSessions } from "../local-agents";
 import { ChatDrawer } from "../Chat";
 import { useState } from "react";
 import type { AgentDefinition } from "../../agents";
@@ -81,7 +81,7 @@ export default function Agents() {
       ) : (
         <div className="grid-2">
           {agents.map((a) => {
-            const seen = sessions.find((s) => s.instanceId === a.instance_id);
+            const seen = matchLocal(sessions, a);
             const def = seen?.agent ?? null;
             const member = members.find((m) => m.id === a.membership_id);
             const owns = okrs.filter((o) => o.okr.managed_agent === a.id && o.okr.state === 1);
@@ -190,7 +190,7 @@ export default function Agents() {
               <tbody>
                 {agents.map((a) => {
                   const member = members.find((m) => m.id === a.membership_id);
-                  const seen = sessions.find((s) => s.instanceId === a.instance_id);
+                  const seen = matchLocal(sessions, a);
                   // Only this computer's own scan proves it is running here.
                   const here = !!seen && seen.state !== "dead";
                   const owns = okrs.filter((o) => o.okr.managed_agent === a.id && o.okr.state === 1);
