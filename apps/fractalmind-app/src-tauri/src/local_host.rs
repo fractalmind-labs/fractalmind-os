@@ -162,6 +162,25 @@ fn valid_public(value: &serde_json::Value, profile: &str) -> bool {
         && hex_of(value.get("signing_public_key"), 64)
         && hex_of(value.get("encryption_public_key"), 64)
 }
+/// Signed observations are valid for 60s and the import revalidates them
+/// over many chain reads; a 10s heartbeat with a fresh scan leaves room.
+const HEARTBEAT_BLOCK: &str =
+    "heartbeat:\n  interval: \"10s\"\nagents:\n  scan_interval: \"10s\"\n";
+/// Configurations written before the 10s heartbeat gain it on reinstall.
+fn ensure_heartbeat(config: &Path) -> Result<(), String> {
+    let Ok(text) = fs::read_to_string(config) else {
+        return Ok(());
+    };
+    if text.lines().any(|l| l == "heartbeat:" || l == "agents:") {
+        return Ok(());
+    }
+    let mut out = text;
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
+    out.push_str(HEARTBEAT_BLOCK);
+    write_private(config, out.as_bytes())
+}
 pub fn key_profile(profile: &str) -> String {
     format!("app-{profile}")
 }
@@ -213,6 +232,7 @@ pub fn render_config(profile: &str, chain: &Chain, org: &Organization, workspace
         format!("  protocol_registry_id: {}", q(&chain.registry_id)),
         format!("  org_id: {}", q(&org.organization_id)),
         format!("  host_join_gas_budget: {JOIN_GAS_BUDGET}"),
+        HEARTBEAT_BLOCK.trim_end().into(),
         "runtime:".into(),
         "  enabled: true".into(),
         "  adapter_kind: native-file-agent".into(),
@@ -474,7 +494,10 @@ impl Layout {
         }
         match action {
             "install" | "start" if self.record().is_none() => Err("LocalHostNotConfigured".into()),
-            "install" => service::install(self, self.envd()?),
+            "install" => {
+                ensure_heartbeat(&self.config)?;
+                service::install(self, self.envd()?)
+            }
             "start" => service::start(self),
             "stop" => service::stop(self),
             _ => Err("InvalidAction".into()),
@@ -1178,7 +1201,18 @@ mod tests {
         assert_eq!(endpoint(7444), "http://127.0.0.1:7444");
         assert!(render_keys_config("primary", "localnet").contains("key_profile: \"app-primary\""));
         // Block structure: sections at column 0, keys at 2, workspace entry at 4.
-        let sections = ["identity:", "roles:", "coordinator:", "sui:", "runtime:"];
+        let sections = [
+            "identity:",
+            "roles:",
+            "coordinator:",
+            "sui:",
+            "heartbeat:",
+            "agents:",
+            "runtime:",
+        ];
+        assert!(
+            yaml.contains("heartbeat:\n  interval: \"10s\"\nagents:\n  scan_interval: \"10s\"\n")
+        );
         for line in yaml.lines().filter(|l| !l.starts_with('#')) {
             let indent = line.len() - line.trim_start().len();
             assert!(
@@ -1262,6 +1296,23 @@ mod tests {
                 "{bad}"
             );
         }
+        fs::remove_dir_all(&dir).unwrap();
+    }
+    #[test]
+    fn older_configs_gain_the_heartbeat_once() {
+        let dir = std::env::temp_dir().join(format!("fm-hb-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let cfg = dir.join("sentinel.yaml");
+        fs::write(
+            &cfg,
+            "identity:\n  key_profile: \"app-x\"\nruntime:\n  enabled: true\n",
+        )
+        .unwrap();
+        ensure_heartbeat(&cfg).unwrap();
+        ensure_heartbeat(&cfg).unwrap();
+        let text = fs::read_to_string(&cfg).unwrap();
+        assert_eq!(text.matches("heartbeat:").count(), 1);
+        assert!(text.ends_with(HEARTBEAT_BLOCK));
         fs::remove_dir_all(&dir).unwrap();
     }
     #[test]

@@ -671,6 +671,13 @@ func main() {
 			lastAgents = agents
 
 		case <-heartbeatTicker.C:
+			// A signed observation is valid for 60s; send this moment's scan
+			// rather than the last periodic one, so readers get its full window.
+			if connectionKeys != nil {
+				if agents, err := scan(); err == nil {
+					lastAgents = agents
+				}
+			}
 			payload := heartbeat.NewPayload(
 				cfg.Identity.HostID,
 				cfg.Identity.Hostname,
