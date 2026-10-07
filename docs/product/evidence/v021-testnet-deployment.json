@@ -12,10 +12,11 @@
     "network": "testnet",
     "rpcUrl": "https://fullnode.testnet.sui.io:443",
     "packageId": "0x4c0cb05c43ef5c45720b1e584ce78f39047b006e63c7e20a0a3cd6615c4dc32c",
-    "okrPackageId": "0x120eb48c3b9c2a28451bea22c42b28bd3d3749526c4cc6f86701de0a697a7fe7",
+    "okrPackageId": "0x3eebdb2361d0bbcbb1b6e8b6a03fcb2876b595457d28c14b7ba02953876e81bc",
     "directPackageId": "0x1977842bde7e0aa412aa39feac5edd3c69c72335942f801c84517387281e3a17",
     "registryId": "0xe4405efce88948122a5ea2e1bf61523b4bad1e4e155dad0c8cef61867f7b7ca2",
-    "originalPackageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95"
+    "originalPackageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95",
+    "originalOkrPackageId": "0x120eb48c3b9c2a28451bea22c42b28bd3d3749526c4cc6f86701de0a697a7fe7"
   },
   "identityRegistryId": "0x267faa6a730523fc8d6b12c5a6a426bfefeed16aa3718f03bdee9e05fd962e0b",
   "identityInitialization": "atomic_with_core_publish",
@@ -60,6 +61,18 @@
       "actualGasMist": "707898740",
       "reason": "#70: agent-manager-v1 runtime; import_agent may confirm control for agent-manager Homes",
       "notes": "okr and direct-agent still link protocol v1 and are upgraded with #70 phase 2"
+    },
+    {
+      "date": "2026-10-07",
+      "package": "okr",
+      "version": 2,
+      "policy": "compatible",
+      "packageId": "0x3eebdb2361d0bbcbb1b6e8b6a03fcb2876b595457d28c14b7ba02953876e81bc",
+      "originalPackageId": "0x120eb48c3b9c2a28451bea22c42b28bd3d3749526c4cc6f86701de0a697a7fe7",
+      "digest": "7CsAiUHquqzypitArLfWWSaqh8sWj1Bm9dZpw2UcKFx2",
+      "actualGasMist": "147957140",
+      "reason": "#75 M2: okr::assign_agent_manager assigns an OKR to an agent-manager Agent imported with control; links protocol v2",
+      "notes": "direct-agent still links protocol v1"
     }
   ]
 }
