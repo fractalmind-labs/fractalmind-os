@@ -818,7 +818,18 @@ mod service {
         let target = format!("gui/{uid}/{}", layout.label);
         let _ = launchctl(&["bootout", &target]);
         let _ = launchctl(&["disable", &target]);
-        Ok(())
+        // bootout returns while the job may still be shutting down; a start
+        // in that window would only kickstart a job that is about to vanish.
+        for _ in 0..100 {
+            if !launchctl(&["print", &target])
+                .map(|o| o.status.success())
+                .unwrap_or(false)
+            {
+                return Ok(());
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        Err("ServiceStopTimeout".into())
     }
     pub fn uninstall(layout: &Layout) -> Result<(), String> {
         stop(layout)?;
