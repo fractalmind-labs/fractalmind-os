@@ -552,13 +552,13 @@
         { key: 'tmux:codex-docs', name: 'codex-docs', runtime: 'Codex CLI 0.9', adapter: 'tmux-observe', workspace: '~/code/fractalmind-docs', identity: 'verified', startedAt: now - 50 * MIN, task: L('更新文档站链接', 'Updating docs site links') },
       ],
       'host-mbp': [
-        { key: 'tmux:main', name: 'main', runtime: 'Codex CLI', adapter: 'tmux-observe', workspace: '~/work-assistant', identity: 'verified', startedAt: now - 13 * DAY, task: L('工作助理：日程、调研与员工 Agent 调度', 'Work assistant: schedule, research and employee dispatch'),
+        { key: 'tmux:main', name: 'main', runtime: 'Codex CLI', adapter: 'agent-manager', workspace: '~/work-assistant', identity: 'verified', startedAt: now - 13 * DAY, task: L('工作助理：日程、调研与员工 Agent 调度', 'Work assistant: schedule, research and employee dispatch'),
           agentFile: { name: 'main', namespace: null, description: L('工作助理', 'Work assistant'), launcher: 'codex', profile: 'main', model: L('ornith · 局域网 Mac Studio', 'ornith · LAN Mac Studio'), skills: 32, subAgents: 10, heartbeat: { cron: '0 * * * *', by: 'crontab' }, rom: null } },
-        { key: 'tmux:research--main', name: 'research--main', runtime: 'Codex CLI', adapter: 'tmux-observe', workspace: '~/research-desk', identity: 'verified', startedAt: now - 2 * HOUR, task: L('早晚研究报告与预警', 'Morning and evening research reports and alerts'),
+        { key: 'tmux:research--main', name: 'research--main', runtime: 'Codex CLI', adapter: 'agent-manager', workspace: '~/research-desk', identity: 'verified', startedAt: now - 2 * HOUR, task: L('早晚研究报告与预警', 'Morning and evening research reports and alerts'),
           agentFile: { name: 'main', namespace: 'research', description: L('研究员', 'Researcher'), launcher: 'codex', profile: 'research', model: L('ornith · 局域网 Mac Studio', 'ornith · LAN Mac Studio'), skills: 30, subAgents: 0, heartbeat: { schedules: 5, by: 'crontab' }, rom: null } },
-        { key: 'tmux:trading-bot--main', name: 'trading-bot--main', runtime: 'Codex CLI', adapter: 'tmux-observe', workspace: '~/code/trading-bot', identity: 'verified', startedAt: now - 10 * DAY, task: L('模拟盘交易与风控心跳', 'Paper trading and risk heartbeat'),
+        { key: 'tmux:trading-bot--main', name: 'trading-bot--main', runtime: 'Codex CLI', adapter: 'agent-manager', workspace: '~/code/trading-bot', identity: 'verified', startedAt: now - 10 * DAY, task: L('模拟盘交易与风控心跳', 'Paper trading and risk heartbeat'),
           agentFile: { name: 'main', namespace: 'trading-bot', description: L('交易机器人', 'Trading bot'), launcher: 'codex', profile: 'main', model: L('ornith · 局域网 Mac Studio', 'ornith · LAN Mac Studio'), skills: 13, subAgents: 0, heartbeat: { cron: '*/5 * * * *', by: 'project-script' }, rom: null } },
-        { key: 'tmux:home--main', name: 'home--main', runtime: 'Codex CLI', adapter: 'tmux-observe', workspace: '~/home-assistant', identity: 'verified', startedAt: now - 16 * DAY, task: L('家庭助手', 'Household assistant'),
+        { key: 'tmux:home--main', name: 'home--main', runtime: 'Codex CLI', adapter: 'agent-manager', workspace: '~/home-assistant', identity: 'verified', startedAt: now - 16 * DAY, task: L('家庭助手', 'Household assistant'),
           agentFile: { name: 'main', namespace: 'home', description: L('家庭助手', 'Household assistant'), launcher: 'codex', profile: 'default', model: 'gpt-6.1-sol', skills: 12, subAgents: 2, heartbeat: { cron: '11 * * * *', by: 'codex-app' }, rom: { id: 'hermes-agent', version: '0.1.0' } } },
       ],
       'host-build': [

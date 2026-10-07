@@ -844,7 +844,7 @@ check('agents', 'importing a running Agent takes its definition from AGENTS.md',
   assert.equal(agent.home, '~/research-desk');
   assert.equal(agent.profileId, 'research');
   assert.equal(agent.rom, null, 'no ROM recorded');
-  assert.equal(res.instance.imported, 'observe');
+  assert.equal(res.instance.imported, 'control', 'an agent-manager Home is imported with control');
   assert.equal(M.importObserve(p, org, research, T0).code, 'duplicate');
   const home = sessions.find(x => x.key === 'tmux:home--main');
   assert.deepEqual(M.find(org.agents, M.importObserve(p, org, home, T0).instance.agentId).rom, { id: 'hermes-agent', version: '0.1.0' });
@@ -855,6 +855,37 @@ check('agents', 'importing a running Agent takes its definition from AGENTS.md',
   const fresh2 = F.emptyOrgData();
   fresh2.hosts.push({ id: 'host-new', status: 'online', isThisDevice: true, membership: { state: 'active' } });
   assert.equal(M.scanHost(fresh2, 'host-new', F.observedSessions(T0), T0).sessions.length, 4, 'a new identity sees this computer\'s running Agents');
+});
+
+check('agents', 'one transaction imports several running Agents (#70)', () => {
+  const p = fresh();
+  const org = personal(p);
+  const sessions = M.scanHost(org, 'host-mbp', F.observedSessions(T0), T0).sessions;
+  assert.equal(M.importAgents(p, org, [], T0).code, 'none_selected');
+  const res = M.importAgents(p, org, sessions, T0);
+  assert.equal(res.ok, true);
+  assert.equal(res.instances.length, 4);
+  const tx = M.beginTx(p, { kind: 'agent.import', orgId: F.P, payload: { instanceIds: res.instances.map(i => i.id) } }, T0).tx;
+  assert.equal(tx.fee, M.importFee(4));
+  assert.ok(M.importFee(4) < 4 * M.FEES['agent.import'], 'a batch costs less than separate imports');
+  assert.equal(M.commitTx(p, tx.id, T0 + 1000).ok, true);
+  assert.ok(res.instances.every(i => i.status === 'running' && i.imported === 'control'));
+  assert.equal(M.importAgents(p, org, sessions.slice(0, 1), T0).code, 'duplicate');
+});
+
+check('agents', 'an agent-manager Agent takes an OKR after one acknowledgement', () => {
+  const p = fresh();
+  const org = personal(p);
+  const session = M.scanHost(org, 'host-mbp', F.observedSessions(T0), T0).sessions.find(x => x.key === 'tmux:research--main');
+  const inst = M.importAgents(p, org, [session], T0).instances[0];
+  M.confirmImport(org, [inst.id]);
+  const okr = org.okrs.find(o => o.lifecycle === 'ACTIVE');
+  assert.deepEqual(M.includeIssues(org, inst, okr, {}, T0 + 10 * 60000), ['checks_incomplete'], 'no workspace match, stale scan or handover checklist');
+  assert.deepEqual(M.includeIssues(org, inst, okr, { acknowledged: true }, T0 + 10 * 60000), []);
+  const tmux = M.scanHost(org, 'host-mini', F.observedSessions(T0), T0).sessions.find(x => x.adapter === 'tmux-observe');
+  const observe = M.importAgents(p, org, [tmux], T0).instances[0];
+  assert.equal(observe.imported, 'observe');
+  assert.ok(M.includeIssues(org, observe, okr, { acknowledged: true }, T0).includes('observe_only'), 'other tmux sessions stay observe-only');
 });
 
 check('agents', 'new identities start with no Agents; onboarding tracks host, Agent and OKR', () => {

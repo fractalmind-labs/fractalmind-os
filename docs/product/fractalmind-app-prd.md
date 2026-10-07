@@ -186,9 +186,13 @@ Human ID、钱包地址、Host ID、AgentCertificate 与运行会话各有用途
      版本、兼容状态、将写入的文件与必装/可选技能），启动方式从本机已安装的启动器与配置中选择。
      App 写入 ROM 文件与技能、生成 `AGENTS.md`，本设备签名一笔交易登记 Agent，再启动 tmux
      会话并安装心跳。已有 Agent 的 Home 或非空目录不能用于新建。目前只能在本 App 管理的主机上新建。
-   - **导入**：按 J11 发现主机上的 tmux 会话，读取各自 `AGENTS.md`，显示名称、Home、启动方式与
-     模型、心跳由谁驱动（crontab、项目脚本、Codex App）、ROM（未记录时如实标注）与员工 Agent
-     数量；默认仅观察导入，不重启、不改写文件，员工 Agent 不随之导入。
+   - **导入**（#70）：本机 Agent 由 App 直接读取 tmux 会话与各自 `AGENTS.md`，打开即列出；远程主机
+     经 Coordinator 读取签名扫描。显示名称、Home、启动方式与模型、心跳由谁驱动（crontab、项目
+     脚本、Codex App）、ROM（未记录时如实标注）与员工 Agent 数量。多选后一笔交易导入，费用写在
+     按钮上；不重启、不改写文件，员工 Agent 不随之导入。agent-manager Home 导入后即可接 OKR：
+     FractalMind 投递目标（写入 `OKR.md` 并经 agent-manager 发送）、到期或手动停止、记录进度与
+     证据（标为“Agent 声明”）；工具调用与模型花费由其启动配置决定、FractalMind 不能拦截，导入与
+     分配时如实说明，用户确认一次。其他 tmux 会话仍只能观察。
 4. 模型、账号与密钥由启动器自己的配置管理（如 `~/.codex/<profile>.config.toml`），App 不读取；
    界面显示每个 Agent 使用的启动器、配置与模型，模型费用由服务商计费，与链上运行费分开。新建
    Agent 的常驻权限默认为空（没有 OKR 时只对话）。

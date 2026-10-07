@@ -982,7 +982,7 @@
     };
     const inst = {
       id: nextId(profile, 'inst'), name: 'main', agentId: agent.id, hostId: host.id, sessionKey: `tmux:${name}--main`,
-      runtime: launcher.name, adapter: 'native', origin: 'app', workspace: home, status: 'creating', okrIds: [],
+      runtime: launcher.name, adapter: 'agent-manager', origin: 'app', workspace: home, status: 'creating', okrIds: [],
     };
     org.agents.push(agent);
     org.instances.push(inst);
@@ -1251,8 +1251,11 @@
     return { ok: true, payer: 'self' };
   }
 
+  /** One PTB registers several Agents: a base fee plus a smaller one per Agent. */
+  const importFee = n => FEES['agent.import'] + 250000 * Math.max(0, n - 1);
   function beginTx(profile, spec, now) {
-    const fee = feeFor(spec.kind);
+    const ids = spec.payload && spec.payload.instanceIds;
+    const fee = spec.kind === 'agent.import' && Array.isArray(ids) ? importFee(ids.length) : feeFor(spec.kind);
     const pay = canPay(profile.wallet, fee);
     if (!pay.ok) return { ok: false, code: pay.code, fee };
     nextId(profile, 'tx');
@@ -1353,7 +1356,7 @@
       case 'device.revoke': return revokeDevice(profile, p.deviceId, p.byId, now);
       case 'recovery.set': return setRecovery(profile, { digest: p.digest, network: p.network }, now);
       case 'recovery.apply': return applyRecovery(profile, { digest: p.digest }, p.device, now);
-      case 'agent.import': return confirmImport(org, p.instanceId, now);
+      case 'agent.import': return confirmImport(org, p.instanceIds || p.instanceId, now);
       case 'agent.create': return confirmCreateAgent(org, p.instanceId, now);
       case 'agent.include': return includeInOkr(profile, org, p.instanceId, p.okrId, p.checks, now);
       case 'memory.write': {
@@ -1520,18 +1523,43 @@
     const inst = {
       id: nextId(profile, 'inst'), name: session.name, agentId, hostId: session.hostId,
       sessionKey: session.key, runtime: session.runtime, model: session.model || null, adapter: session.adapter,
-      workspace: session.workspace, status: 'importing', imported: 'observe', observedAt: session.observedAt, okrIds: [],
+      workspace: session.workspace, status: 'importing', imported: session.adapter === 'agent-manager' ? 'control' : 'observe', observedAt: session.observedAt, okrIds: [],
     };
     org.instances.push(inst);
     return { ok: true, instance: inst };
   }
 
   function confirmImport(org, instanceId) {
-    const inst = find(org.instances, instanceId);
-    if (!inst || inst.status !== 'importing') return { ok: false, code: 'not_importing' };
-    inst.status = 'running';
+    const ids = Array.isArray(instanceId) ? instanceId : [instanceId];
+    const insts = ids.map(id => find(org.instances, id));
+    if (!insts.length || insts.some(i => !i || i.status !== 'importing')) return { ok: false, code: 'not_importing' };
+    insts.forEach(i => { i.status = 'running'; });
     return { ok: true };
   }
+
+  /* One-click import (#70): several sessions, one transaction. agent-manager
+   * Homes are registered with control (agent-manager-v1) and can take OKRs;
+   * other tmux sessions stay observe-only. */
+  function importAgents(profile, org, sessions, now) {
+    if (!sessions.length) return { ok: false, code: 'none_selected' };
+    for (const s of sessions) {
+      if (org.instances.some(i => i.hostId === s.hostId && i.sessionKey === s.key)) return { ok: false, code: 'duplicate' };
+      if (s.identity !== 'verified') return { ok: false, code: 'identity_unverified' };
+    }
+    const instances = sessions.map(s => importObserve(profile, org, s, now).instance);
+    return { ok: true, instances };
+  }
+  /** What FractalMind enforces for an agent-manager Agent, and what it cannot. */
+  const AGENT_MANAGER_LIMITS = {
+    enforced: [
+      { zh: '投递目标：写入 Home 的 OKR.md，并通过 agent-manager 发送任务', en: 'Deliver the goal: written to OKR.md in its Home and sent through agent-manager' },
+      { zh: '期限与停止：到期、撤销或手动停止时停止会话', en: 'Deadline and stop: the session is stopped on expiry, revocation or request' },
+      { zh: '进度与证据：心跳和写回的结果，标为“Agent 声明”，由你验收', en: 'Progress and evidence: heartbeats and returned results, marked “Agent claimed” for your acceptance' },
+    ],
+    notEnforced: [
+      { zh: '工具调用与模型花费：由 Agent 自己的启动配置决定，FractalMind 不能拦截', en: 'Tool use and model spending: decided by the Agent’s own launch configuration; FractalMind cannot intercept them' },
+    ],
+  };
 
   function includeIssues(org, inst, okr, checks, now) {
     const issues = [];
@@ -1544,6 +1572,15 @@
       if (!ws || ws.path !== inst.workspace) issues.push('workspace_mismatch');
     }
     const c = checks || {};
+    if (inst.adapter === 'agent-manager') {
+      // Its Home is the workspace; there is no running task to hand over.
+      const i = issues.indexOf('workspace_mismatch');
+      if (i >= 0) issues.splice(i, 1);
+      const j = issues.indexOf('observation_stale');
+      if (j >= 0) issues.splice(j, 1);
+      if (!c.acknowledged) issues.push('checks_incomplete');
+      return issues;
+    }
     if (!(c.budget && c.deadline && c.tools && c.escalation && c.checkpoint && c.stopped)) issues.push('checks_incomplete');
     return issues;
   }
@@ -1810,7 +1847,7 @@
     B32, makeRecoveryCode, parseRecoveryCode, lookupRecovery, setRecovery, applyRecovery,
     feeFor, canPay, beginTx, commitTx, queryTx,
     snapshot, canMessage, conversation, sendMessage, agentReply, adoptProposal, switchRoute,
-    scanHost, importObserve, confirmImport, includeIssues, includeInOkr,
+    scanHost, importObserve, importAgents, importFee, AGENT_MANAGER_LIMITS, confirmImport, includeIssues, includeInOkr,
     switchOrg, sameContext, contextToken, buildExport,
     DIRECT_ACTIONS, constrainable, standingToday, directConversation, pickInstance, setDirectInstance, channelCan,
     sendDirect, directReply, executeStandingApproval, updateStanding, promoteDirect,
