@@ -232,6 +232,7 @@ func main() {
 		if err != nil {
 			log.Fatal("[auth] native Host store unavailable")
 		}
+		log.Printf("[auth] reading Host key %q from the system credential store (the OS may ask to allow access)", cfg.Identity.KeyProfile)
 		connectionKeys, err = hostidentity.Load(store, cfg.Identity.KeyProfile)
 		if err != nil {
 			log.Fatal("[auth] initialize native Host keys with --init-host first")
