@@ -60,6 +60,7 @@ export default function CreateOkr({
   initialDeviceProfile,
   sourceExpiresAtMs,
   onClosed,
+  autoOpen = false,
 }: {
   profile: ConnectionProfile;
   organizationId: string;
@@ -69,6 +70,8 @@ export default function CreateOkr({
   initialDeviceProfile?: string;
   sourceExpiresAtMs?: string;
   onClosed?: () => void;
+  /** App v2 (#75): open straight into the dialog, without the own button. */
+  autoOpen?: boolean;
 }) {
   const [open, setOpen] = useState(false),
     [objective, setObjective] = useState(""),
@@ -289,6 +292,9 @@ export default function CreateOkr({
       if (mounted.current) setBusy(false);
     }
   }
+  useEffect(() => {
+    if (autoOpen) start();
+  }, []);
   function start() {
     active.current = true;
     setOpen(true);
@@ -340,7 +346,7 @@ export default function CreateOkr({
   const ready = isTauri();
   return (
     <>
-      {!source && (
+      {!source && !autoOpen && (
         <button className="primary" onClick={start}>
           + {t("创建 OKR 候选", "Create OKR draft")}
         </button>
