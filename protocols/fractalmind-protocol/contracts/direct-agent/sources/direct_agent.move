@@ -108,7 +108,7 @@ module fractalmind_direct::direct_agent {
     fun approve_source(org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, clock: &Clock, ctx: &TxContext) {
         identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
         host::assert_member(org, member, binding, clock); host::assert_managed(org, member, managed, true);
-        assert!(host::managed_runtime(managed) == string::utf8(b"bounded-process-v1"), E_SCOPE);
+        assert!(host::runtime_controllable(&host::managed_runtime(managed)), E_SCOPE);
     }
     public fun create_permission(
         org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
