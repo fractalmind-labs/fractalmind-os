@@ -21,12 +21,16 @@ export default function LocalHostCard({
   deviceProfile,
   t,
   onChanged,
+  setupOnly = false,
 }: {
   profile: ConnectionProfile;
   organizationId: string;
   deviceProfile: string | null;
   t: Translate;
   onChanged: () => void;
+  /** Host list: only offer setup; the service card lives in this computer's
+   * Host detail. The outdated-service reinstall runs either way. */
+  setupOnly?: boolean;
 }) {
   const [status, setStatus] = useState<LocalHostStatus | null>(null),
     [setup, setSetup] = useState(false),
@@ -115,7 +119,7 @@ export default function LocalHostCard({
         </button>
       </div>
     );
-  if (!mine) return null;
+  if (!mine || setupOnly) return null;
   const running = status.service === "running";
   const chip =
     status.service === "running"

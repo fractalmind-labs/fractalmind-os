@@ -22,7 +22,7 @@ import { deviceConnection } from "./native-device";
 import { matchesTarget } from "./build-target";
 import type { OkrText } from "./okr-text";
 import { useChain } from "./use-chain";
-import { clockNow, memberStatus, navigation } from "./domain";
+import { clockNow, navigation } from "./domain";
 import type {
   ConnectionProfile,
   OrganizationSnapshot,
@@ -49,8 +49,7 @@ const PrivateRecordView = lazy(() => import("./PrivateRecordView"));
 const DeviceAccess = lazy(() => import("./DeviceAccess"));
 const PairingFlow = lazy(() => import("./PairingFlow"));
 const HostAccess = lazy(() => import("./HostAccess"));
-const HostObservations = lazy(() => import("./HostObservations"));
-const LocalHostCard = lazy(() => import("./LocalHostCard"));
+const HostsPage = lazy(() => import("./HostsPage"));
 const AgentCreate = lazy(() => import("./AgentCreate"));
 const AgentDiscover = lazy(() => import("./AgentDiscover"));
 const AgentCheckpointView = lazy(() => import("./AgentCheckpointView"));
@@ -258,6 +257,14 @@ export function App() {
   // New Agent (#67): created on this computer, then registered via import.
   const [createOpen, setCreateOpen] = useState(false);
   const [focusSession, setFocusSession] = useState<string | null>(null);
+  // Hosts & compute (#73): an open Host detail, and requests for the Host
+  // access dialog (connections, invitations, membership revocation).
+  const [hostDetail, setHostDetail] = useState<string | null>(null);
+  const [hostAccess, setHostAccess] = useState<{
+    kind: "binding" | "invite" | "revoke-member";
+    target?: string;
+    n: number;
+  } | null>(null);
   const createDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = createDialog.current;
@@ -480,6 +487,7 @@ export function App() {
   const go = (id: Page) => {
     setPage(id);
     if (id !== "okrs") setDetailId(null);
+    setHostDetail(null);
     setAllFeatures(false);
     setDiscoverOpen(false);
   };
@@ -531,7 +539,10 @@ export function App() {
       "每个组织最多 3 个运行中的目标；打开目标查看 KR、观测与执行来源。",
       "At most 3 active goals per organization. Open a goal for KRs, observations and execution provenance.",
     ),
-    hosts: t("执行主机、连接入口与运行观测", "Execution hosts, endpoints and observations"),
+    hosts: t(
+      "执行主机、Agent 实例和正在执行的 OKR。每台主机的心跳与连接相互独立。",
+      "Execution hosts, Agent instances and the OKRs they run. Heartbeats and connections are independent per host.",
+    ),
     agents: t(
       "Agent 实例与所在主机。可以直接和任一实例对话；没有 OKR 时它按常驻权限行事。",
       "Agent instances and their hosts. Chat with any instance; without an OKR it acts within its standing authority.",
@@ -614,6 +625,23 @@ export function App() {
       <button className="primary" onClick={() => go("okrs")}>
         + {t("新建 OKR", "New OKR")}
       </button>
+    ) : page === "hosts" && snapshot ? (
+      <span className="row wrap">
+        <button onClick={() => setHostAccess((r) => ({ kind: "binding", n: (r?.n ?? 0) + 1 }))}>
+          <NavIcon name="globe" />
+          {t("管理连接", "Connections")}
+        </button>
+        <button onClick={() => setDiscoverOpen(true)}>
+          <NavIcon name="users" />
+          {t("发现已有 Agent", "Discover Agents")}
+        </button>
+        <button
+          className="primary"
+          onClick={() => setHostAccess((r) => ({ kind: "invite", n: (r?.n ?? 0) + 1 }))}
+        >
+          + {t("接入主机", "Add a host")}
+        </button>
+      </span>
     ) : page === "agents" && snapshot ? (
       <span className="row">
         <button onClick={() => setDiscoverOpen(true)}>
@@ -642,7 +670,7 @@ export function App() {
       </Suspense>
     ) : null;
   // An open OKR shows its own header; the page header would repeat it.
-  const showPageHeader = !(page === "okrs" && detailId);
+  const showPageHeader = !(page === "okrs" && detailId) && !(page === "hosts" && hostDetail);
   return (
     <div className="shell">
       <aside className="sidebar" aria-label={t("主导航", "Main navigation")}>
@@ -1182,11 +1210,72 @@ export function App() {
             )}
           </>
         )}
-        {page === "hosts" && snapshot && (
+        {snapshot && (
           <>
-            {isTauri() && (
-              <Suspense fallback={null}>
-                <LocalHostCard
+          {isTauri() && (
+            <dialog
+              ref={createDialog}
+              className="discover-dialog"
+              aria-label={t("新建 Agent", "New Agent")}
+              onClose={() => setCreateOpen(false)}
+            >
+              <div className="dialog-heading">
+                <div>
+                  <h2>{t("新建 Agent", "New Agent")}</h2>
+                </div>
+                <button
+                  className="btn ghost icon sm"
+                  aria-label={t("关闭", "Close")}
+                  onClick={() => setCreateOpen(false)}
+                >
+                  <NavIcon name="x" />
+                </button>
+              </div>
+              {createOpen && (
+                <Suspense fallback={<p>{t("加载…", "Loading…")}</p>}>
+                  <AgentCreate
+                    t={t}
+                    onClose={() => setCreateOpen(false)}
+                    onRegister={(session) => {
+                      setCreateOpen(false);
+                      setFocusSession(session);
+                      setDiscoverOpen(true);
+                    }}
+                  />
+                </Suspense>
+              )}
+            </dialog>
+          )}
+          <dialog
+            ref={discoverDialog}
+            className="discover-dialog"
+            aria-label={t("导入主机上已运行的 Agent", "Import Agents running on a host")}
+            onClose={() => {
+              setDiscoverOpen(false);
+              setFocusSession(null);
+            }}
+          >
+            <div className="dialog-heading">
+              <div>
+                <h2>{t("导入主机上已运行的 Agent", "Import Agents running on a host")}</h2>
+                <p>
+                  {t(
+                    "按 tmux 会话发现，读取各自 Home 里的 AGENTS.md：名称、启动方式、心跳与 ROM。发现快照是观测；导入关系、OKR 绑定与授权是链上状态。",
+                    "Found by tmux session, read from each Home’s AGENTS.md: name, launch, heartbeat and ROM. Snapshots are observations; imports, OKR bindings and grants are chain state.",
+                  )}
+                </p>
+              </div>
+              <button
+                className="btn ghost icon sm"
+                aria-label={t("关闭", "Close")}
+                onClick={() => setDiscoverOpen(false)}
+              >
+                <NavIcon name="x" />
+              </button>
+            </div>
+            {discoverOpen && (
+              <Suspense fallback={<p>{t("加载…", "Loading…")}</p>}>
+                <AgentDiscover
                   key={JSON.stringify([profile, snapshot.organization.objectId])}
                   profile={{
                     ...profile,
@@ -1199,147 +1288,77 @@ export function App() {
                       ? device.session.profile
                       : null
                   }
-                  t={t}
+                  memberships={snapshot.memberships.value ?? []}
+                  importedInstances={
+                    new Set(
+                      (snapshot.agents.value ?? [])
+                        .filter((a) => !a.revoked)
+                        .map((a) => a.instance_id),
+                    )
+                  }
+                  authorityRevision={hostAuthorityRevision}
+                  focusSession={focusSession}
                   onChanged={data.refresh}
+                  t={t}
                 />
               </Suspense>
             )}
-            <Suspense
-              fallback={
-                <p>{t("加载主机接入入口…", "Loading Host onboarding…")}</p>
-              }
-            >
-              <HostAccess
-                key={JSON.stringify([profile, snapshot.organization.objectId])}
-                profile={{
-                  ...profile,
-                  chainIdentifier:
-                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
-                }}
-                organizationId={snapshot.organization.objectId}
-                t={t}
-                onChanged={data.refresh}
-              />
-            </Suspense>
-            <Suspense
-              fallback={
-                <p>{t("加载运行观测…", "Loading runtime observations…")}</p>
-              }
-            >
-              <HostObservations
-                key={JSON.stringify([profile, snapshot.organization.objectId])}
-                profile={{
-                  ...profile,
-                  chainIdentifier:
-                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
-                }}
-                organizationId={snapshot.organization.objectId}
-                authorityRevision={hostAuthorityRevision}
-                t={t}
-              />
-            </Suspense>
-            <HostList
-              snapshot={snapshot}
-              now={now}
-              t={t}
-              reachable={data.reachable}
-            />
+          </dialog>
           </>
+        )}
+        {page === "hosts" && snapshot && (
+          <Suspense fallback={<p>{t("加载主机…", "Loading Hosts…")}</p>}>
+            <HostsPage
+              key={JSON.stringify([profile, snapshot.organization.objectId])}
+              profile={{
+                ...profile,
+                chainIdentifier:
+                  data.identity?.chainIdentifier ?? profile.chainIdentifier,
+              }}
+              snapshot={snapshot}
+              deviceProfile={
+                device.session.state === "unlocked"
+                  ? device.session.profile
+                  : null
+              }
+              authorityRevision={hostAuthorityRevision}
+              detail={hostDetail}
+              onDetail={setHostDetail}
+              onAccess={(kind, target) =>
+                setHostAccess((r) => ({ kind, target, n: (r?.n ?? 0) + 1 }))
+              }
+              onDiscover={() => setDiscoverOpen(true)}
+              onOpenOkr={(id) => goOkr(id, "okrs")}
+              okrTitle={(id) => {
+                const row = okrs?.find((o) => o.okr.id === id);
+                return (
+                  okrTexts.get(id)?.objective ??
+                  `OKR ${short(row?.okr.logical_id ?? id)}`
+                );
+              }}
+              onChanged={data.refresh}
+              t={t}
+            />
+          </Suspense>
+        )}
+        {snapshot && (
+          <Suspense fallback={null}>
+            <HostAccess
+              key={JSON.stringify([profile, snapshot.organization.objectId])}
+              profile={{
+                ...profile,
+                chainIdentifier:
+                  data.identity?.chainIdentifier ?? profile.chainIdentifier,
+              }}
+              organizationId={snapshot.organization.objectId}
+              t={t}
+              onChanged={data.refresh}
+              request={hostAccess}
+            />
+          </Suspense>
         )}
         {page === "agents" && snapshot && (
           <>
-            {isTauri() && (
-              <dialog
-                ref={createDialog}
-                className="discover-dialog"
-                aria-label={t("新建 Agent", "New Agent")}
-                onClose={() => setCreateOpen(false)}
-              >
-                <div className="dialog-heading">
-                  <div>
-                    <h2>{t("新建 Agent", "New Agent")}</h2>
-                  </div>
-                  <button
-                    className="btn ghost icon sm"
-                    aria-label={t("关闭", "Close")}
-                    onClick={() => setCreateOpen(false)}
-                  >
-                    <NavIcon name="x" />
-                  </button>
-                </div>
-                {createOpen && (
-                  <Suspense fallback={<p>{t("加载…", "Loading…")}</p>}>
-                    <AgentCreate
-                      t={t}
-                      onClose={() => setCreateOpen(false)}
-                      onRegister={(session) => {
-                        setCreateOpen(false);
-                        setFocusSession(session);
-                        setDiscoverOpen(true);
-                      }}
-                    />
-                  </Suspense>
-                )}
-              </dialog>
-            )}
-            <dialog
-              ref={discoverDialog}
-              className="discover-dialog"
-              aria-label={t("导入主机上已运行的 Agent", "Import Agents running on a host")}
-              onClose={() => {
-                setDiscoverOpen(false);
-                setFocusSession(null);
-              }}
-            >
-              <div className="dialog-heading">
-                <div>
-                  <h2>{t("导入主机上已运行的 Agent", "Import Agents running on a host")}</h2>
-                  <p>
-                    {t(
-                      "按 tmux 会话发现，读取各自 Home 里的 AGENTS.md：名称、启动方式、心跳与 ROM。发现快照是观测；导入关系、OKR 绑定与授权是链上状态。",
-                      "Found by tmux session, read from each Home’s AGENTS.md: name, launch, heartbeat and ROM. Snapshots are observations; imports, OKR bindings and grants are chain state.",
-                    )}
-                  </p>
-                </div>
-                <button
-                  className="btn ghost icon sm"
-                  aria-label={t("关闭", "Close")}
-                  onClick={() => setDiscoverOpen(false)}
-                >
-                  <NavIcon name="x" />
-                </button>
-              </div>
-              {discoverOpen && (
-                <Suspense fallback={<p>{t("加载…", "Loading…")}</p>}>
-                  <AgentDiscover
-                    key={JSON.stringify([profile, snapshot.organization.objectId])}
-                    profile={{
-                      ...profile,
-                      chainIdentifier:
-                        data.identity?.chainIdentifier ?? profile.chainIdentifier,
-                    }}
-                    organizationId={snapshot.organization.objectId}
-                    deviceProfile={
-                      device.session.state === "unlocked"
-                        ? device.session.profile
-                        : null
-                    }
-                    memberships={snapshot.memberships.value ?? []}
-                    importedInstances={
-                      new Set(
-                        (snapshot.agents.value ?? [])
-                          .filter((a) => !a.revoked)
-                          .map((a) => a.instance_id),
-                      )
-                    }
-                    authorityRevision={hostAuthorityRevision}
-                    focusSession={focusSession}
-                    onChanged={data.refresh}
-                    t={t}
-                  />
-                </Suspense>
-              )}
-            </dialog>
             <div className="sec-h">
               <h2>
                 {t("受管理实例", "Managed instances")}{" "}
@@ -2695,109 +2714,6 @@ function OkrDetails({
           </section>
         </aside>
       </div>
-    </>
-  );
-}
-
-function HostList({
-  snapshot,
-  now,
-  t,
-  reachable,
-}: {
-  snapshot: OrganizationSnapshot;
-  now: bigint;
-  t: Translate;
-  reachable: boolean;
-}) {
-  const directory = snapshot.hosts.value;
-  const status: Record<"valid" | "revoked" | "expired", [string, string]> = {
-    valid: ["有效", "Valid"],
-    revoked: ["已撤销", "Revoked"],
-    expired: ["已到期", "Expired"],
-  };
-  return (
-    <>
-      <h2>{t("组织主机", "Organization Hosts")}</h2>
-      <p className="muted">
-        {t(
-          "按稳定 Host 地址展示，当前成员资格由链上目录确定；重新接入保留历史，不重复显示为新主机。在线和资源数据仍需签名心跳。",
-          "Hosts use stable addresses and the current chain membership directory. Rejoining retains history instead of creating a duplicate Host. Connectivity and resources still need signed heartbeats.",
-        )}
-      </p>
-      {!directory ? (
-        <ReadFailure t={t} />
-      ) : !directory.length ? (
-        <Empty t={t} />
-      ) : (
-        <div className="card-grid">
-          {directory.map((row) => {
-            const member = row.current.value;
-            return (
-              <div className="panel" key={row.address}>
-                <span className="badge">
-                  {t("在线状态未知", "Connectivity unknown")}
-                </span>
-                <h3>{member?.name ?? `Host ${short(row.address)}`}</h3>
-                <code>{short(row.address)}</code>
-                {member ? (
-                  <dl>
-                    <dt>
-                      {reachable
-                        ? t("成员资格", "Membership")
-                        : t("快照成员资格", "Snapshot membership")}
-                    </dt>
-                    <dd>{t(...status[memberStatus(member, now)])}</dd>
-                    <dt>{t("当前成员记录", "Current membership")}</dt>
-                    <dd>
-                      <code title={member.id}>{short(member.id)}</code>
-                    </dd>
-                    <dt>{t("到期", "Expires")}</dt>
-                    <dd>
-                      {new Date(Number(member.expires_at_ms)).toLocaleString()}
-                    </dd>
-                  </dl>
-                ) : row.current.failure ? (
-                  <p className="warn">
-                    {t(
-                      "当前成员目录读取失败；不会以旧记录推断新资格。",
-                      "Current membership could not be read; an older record does not establish new authority.",
-                    )}
-                  </p>
-                ) : (
-                  <p className="muted">
-                    {t(
-                      "当前链上目录无成员记录；历史记录不授予当前权限。",
-                      "No current membership is indexed on chain. Historical records grant no current authority.",
-                    )}
-                  </p>
-                )}
-                <details>
-                  <summary>
-                    {t("成员资格历史", "Membership history")} ·{" "}
-                    {row.history.length}
-                  </summary>
-                  {row.history.map((old) => (
-                    <p key={old.id}>
-                      <code>{short(old.id)}</code> ·{" "}
-                      {old.id === member?.id
-                        ? t("当前", "Current")
-                        : t("历史", "Historical")}{" "}
-                      · {t(...status[memberStatus(old, now)])}
-                    </p>
-                  ))}
-                </details>
-                <p className="muted">
-                  {t(
-                    "资格有效不代表此刻在线，也不替代具体执行授权。",
-                    "Valid membership does not prove current connectivity or authorize a specific action.",
-                  )}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </>
   );
 }
