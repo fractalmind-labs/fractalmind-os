@@ -140,3 +140,112 @@ test("hash routes resolve to known pages", () => {
     parts: ["workbench"],
   });
 });
+
+test("notifications come from chain facts, newest first", async () => {
+  const { activity } = await import("../src/v2/activity");
+  const snap = {
+    okrs: {
+      value: [
+        {
+          okr: {
+            id: a("1"),
+            activated_at_ms: "100",
+            agreement_version: "1",
+            state: 3,
+            accepted_at_ms: "400",
+          },
+          observations: {
+            value: [
+              {
+                id: a("2"),
+                recorded_at_ms: "200",
+                kr_index: "0",
+                current: "5",
+              },
+            ],
+          },
+          executions: {
+            value: [
+              {
+                run: { id: a("3"), state: 2, issued_at_ms: "300" },
+                contract: { kr_index: "0" },
+              },
+              {
+                run: { id: a("4"), state: 1, issued_at_ms: "350" },
+                contract: { kr_index: "1" },
+              },
+            ],
+          },
+        },
+        {
+          okr: {
+            id: a("5"),
+            activated_at_ms: "0",
+            state: 0,
+            accepted_at_ms: "0",
+          },
+          observations: { value: null },
+          executions: { value: null },
+        },
+      ],
+    },
+    agents: {
+      value: [
+        { id: a("6"), revoked: false, imported_at_ms: "50" },
+        { id: a("7"), revoked: true, imported_at_ms: "500" },
+      ],
+    },
+  } as unknown as OrganizationSnapshot;
+  const items = activity(snap, () => "Goal");
+  assert.deepEqual(
+    items.map((x) => [x.at, x.icon]),
+    [
+      [400, "flag"],
+      [300, "check"],
+      [200, "trend"],
+      [100, "play"],
+      [50, "users"],
+    ],
+  );
+  // A running Run, a revoked Agent and a never-activated goal are not news.
+  assert.deepEqual(
+    activity(null, () => ""),
+    [],
+  );
+  assert.equal(items.find((x) => x.icon === "trend")?.zh, "Goal · KR1 测得 5");
+});
+
+test("an agent-manager Agent is found by its Home after its session restarts", async () => {
+  const { matchLocal } = await import("../src/v2/local-agents");
+  const home = "ab".repeat(32);
+  const session = (instanceId: string, workspaceHash: string, agent = true) =>
+    ({
+      instanceId,
+      workspaceHash,
+      state: "observed",
+      agent: agent ? { home: "/h", name: "main" } : null,
+    }) as never;
+  const chainAgent = {
+    instance_id: "tmux-old",
+    runtime: "agent-manager-v1",
+    workspace_hash: Array(32).fill(0xab),
+  };
+  const now = [
+    session("tmux-new", home),
+    session("tmux-other", "cd".repeat(32)),
+  ];
+  assert.equal(
+    (matchLocal(now, chainAgent) as { instanceId: string }).instanceId,
+    "tmux-new",
+  );
+  // Other runtimes stay bound to the exact instance.
+  assert.equal(
+    matchLocal(now, { ...chainAgent, runtime: "tmux-observe" }),
+    null,
+  );
+  // A plain tmux session in the same folder is not an agent-manager Home.
+  assert.equal(
+    matchLocal([session("tmux-new", home, false)], chainAgent),
+    null,
+  );
+});

@@ -64,7 +64,7 @@ function OkrCard({ row }: { row: OkrSnapshot }) {
           {t("负责", "Owner")} {agent ? agentName(agent) : "—"}
         </span>
         <span>
-          {t("截止", "Due")} {date(Number(row.okr.expires_at_ms) || null, lang)}
+          {t("截止", "Due")} {date(Number(row.okr.deadline_ms) || null, lang)}
         </span>
       </div>
       <div>
@@ -200,7 +200,7 @@ function Detail({ id }: { id: string }) {
           <h1 className="mt-8">{okrTitle(app, id)}</h1>
           <p className="small muted">
             {t("负责", "Owner")} {agent ? agentName(agent) : "—"} · {t("截止", "Due")}{" "}
-            {date(Number(row.okr.expires_at_ms) || null, lang)} · {t("执行", "Runs on")} {member ? hostName(member) : "—"}
+            {date(Number(row.okr.deadline_ms) || null, lang)} · {t("执行", "Runs on")} {member ? hostName(member) : "—"}
           </p>
         </div>
         <div className="row wrap">
@@ -260,7 +260,7 @@ function Detail({ id }: { id: string }) {
                 {row.budget.value ? `${row.budget.value.spent} / ${row.okr.budget_limit} ${row.okr.budget_asset}` : "—"}
               </dd>
               <dt>{t("截止", "Due")}</dt>
-              <dd>{date(Number(row.okr.expires_at_ms) || null, lang)}</dd>
+              <dd>{date(Number(row.okr.deadline_ms) || null, lang)}</dd>
               <dt>{t("约定版本", "Agreement")}</dt>
               <dd>v{row.okr.agreement_version}</dd>
             </dl>

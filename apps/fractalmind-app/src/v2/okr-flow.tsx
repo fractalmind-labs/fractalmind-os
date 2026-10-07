@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { IndexedDbTransactionJournal, TransactionPreflightError, type SelfPayFeeQuote } from "@fractalmind-labs/fractalmind-sdk";
 import { useApp } from "./store";
 import { Btn, Icon, sui, useT, type Translate } from "./ui";
-import { useLocalSessions } from "./local-agents";
+import { matchLocal, useLocalSessions } from "./local-agents";
 import { ChainReadSession } from "../chain";
 import { NativeDeviceError, NativeDeviceSigner } from "../native-device";
 import { DeviceIdentityError } from "../device-identity";
@@ -55,10 +55,13 @@ export function useAgentLabel() {
   return {
     sessions,
     label: (a: Agent) => {
-      const seen = sessions.find((s) => s.instanceId === a.instance_id);
+      const seen = matchLocal(sessions, a);
       return seen?.agent ? definitionName(seen.agent) : agentName(a);
     },
-    local: (a: Agent) => sessions.find((s) => s.instanceId === a.instance_id && s.agent) ?? null,
+    local: (a: Agent) => {
+      const seen = matchLocal(sessions, a);
+      return seen?.agent ? seen : null;
+    },
   };
 }
 

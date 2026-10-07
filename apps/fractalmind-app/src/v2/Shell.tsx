@@ -1,11 +1,13 @@
 // App v2 (#75): the prototype shell (js/shell.js) — sidebar, context bar,
 // top tools, phone navigation, organization menu and lock screen.
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "./store";
 import { go, type PageName, type Route } from "./router";
 import { ago, Icon, Logo, shortId, until, useLang, useT } from "./ui";
 import { focusOkr, orgCounts, okrTitle } from "./model";
 import { agentName, hostName } from "../display";
+import { Notifications, Palette, useUnread } from "./Palette";
 
 type Nav = { id: PageName; icon: string; zh: string; en: string };
 const NAV: Nav[] = [
@@ -53,7 +55,7 @@ function OrgMenu({ onClose, anchor }: { onClose: () => void; anchor: DOMRect }) 
       removeEventListener("keydown", key);
     };
   }, [onClose]);
-  return (
+  return createPortal(
     <div className="pop" ref={ref} role="menu" style={{ top: anchor.bottom + 6, left: anchor.left, width: Math.max(anchor.width, 260) }}>
       <div className="menu-h">{t("切换组织", "Switch organization")}</div>
       {(app.identity?.organizations ?? []).map((o) => (
@@ -83,7 +85,8 @@ function OrgMenu({ onClose, anchor }: { onClose: () => void; anchor: DOMRect }) 
         <Icon name="layers" size="sm" />
         {t("我的组织", "My organizations")}
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -254,11 +257,30 @@ function SyncIndicator() {
 function Tools() {
   const app = useApp();
   const t = useT();
+  const [palette, setPalette] = useState(false);
+  const [notif, setNotif] = useState<DOMRect | null>(null);
+  const { unread, markRead } = useUnread();
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPalette((v) => !v);
+      }
+    };
+    addEventListener("keydown", key);
+    return () => removeEventListener("keydown", key);
+  }, []);
   const next = { system: "light", light: "dark", dark: "system" } as const;
   const themeIcon = { system: "monitor", light: "sun", dark: "moon" }[app.prefs.theme];
   return (
     <div className="tb-tools">
       <SyncIndicator />
+      <button className="tb-search" onClick={() => setPalette(true)}>
+        <Icon name="search" size="sm" />
+        <span>{t("搜索或跳转", "Search or jump")}</span>
+        <span className="kbd">⌘K</span>
+      </button>
+      {palette && <Palette onClose={() => setPalette(false)} />}
       <button className="tb-btn" aria-label={t("刷新", "Refresh")} title={t("刷新链上数据", "Refresh chain data")} onClick={app.refresh}>
         <Icon name="refresh" className={app.chain.busy ? "spin" : undefined} />
       </button>
@@ -277,6 +299,19 @@ function Tools() {
       >
         <Icon name={themeIcon} />
       </button>
+      <button
+        className="tb-btn"
+        aria-label={t("通知", "Notifications")}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setNotif((v) => (v ? null : r));
+          markRead();
+        }}
+      >
+        <Icon name="bell" />
+        {unread > 0 && <span className="count">{unread}</span>}
+      </button>
+      {notif && <Notifications anchor={notif} onClose={() => setNotif(null)} />}
     </div>
   );
 }
