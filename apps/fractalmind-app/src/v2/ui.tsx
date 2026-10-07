@@ -102,9 +102,12 @@ export function Btn({
   type = "button",
   className,
   aria,
+  iconEnd,
 }: {
   label?: string;
   icon?: string;
+  /** An icon after the label, as the prototype's “Next →”. */
+  iconEnd?: string;
   kind?: "primary" | "ghost" | "danger" | "";
   size?: "sm" | "lg" | "icon" | "icon sm" | "";
   disabled?: boolean;
@@ -125,6 +128,7 @@ export function Btn({
     >
       {icon && <Icon name={icon} />}
       {label && <span>{label}</span>}
+      {iconEnd && <Icon name={iconEnd} size="sm" />}
     </button>
   );
 }

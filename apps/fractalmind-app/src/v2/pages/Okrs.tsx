@@ -4,10 +4,11 @@ import { lazy, Suspense, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useApp } from "../store";
 import { go, type Route } from "../router";
-import { useDialogs } from "../dialogs";
 import { Btn, date, Icon, shortId, useLang, useT } from "../ui";
 import { condOf, decisions, LIFE, lifeOf, nav, okrTitle, type Life } from "../model";
 import { CondBadge, RunState, Trust } from "./Workbench";
+import OkrNew from "./OkrNew";
+import { AssignFlow, DeliveryResult, assignable, errorCode, errorText, useAgentLabel, useDelivery } from "../okr-flow";
 import { trustState } from "../../v2-model";
 import { agentName, hostName } from "../../display";
 import type { OkrSnapshot } from "../../domain";
@@ -86,7 +87,6 @@ function OkrCard({ row }: { row: OkrSnapshot }) {
 function List() {
   const app = useApp();
   const t = useT();
-  const dialogs = useDialogs();
   const [filter, setFilter] = useState<Life | "all">("all");
   const rows = app.snapshot?.okrs.value;
   const shown = (rows ?? [])
@@ -112,7 +112,7 @@ function List() {
             kind="primary"
             disabled={!isTauri()}
             why={t("需要在桌面 App 中操作", "Needs the desktop App")}
-            onClick={() => dialogs.open({ kind: "okr-create" })}
+            onClick={() => go("okrs/new")}
           />
         </div>
       </div>
@@ -267,6 +267,11 @@ function Detail({ id }: { id: string }) {
           </section>
         </div>
       )}
+      {tab === "overview" && (
+        <div className="mt-16">
+          <AgentPanel row={row} />
+        </div>
+      )}
       {tab === "runs" && (
         <section className="card">
           {row.executions.value === null ? (
@@ -324,5 +329,115 @@ function Detail({ id }: { id: string }) {
 }
 
 export default function Okrs({ route }: { route: Route }) {
+  if (route.parts[1] === "new") return <OkrNew />;
   return route.parts[1] ? <Detail id={route.parts[1]} /> : <List />;
+}
+
+/** Assign a draft or paused goal; deliver an active one again. */
+function AgentPanel({ row }: { row: OkrSnapshot }) {
+  const app = useApp();
+  const t = useT();
+  const { label } = useAgentLabel();
+  const deliver = useDelivery();
+  const agents = assignable(app.snapshot?.agents.value);
+  const busy = new Set((app.snapshot?.okrs.value ?? []).filter((r) => r.okr.state === 1).map((r) => r.okr.managed_agent));
+  const [agentId, setAgentId] = useState("");
+  const [limit, setLimit] = useState("200");
+  const [paths, setPaths] = useState(".");
+  const [start, setStart] = useState(false);
+  const [delivered, setDelivered] = useState<Awaited<ReturnType<typeof deliver>> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [delivering, setDelivering] = useState(false);
+  const owner = app.snapshot?.agents.value?.find((a) => a.id === row.okr.managed_agent) ?? null;
+  if (row.okr.state === 1 && owner?.runtime === "agent-manager-v1")
+    return (
+      <section className="card">
+        <div className="card-h">
+          <h2>{t("投递到 Agent", "Delivery to the Agent")}</h2>
+        </div>
+        <p className="small muted">
+          {t(
+            "目标已分配给 ",
+            "Assigned to ",
+          )}
+          <strong>{label(owner)}</strong>
+          {t("。如果 Agent 没收到或文件被改动，可以重新投递最新的链上内容。", ". If the Agent missed it or the file changed, deliver the current chain content again.")}
+        </p>
+        {error && (
+          <div className="note warn">
+            <Icon name="alert" />
+            <div>{errorText(error, t)}</div>
+          </div>
+        )}
+        {delivered && <DeliveryResult result={delivered} t={t} />}
+        <div className="card-f">
+          <Btn
+            label={delivering ? t("正在投递…", "Delivering…") : t("重新投递", "Deliver again")}
+            icon="send"
+            disabled={delivering || !app.deviceProfile}
+            why={t("请先解锁本设备", "Unlock this device first")}
+            onClick={async () => {
+              setDelivering(true);
+              setError(null);
+              try {
+                setDelivered(await deliver(row.okr.id, owner));
+              } catch (e) {
+                setError(errorCode(e));
+              }
+              setDelivering(false);
+            }}
+          />
+        </div>
+      </section>
+    );
+  if (row.okr.state !== 0 && row.okr.state !== 2) return null;
+  const agent = agents.find((a) => a.id === agentId) ?? null;
+  return (
+    <section className="card">
+      <div className="card-h">
+        <h2>{t("分配给 Agent", "Assign to an Agent")}</h2>
+      </div>
+      {start && agent ? (
+        <AssignFlow
+          okrId={row.okr.id}
+          agent={agent}
+          budgetLimit={limit.trim()}
+          allowedPaths={paths.split("\n").map((p) => p.trim()).filter(Boolean)}
+          onAssigned={app.refresh}
+        />
+      ) : (
+        <div className="form-grid">
+          <div className="field full">
+            <label htmlFor="a-agent">{t("负责 Agent", "Owner Agent")}</label>
+            <select id="a-agent" className="select" value={agentId} onChange={(e) => setAgentId(e.target.value)}>
+              <option value="">{t("选择 Agent", "Choose an Agent")}</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id} disabled={busy.has(a.id)}>
+                  {label(a)}
+                  {busy.has(a.id) ? t("（已有进行中的目标）", " (has an active goal)") : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="a-limit">{t("工具调用上限", "Tool-call limit")}</label>
+            <input id="a-limit" className="input num" value={limit} onChange={(e) => setLimit(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="a-paths">{t("允许的路径", "Allowed paths")}</label>
+            <textarea id="a-paths" className="textarea mono" rows={2} value={paths} onChange={(e) => setPaths(e.target.value)} />
+          </div>
+          <div className="field full">
+            <Btn
+              kind="primary"
+              label={t("下一步：查看费用", "Next: see the fee")}
+              disabled={!agent || !/^[1-9][0-9]*$/.test(limit.trim()) || !paths.trim() || !app.deviceProfile}
+              why={t("选择 Agent 并填写约定", "Choose an Agent and fill in the agreement")}
+              onClick={() => setStart(true)}
+            />
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }

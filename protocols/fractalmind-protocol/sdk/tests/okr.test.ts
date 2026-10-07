@@ -66,3 +66,21 @@ test('a lagging empty directory is unavailable, rather than a successful empty O
   size = 0;
   assert.deepEqual(await api.listOkrs(id('0x10')), { okrs: [], hasNextPage: false, cursor: null });
 });
+
+test('assignAgentManager calls the upgraded OKR package with the exact agreement arguments', () => {
+  const fm = new FractalMindClient({ client: {} as ClientWithCoreApi, network: 'testnet', packageId: id('0x41'), originalPackageId: id('0x40'), okrPackageId: id('0x51'), originalOkrPackageId: id('0x50') });
+  const api = new OkrApi(fm);
+  const base = {
+    okrId: id('0x1'), organizationId: id('0x2'), humanId: id('0x3'), grantId: id('0x4'), expectedVersion: 1n,
+    membershipId: id('0x5'), bindingId: id('0x6'), managedAgentId: id('0x7'),
+    workspaceHash: new Uint8Array(32).fill(7), boundaryHash: new Uint8Array(32).fill(8),
+    budgetAsset: 'TOOL_CALLS', budgetLimit: 50n, expiresAtMs: 5000n, expectedRecordRevision: 0n,
+    keyVersion: 1n, encryptedBody: new Uint8Array([70, 77, 69, 49, ...new Array(32).fill(0)]),
+  };
+  const call = api.assignAgentManager(base).getData().commands.find((c) => c.$kind === 'MoveCall')!.MoveCall!;
+  assert.equal(`${call.package}::${call.module}::${call.function}`, `${id('0x51')}::okr::assign_agent_manager`);
+  // okr, org, human, grant, member, binding, managed, version, workspace, boundary, asset, limit, expires, revision, key, body, clock
+  assert.equal(call.arguments.length, 17);
+  assert.throws(() => api.assignAgentManager({ ...base, workspaceHash: new Uint8Array(31) }));
+  assert.throws(() => api.assignAgentManager({ ...base, budgetLimit: 0n }));
+});

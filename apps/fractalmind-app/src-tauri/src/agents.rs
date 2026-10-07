@@ -456,16 +456,22 @@ fn session_exists(name: &str, user_home: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Where a Home keeps agent-manager: App-created Homes use `.agents/skills`;
+/// existing Homes may keep it under `skills/` or `.claude/skills/`.
+fn agent_manager_script(home: &Path) -> Option<PathBuf> {
+    [".agents/skills", "skills", ".claude/skills"]
+        .iter()
+        .map(|dir| home.join(dir).join("agent-manager/scripts/main.py"))
+        .find(|p| p.is_file())
+}
+
 fn agent_manager(
     home: &Path,
     user_home: &Path,
     args: &[&str],
     timeout: Duration,
 ) -> Result<(bool, String), String> {
-    let script = home.join(".agents/skills/agent-manager/scripts/main.py");
-    if !script.is_file() {
-        return Err("AgentManagerMissing".into());
-    }
+    let script = agent_manager_script(home).ok_or("AgentManagerMissing")?;
     let python = find_bin("python3", user_home).ok_or("PythonUnavailable")?;
     run(
         Command::new(python)
@@ -508,6 +514,87 @@ pub fn start(home: &Path, user_home: &Path) -> Result<StartOutcome, String> {
     Ok(StartOutcome {
         heartbeat_installed: heartbeat_error.is_none(),
         heartbeat_error,
+    })
+}
+
+const OKR_HEADER: &str = "# FractalMind OKR";
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Delivered {
+    /// The file the goal was written to.
+    pub path: String,
+    /// Whether agent-manager accepted the task for the running Agent.
+    pub notified: bool,
+    pub notify_error: Option<String>,
+}
+
+/// Where the projection goes: the Home's OKR.md, unless that file exists and
+/// was not written by FractalMind, in which case it is left untouched.
+pub fn okr_target(home: &Path) -> PathBuf {
+    let own = home.join("OKR.md");
+    let ours = match fs::read_to_string(&own) {
+        Err(_) => true,
+        Ok(text) => text.starts_with(OKR_HEADER),
+    };
+    if ours {
+        own
+    } else {
+        home.join(".fractalmind/OKR.md")
+    }
+}
+
+fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
+    let dir = path.parent().ok_or("DeliveryFailed")?;
+    fs::create_dir_all(dir).map_err(|_| "DeliveryFailed")?;
+    let tmp = dir.join(format!(".OKR.md.{}.tmp", std::process::id()));
+    fs::write(&tmp, content).map_err(|_| "DeliveryFailed")?;
+    fs::rename(&tmp, path).map_err(|_| {
+        let _ = fs::remove_file(&tmp);
+        "DeliveryFailed".to_string()
+    })
+}
+
+/// Delivers an assigned OKR to an agent-manager Agent on this computer (#75):
+/// writes the projection into its Home, then hands it the task through
+/// agent-manager. A failed notification keeps the written goal.
+pub fn deliver_okr(
+    home: &Path,
+    user_home: &Path,
+    agent: &str,
+    content: &str,
+    task: &str,
+) -> Result<Delivered, String> {
+    if !(agent == "main" || valid_name(agent))
+        || !content.starts_with(OKR_HEADER)
+        || content.len() > 262_144
+        || task.trim().is_empty()
+        || task.len() > 8192
+    {
+        return Err("InvalidDelivery".into());
+    }
+    let target = okr_target(home);
+    write_atomic(&target, content)?;
+    let task_file = home.join(format!(".fractalmind/task-{}.md", std::process::id()));
+    // The task names the file actually written.
+    write_atomic(&task_file, &task.replace("{OKR_PATH}", &target.to_string_lossy()))?;
+    let file = task_file.to_string_lossy().to_string();
+    let result = agent_manager(
+        home,
+        user_home,
+        &["assign", agent, "--task-file", &file],
+        Duration::from_secs(90),
+    );
+    let _ = fs::remove_file(&task_file);
+    let (notified, notify_error) = match result {
+        Ok((true, _)) => (true, None),
+        Ok((false, out)) => (false, Some(format!("AssignFailed: {}", last_line(&out)))),
+        Err(e) => (false, Some(e)),
+    };
+    Ok(Delivered {
+        path: target.to_string_lossy().into(),
+        notified,
+        notify_error,
     })
 }
 
@@ -743,9 +830,61 @@ pub async fn fm_agent_start(
     .await
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Delivery {
+    home: String,
+    agent: String,
+    content: String,
+    task: String,
+}
+#[tauri::command]
+pub async fn fm_agent_deliver_okr(
+    window: WebviewWindow,
+    app: AppHandle,
+    delivery: Delivery,
+) -> Result<Delivered, String> {
+    super::main_window(&window)?;
+    blocking(move || {
+        let user = user_home(&app)?;
+        let path = resolve_home(&user, &delivery.home).ok_or("InvalidHome")?;
+        if home_state(&path) != "agent_home" {
+            return Err("HomeNotUsable".into());
+        }
+        deliver_okr(&path, &user, &delivery.agent, &delivery.content, &delivery.task)
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn okr_delivery_never_overwrites_a_persons_own_okr_file() {
+        let dir = std::env::temp_dir().join(format!("fm-okr-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        // No OKR.md yet, or one FractalMind wrote: deliver there.
+        assert_eq!(okr_target(&dir), dir.join("OKR.md"));
+        fs::write(dir.join("OKR.md"), "# FractalMind OKR\nold").unwrap();
+        assert_eq!(okr_target(&dir), dir.join("OKR.md"));
+        // The person's own OKR.md stays; the goal goes beside it.
+        fs::write(dir.join("OKR.md"), "# My plans").unwrap();
+        assert_eq!(okr_target(&dir), dir.join(".fractalmind/OKR.md"));
+        let user = std::env::temp_dir();
+        let out = deliver_okr(&dir, &user, "main", "# FractalMind OKR\nnew", "Read OKR.md").unwrap();
+        assert_eq!(out.path, dir.join(".fractalmind/OKR.md").to_string_lossy());
+        assert_eq!(fs::read_to_string(dir.join("OKR.md")).unwrap(), "# My plans");
+        assert_eq!(fs::read_to_string(dir.join(".fractalmind/OKR.md")).unwrap(), "# FractalMind OKR\nnew");
+        // Without agent-manager the goal is still written, and that is reported.
+        assert!(!out.notified && out.notify_error.as_deref() == Some("AgentManagerMissing"));
+        assert!(!dir.join(format!(".fractalmind/task-{}.md", std::process::id())).exists());
+        // Only FractalMind projections and plain agent names are delivered.
+        assert!(deliver_okr(&dir, &user, "main", "# other", "t").is_err());
+        assert!(deliver_okr(&dir, &user, "Bad Name", "# FractalMind OKR", "t").is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn names_and_homes_are_strict() {

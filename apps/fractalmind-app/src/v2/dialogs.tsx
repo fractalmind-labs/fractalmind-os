@@ -5,12 +5,12 @@
 import { createContext, lazy, Suspense, useContext, useState, type ReactNode } from "react";
 import { useApp } from "./store";
 import { Dialog, useT } from "./ui";
+import { go } from "./router";
 
 const LocalHostSetup = lazy(() => import("../LocalHostSetup"));
 const AgentCreate = lazy(() => import("../AgentCreate"));
 const AgentDiscover = lazy(() => import("../AgentDiscover"));
 const HostAccess = lazy(() => import("../HostAccess"));
-const CreateOkr = lazy(() => import("../CreateOkr"));
 
 export type DialogSpec =
   | { kind: "host-setup" }
@@ -32,6 +32,8 @@ export function DialogHost({ children }: { children: ReactNode }) {
   );
   const close = () => setSpec(null);
   const open = (next: DialogSpec) => {
+    // App v2 M2: new OKRs use the wizard page.
+    if (next.kind === "okr-create") return go("okrs/new");
     if (next.kind === "host-access") setAccess((r) => ({ kind: next.operation, target: next.target, n: (r?.n ?? 0) + 1 }));
     else setSpec(next);
   };
@@ -89,20 +91,6 @@ export function DialogHost({ children }: { children: ReactNode }) {
             t={t}
           />
         </Dialog>
-      );
-    else if (spec.kind === "okr-create")
-      body = (
-        <CreateOkr
-          profile={app.profile}
-          organizationId={organizationId}
-          t={t}
-          onCreated={() => {
-            close();
-            app.refresh();
-          }}
-          onClosed={close}
-          autoOpen
-        />
       );
   }
   return (
