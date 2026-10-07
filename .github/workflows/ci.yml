@@ -131,6 +131,8 @@ jobs:
               - .github/workflows/ci.yml
               - apps/fractalmind-app/**
               - protocols/fractalmind-protocol/sdk/**
+              - runtime/fractalmind-envd/cmd/**
+              - runtime/fractalmind-envd/internal/**
 
       - uses: dorny/paths-filter@v3
         id: move
@@ -447,6 +449,12 @@ jobs:
         run: |
           npm ci
           npm run build
+      # The desktop bundle carries envd as a sidecar (#64).
+      - uses: actions/setup-go@v5
+        if: matrix.os == 'macos-latest'
+        with:
+          go-version-file: runtime/fractalmind-envd/go.mod
+          cache-dependency-path: runtime/fractalmind-envd/go.*
       - name: Build and test macOS desktop shell
         if: matrix.os == 'macos-latest'
         working-directory: apps/fractalmind-app

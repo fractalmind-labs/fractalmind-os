@@ -4,6 +4,7 @@ use fractalmind_device_vault::{
 };
 use std::sync::Arc;
 use tauri::{Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+pub mod local_host;
 mod okr_export;
 
 fn local_origin(url: &tauri::Url) -> bool {
@@ -522,7 +523,13 @@ pub fn run() {
             fm_recovery_sign_transaction,
             fm_device_wrap_organization_keys,
             fm_device_wrap_command_result_key,
-            fm_device_encrypt_command_delivery
+            fm_device_encrypt_command_delivery,
+            local_host::fm_local_host_status,
+            local_host::fm_local_host_keys,
+            local_host::fm_local_host_configure,
+            local_host::fm_local_host_join,
+            local_host::fm_local_host_service,
+            local_host::fm_local_host_uninstall
         ])
         .run(tauri::generate_context!())
         .expect("FractalMind App runtime failed");
