@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "agents"
+description = "Create Agents from bundled ROMs on this computer: list the ROM catalog, detect installed launchers and the model of each Codex profile (no other configuration is read), check a chosen Home directory, write the ROM's Agent OS files and skills into a new or empty Home, rewrite its AGENTS.md frontmatter and start it with the installed agent-manager (tmux session and this Home's own crontab block). No arbitrary path, command or shell access."
+commands.allow = ["fm_agent_catalog", "fm_agent_launchers", "fm_agent_home_check", "fm_agent_create", "fm_agent_start"]

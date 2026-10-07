@@ -3,5 +3,5 @@
   "description": "Bounded device operations for the bundled main App only.",
   "windows": ["main"],
   "local": true,
-  "permissions": ["device-access", "app-appearance", "okr-export", "local-host"]
+  "permissions": ["device-access", "app-appearance", "okr-export", "local-host", "agents"]
 }

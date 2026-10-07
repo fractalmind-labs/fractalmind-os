@@ -150,6 +150,9 @@ func main() {
 	}
 
 	runtimeExecutor, err := newRuntimeCommandExecutorFromEnv(cfg)
+	if errors.Is(err, hostidentity.ErrAccessDenied) {
+		waitAfterDeniedKey(err)
+	}
 	if err != nil {
 		log.Fatalf("[runtimeadapter] failed to initialize persistent signed-command runtime: %v", err)
 	}
@@ -232,7 +235,11 @@ func main() {
 		if err != nil {
 			log.Fatal("[auth] native Host store unavailable")
 		}
+		log.Printf("[auth] reading Host key %q from the system credential store (the OS may ask to allow access)", cfg.Identity.KeyProfile)
 		connectionKeys, err = hostidentity.Load(store, cfg.Identity.KeyProfile)
+		if errors.Is(err, hostidentity.ErrAccessDenied) {
+			waitAfterDeniedKey(err)
+		}
 		if err != nil {
 			log.Fatal("[auth] initialize native Host keys with --init-host first")
 		}
@@ -664,6 +671,13 @@ func main() {
 			lastAgents = agents
 
 		case <-heartbeatTicker.C:
+			// A signed observation is valid for 60s; send this moment's scan
+			// rather than the last periodic one, so readers get its full window.
+			if connectionKeys != nil {
+				if agents, err := scan(); err == nil {
+					lastAgents = agents
+				}
+			}
 			payload := heartbeat.NewPayload(
 				cfg.Identity.HostID,
 				cfg.Identity.Hostname,
@@ -1100,4 +1114,16 @@ func truncAddr(s string) string {
 		return s[:16]
 	}
 	return s
+}
+
+// waitAfterDeniedKey keeps a service process alive after the person cancelled
+// or denied the OS prompt for the Host key. Exiting would let the service
+// manager restart it and ask again in a loop; the App restarts it on request.
+func waitAfterDeniedKey(err error) {
+	log.Printf("[auth] %v; waiting. Restart the service from the FractalMind App to ask again.", err)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+	log.Printf("[auth] stopped while waiting for Host key access")
+	os.Exit(0)
 }

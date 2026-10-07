@@ -32,6 +32,11 @@ fn main() {
             "fm_local_host_join",
             "fm_local_host_service",
             "fm_local_host_uninstall",
+            "fm_agent_catalog",
+            "fm_agent_launchers",
+            "fm_agent_home_check",
+            "fm_agent_create",
+            "fm_agent_start",
         ]),
     ))
     .expect("FractalMind App native manifest failed");

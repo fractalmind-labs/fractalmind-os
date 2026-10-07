@@ -34,9 +34,23 @@ export default function LocalHostCard({
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  const upgraded = useRef(false);
   async function refresh() {
     if (!deviceProfile) return;
-    const s = await native.status(deviceProfile);
+    let s = await native.status(deviceProfile);
+    // After an App update the service still runs the old envd or definition;
+    // reinstall it once, keeping it stopped if the person stopped it.
+    if (
+      !upgraded.current &&
+      s.configured?.organizationId === organizationId &&
+      s.envdAvailable &&
+      !s.serviceCurrent &&
+      (s.service === "running" || s.service === "starting")
+    ) {
+      upgraded.current = true;
+      await native.service(deviceProfile, "install").catch(() => {});
+      s = await native.status(deviceProfile);
+    }
     if (mounted.current) setStatus(s);
   }
   useEffect(() => {
@@ -147,6 +161,22 @@ export default function LocalHostCard({
           "Phones and other devices cannot reach a this-computer-only endpoint. Opening it to your LAN or the internet needs an HTTPS endpoint and a binding update, which the App does not offer yet.",
         )}
       </p>
+      {running && !status.listening && (
+        <div className="note warn" role="status">
+          <div>
+            {t(
+              "服务在运行，但还没有读到主机密钥。macOS 可能在询问是否允许 fractalmind-envd 访问钥匙串：请选择“始终允许”。如果刚才取消或拒绝了，服务会停在等待状态，不会反复询问；点“重新启动服务”再试一次。",
+              "The service is running but has not read the host key yet. macOS may be asking whether fractalmind-envd can access the keychain: choose “Always Allow”. If the prompt was cancelled or denied, the service waits instead of asking again; choose “Restart service” to try once more.",
+            )}
+          </div>
+          <button
+            disabled={busy}
+            onClick={() => void act(() => native.service(deviceProfile, "install"))}
+          >
+            {t("重新启动服务", "Restart service")}
+          </button>
+        </div>
+      )}
       {confirmRevoke && (
         <div className="note warn" role="alert">
           <div>

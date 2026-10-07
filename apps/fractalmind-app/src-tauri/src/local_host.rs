@@ -63,6 +63,9 @@ pub struct Status {
     pub pid: Option<u32>,
     /// The configured Coordinator port accepts connections on loopback.
     pub listening: bool,
+    /// The installed service definition matches this App's (envd build,
+    /// paths, environment); false after an App update until reinstalled.
+    pub service_current: bool,
     pub config_path: String,
     pub log_path: String,
     pub workspace_path: String,
@@ -140,6 +143,44 @@ fn q(value: &str) -> String {
     // JSON strings are valid YAML double-quoted scalars.
     serde_json::to_string(value).expect("string serializes")
 }
+fn hex_of(value: Option<&serde_json::Value>, len: usize) -> bool {
+    value.and_then(|v| v.as_str()).is_some_and(|s| {
+        s.len() == len
+            && s.bytes()
+                .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+    })
+}
+/// envd's `--init-host` output: this profile's address and 32-byte keys.
+fn valid_public(value: &serde_json::Value, profile: &str) -> bool {
+    value.get("profile").and_then(|p| p.as_str()) == Some(profile)
+        && value
+            .get("host_address")
+            .and_then(|a| a.as_str())
+            .is_some_and(|a| {
+                a.starts_with("0x") && hex_of(Some(&serde_json::Value::String(a[2..].into())), 64)
+            })
+        && hex_of(value.get("signing_public_key"), 64)
+        && hex_of(value.get("encryption_public_key"), 64)
+}
+/// Signed observations are valid for 60s and the import revalidates them
+/// over many chain reads; a 10s heartbeat with a fresh scan leaves room.
+const HEARTBEAT_BLOCK: &str =
+    "heartbeat:\n  interval: \"10s\"\nagents:\n  scan_interval: \"10s\"\n";
+/// Configurations written before the 10s heartbeat gain it on reinstall.
+fn ensure_heartbeat(config: &Path) -> Result<(), String> {
+    let Ok(text) = fs::read_to_string(config) else {
+        return Ok(());
+    };
+    if text.lines().any(|l| l == "heartbeat:" || l == "agents:") {
+        return Ok(());
+    }
+    let mut out = text;
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
+    out.push_str(HEARTBEAT_BLOCK);
+    write_private(config, out.as_bytes())
+}
 pub fn key_profile(profile: &str) -> String {
     format!("app-{profile}")
 }
@@ -191,6 +232,7 @@ pub fn render_config(profile: &str, chain: &Chain, org: &Organization, workspace
         format!("  protocol_registry_id: {}", q(&chain.registry_id)),
         format!("  org_id: {}", q(&org.organization_id)),
         format!("  host_join_gas_budget: {JOIN_GAS_BUDGET}"),
+        HEARTBEAT_BLOCK.trim_end().into(),
         "runtime:".into(),
         "  enabled: true".into(),
         "  adapter_kind: native-file-agent".into(),
@@ -208,12 +250,16 @@ pub struct Layout {
     pub profile: String,
     pub config: PathBuf,
     pub record: PathBuf,
+    /// Host public keys saved on first creation, so the App never needs the
+    /// credential store (and its OS prompt) just to know the Host address.
+    pub public: PathBuf,
     pub workspace: PathBuf,
     pub log: PathBuf,
     pub label: String,
     /// launchd plist / systemd unit; unused for the Windows task.
     pub service_file: PathBuf,
     pub envd: Option<PathBuf>,
+    pub home: PathBuf,
 }
 impl Layout {
     /// `data` holds the per-profile configuration; `home` the user's home.
@@ -243,16 +289,18 @@ impl Layout {
                 .join("systemd/user")
                 .join(format!("{label}.service")),
         );
-        let _ = (home, config_dir);
+        let _ = config_dir;
         Ok(Layout {
             profile: profile.into(),
             config: root.join("sentinel.yaml"),
             record: root.join("local-host.json"),
+            public: root.join("host-public.json"),
             workspace: root.join("workspace"),
             log,
             label,
             service_file,
             envd,
+            home: home.to_path_buf(),
         })
     }
     fn envd(&self) -> Result<&Path, String> {
@@ -279,6 +327,7 @@ impl Layout {
                 )
                 .is_ok()
             }),
+            service_current: self.service_current(),
             configured,
             service,
             pid,
@@ -286,6 +335,33 @@ impl Layout {
             log_path: self.log.to_string_lossy().into(),
             workspace_path: self.workspace.to_string_lossy().into(),
             default_host_name: default_host_name(),
+        }
+    }
+    /// The service file this App would install now.
+    pub fn service_definition(&self) -> Option<String> {
+        let envd = self.envd.as_deref()?;
+        let env = service_env(&self.home, envd);
+        #[cfg(target_os = "macos")]
+        return Some(launchd_plist(
+            &self.label,
+            envd,
+            &self.config,
+            &self.log,
+            &env,
+        ));
+        #[cfg(not(target_os = "macos"))]
+        return Some(systemd_unit(envd, &self.config, &self.log, &env));
+    }
+    fn service_current(&self) -> bool {
+        if cfg!(target_os = "windows") {
+            return true;
+        }
+        match (
+            self.service_definition(),
+            fs::read_to_string(&self.service_file),
+        ) {
+            (Some(want), Ok(have)) => want == have,
+            _ => false,
         }
     }
     /// Creates (or reads) this profile's Host keys through envd. Returns only
@@ -307,6 +383,12 @@ impl Layout {
                 render_keys_config(&self.profile, network).as_bytes(),
             )?;
         }
+        if let Some(public) = self.cached_public() {
+            return Ok(public);
+        }
+        // Only the first time: envd creates (or reads) the keys, which the OS
+        // may ask the person to allow. The background service then reads
+        // them once per start; the App reads only the saved public part.
         let config = self.config.to_string_lossy().to_string();
         let out = run_envd(
             self.envd()?,
@@ -316,12 +398,19 @@ impl Layout {
         )?
         .ok()?;
         let public = last_json(&out)?;
-        if public.get("profile").and_then(|p| p.as_str())
-            != Some(key_profile(&self.profile).as_str())
-        {
+        if !valid_public(&public, &key_profile(&self.profile)) {
             return Err("EnvdOutputInvalid".into());
         }
+        write_private(
+            &self.public,
+            &serde_json::to_vec_pretty(&public).map_err(|_| "LocalHostUnavailable")?,
+        )?;
         Ok(public)
+    }
+    fn cached_public(&self) -> Option<serde_json::Value> {
+        let value: serde_json::Value =
+            serde_json::from_slice(&fs::read(&self.public).ok()?).ok()?;
+        valid_public(&value, &key_profile(&self.profile)).then_some(value)
     }
     /// Writes the full public configuration once the chain binding exists.
     pub fn configure(
@@ -405,7 +494,10 @@ impl Layout {
         }
         match action {
             "install" | "start" if self.record().is_none() => Err("LocalHostNotConfigured".into()),
-            "install" => service::install(self, self.envd()?),
+            "install" => {
+                ensure_heartbeat(&self.config)?;
+                service::install(self, self.envd()?)
+            }
             "start" => service::start(self),
             "stop" => service::stop(self),
             _ => Err("InvalidAction".into()),
@@ -428,7 +520,7 @@ impl Layout {
             )?
             .ok()?;
         }
-        for path in [&self.record, &self.config] {
+        for path in [&self.record, &self.config, &self.public] {
             match fs::remove_file(path) {
                 Ok(()) => {}
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
@@ -612,7 +704,31 @@ fn xml(value: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
 }
-pub fn launchd_plist(label: &str, envd: &Path, config: &Path, log: &Path) -> String {
+/// Login services start with a minimal PATH; envd and the Agents it observes
+/// or starts need tmux, Homebrew and user-local CLIs (codex, claude).
+pub fn service_path(home: &Path) -> String {
+    let home = home.to_string_lossy();
+    format!("{home}/.local/bin:{home}/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+}
+/// PATH plus a stamp of the envd build, so an App update that ships a new
+/// envd makes the installed definition out of date and gets reinstalled.
+pub fn service_env(home: &Path, envd: &Path) -> String {
+    let stamp = fs::metadata(envd)
+        .ok()
+        .map(|m| {
+            let modified = m
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            format!("{}-{modified}", m.len())
+        })
+        .unwrap_or_default();
+    format!("{}\u{0}{stamp}", service_path(home))
+}
+pub fn launchd_plist(label: &str, envd: &Path, config: &Path, log: &Path, env: &str) -> String {
+    let (path, stamp) = env.split_once('\u{0}').unwrap_or((env, ""));
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -625,6 +741,8 @@ pub fn launchd_plist(label: &str, envd: &Path, config: &Path, log: &Path) -> Str
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>10</integer>
   <key>ProcessType</key><string>Background</string>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>{path}</string><key>LANG</key><string>en_US.UTF-8</string><key>FM_ENVD_BUILD</key><string>{stamp}</string></dict>
   <key>StandardOutPath</key><string>{log}</string>
   <key>StandardErrorPath</key><string>{log}</string>
 </dict>
@@ -634,6 +752,8 @@ pub fn launchd_plist(label: &str, envd: &Path, config: &Path, log: &Path) -> Str
         envd = xml(&envd.to_string_lossy()),
         config = xml(&config.to_string_lossy()),
         log = xml(&log.to_string_lossy()),
+        path = xml(path),
+        stamp = xml(stamp),
     )
 }
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
@@ -647,9 +767,12 @@ fn systemd_quote(value: &str) -> String {
     )
 }
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub fn systemd_unit(envd: &Path, config: &Path, log: &Path) -> String {
+pub fn systemd_unit(envd: &Path, config: &Path, log: &Path, env: &str) -> String {
+    let (path, stamp) = env.split_once('\u{0}').unwrap_or((env, ""));
     format!(
-        "[Unit]\nDescription=FractalMind Host and Coordinator\nAfter=network-online.target\n\n[Service]\nExecStart={} --config {}\nRestart=always\nRestartSec=10\nStandardOutput=append:{}\nStandardError=append:{}\n\n[Install]\nWantedBy=default.target\n",
+        "[Unit]\nDescription=FractalMind Host and Coordinator\nAfter=network-online.target\n\n[Service]\nEnvironment={} {}\nExecStart={} --config {}\nRestart=always\nRestartSec=10\nStandardOutput=append:{}\nStandardError=append:{}\n\n[Install]\nWantedBy=default.target\n",
+        systemd_quote(&format!("PATH={path}")),
+        systemd_quote(&format!("FM_ENVD_BUILD={stamp}")),
         systemd_quote(&envd.to_string_lossy()),
         systemd_quote(&config.to_string_lossy()),
         log.to_string_lossy(),
@@ -708,7 +831,13 @@ mod service {
         if let Some(dir) = layout.log.parent() {
             fs::create_dir_all(dir).map_err(|_| "ServiceUnavailable")?;
         }
-        let content = launchd_plist(&layout.label, envd, &layout.config, &layout.log);
+        let content = launchd_plist(
+            &layout.label,
+            envd,
+            &layout.config,
+            &layout.log,
+            &service_env(&layout.home, envd),
+        );
         fs::create_dir_all(layout.service_file.parent().ok_or("ServiceUnavailable")?)
             .map_err(|_| "ServiceUnavailable")?;
         fs::write(&layout.service_file, content).map_err(|_| "ServiceUnavailable")?;
@@ -748,7 +877,18 @@ mod service {
         let target = format!("gui/{uid}/{}", layout.label);
         let _ = launchctl(&["bootout", &target]);
         let _ = launchctl(&["disable", &target]);
-        Ok(())
+        // bootout returns while the job may still be shutting down; a start
+        // in that window would only kickstart a job that is about to vanish.
+        for _ in 0..100 {
+            if !launchctl(&["print", &target])
+                .map(|o| o.status.success())
+                .unwrap_or(false)
+            {
+                return Ok(());
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        Err("ServiceStopTimeout".into())
     }
     pub fn uninstall(layout: &Layout) -> Result<(), String> {
         stop(layout)?;
@@ -792,7 +932,12 @@ mod service {
             .map_err(|_| "ServiceUnavailable")?;
         fs::write(
             &layout.service_file,
-            systemd_unit(envd, &layout.config, &layout.log),
+            systemd_unit(
+                envd,
+                &layout.config,
+                &layout.log,
+                &service_env(&layout.home, envd),
+            ),
         )
         .map_err(|_| "ServiceUnavailable")?;
         systemctl(&["daemon-reload"])?;
@@ -1056,7 +1201,18 @@ mod tests {
         assert_eq!(endpoint(7444), "http://127.0.0.1:7444");
         assert!(render_keys_config("primary", "localnet").contains("key_profile: \"app-primary\""));
         // Block structure: sections at column 0, keys at 2, workspace entry at 4.
-        let sections = ["identity:", "roles:", "coordinator:", "sui:", "runtime:"];
+        let sections = [
+            "identity:",
+            "roles:",
+            "coordinator:",
+            "sui:",
+            "heartbeat:",
+            "agents:",
+            "runtime:",
+        ];
+        assert!(
+            yaml.contains("heartbeat:\n  interval: \"10s\"\nagents:\n  scan_interval: \"10s\"\n")
+        );
         for line in yaml.lines().filter(|l| !l.starts_with('#')) {
             let indent = line.len() - line.trim_start().len();
             assert!(
@@ -1074,7 +1230,12 @@ mod tests {
             Path::new("/Applications/FractalMind.app/Contents/MacOS/fractalmind-envd"),
             Path::new("/Users/a&b/cfg.yaml"),
             Path::new("/Users/a/Library/Logs/FractalMind/envd-testnet.log"),
+            &service_path(Path::new("/Users/a")),
         );
+        assert!(p.contains(
+            "<key>PATH</key><string>/Users/a/.local/bin:/Users/a/bin:/opt/homebrew/bin:"
+        ));
+        assert!(p.contains("<key>LANG</key><string>en_US.UTF-8</string>"));
         assert!(p.contains("<string>/Users/a&amp;b/cfg.yaml</string>"));
         assert!(
             p.contains("<key>RunAtLoad</key><true/>") && p.contains("<key>KeepAlive</key><true/>")
@@ -1083,6 +1244,19 @@ mod tests {
             Path::new("/opt/fm/fractalmind-envd"),
             Path::new("/home/u/100% \"x\"/cfg"),
             Path::new("/home/u/envd.log"),
+            "/home/u/.local/bin:/usr/bin",
+        );
+        assert!(u.contains("Environment=\"PATH=/home/u/.local/bin:/usr/bin\" \"FM_ENVD_BUILD=\"\n"));
+        let stamped = launchd_plist(
+            "l",
+            Path::new("/e"),
+            Path::new("/c"),
+            Path::new("/l"),
+            "/bin\u{0}123-456",
+        );
+        assert!(
+            stamped.contains("<key>PATH</key><string>/bin</string>")
+                && stamped.contains("<key>FM_ENVD_BUILD</key><string>123-456</string>")
         );
         assert!(u.contains(
             "ExecStart=\"/opt/fm/fractalmind-envd\" --config \"/home/u/100%% \\\"x\\\"/cfg\"\n"
@@ -1095,6 +1269,51 @@ mod tests {
             ),
             "\"C:\\FM\\fractalmind-envd.exe\" --config \"C:\\Users\\u\\cfg.yaml\""
         );
+    }
+    #[test]
+    fn public_keys_are_cached_after_the_first_read() {
+        let dir = std::env::temp_dir().join(format!("fm-public-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        // No envd: any attempt to read the credential store would fail.
+        let layout = Layout::new("testnet", &dir, &dir, &dir, None).unwrap();
+        assert_eq!(layout.keys("testnet"), Err("EnvdUnavailable".to_string()));
+        let public = serde_json::json!({
+            "format": "1", "profile": "app-testnet",
+            "host_address": format!("0x{}", "a".repeat(64)),
+            "signing_public_key": "b".repeat(64), "encryption_public_key": "c".repeat(64),
+        });
+        write_private(&layout.public, public.to_string().as_bytes()).unwrap();
+        assert_eq!(layout.keys("testnet").unwrap(), public);
+        for bad in [
+            serde_json::json!({ "profile": "app-other", "host_address": format!("0x{}", "a".repeat(64)), "signing_public_key": "b".repeat(64), "encryption_public_key": "c".repeat(64) }),
+            serde_json::json!({ "profile": "app-testnet", "host_address": "0x12", "signing_public_key": "b".repeat(64), "encryption_public_key": "c".repeat(64) }),
+            serde_json::json!({ "profile": "app-testnet", "host_address": format!("0x{}", "a".repeat(64)), "signing_public_key": "B".repeat(64), "encryption_public_key": "c".repeat(64) }),
+        ] {
+            write_private(&layout.public, bad.to_string().as_bytes()).unwrap();
+            assert_eq!(
+                layout.keys("testnet"),
+                Err("EnvdUnavailable".to_string()),
+                "{bad}"
+            );
+        }
+        fs::remove_dir_all(&dir).unwrap();
+    }
+    #[test]
+    fn older_configs_gain_the_heartbeat_once() {
+        let dir = std::env::temp_dir().join(format!("fm-hb-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let cfg = dir.join("sentinel.yaml");
+        fs::write(
+            &cfg,
+            "identity:\n  key_profile: \"app-x\"\nruntime:\n  enabled: true\n",
+        )
+        .unwrap();
+        ensure_heartbeat(&cfg).unwrap();
+        ensure_heartbeat(&cfg).unwrap();
+        let text = fs::read_to_string(&cfg).unwrap();
+        assert_eq!(text.matches("heartbeat:").count(), 1);
+        assert!(text.ends_with(HEARTBEAT_BLOCK));
+        fs::remove_dir_all(&dir).unwrap();
     }
     #[test]
     fn last_json_line_wins() {

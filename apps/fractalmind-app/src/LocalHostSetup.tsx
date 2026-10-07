@@ -404,6 +404,14 @@ export default function LocalHostSetup({
           </span>
         </div>
       )}
+      {result && (
+        <p className="small muted">
+          {t(
+            "下一步：在“团队与 Agents”新建 Agent（名称、Home 目录、ROM），或导入这台电脑上已在运行的 Agent。",
+            "Next: under Team & Agents, create an Agent (name, Home directory, ROM) or import one already running on this computer.",
+          )}
+        </p>
+      )}
       {error && (
         <p role="alert" className="note warn">
           {error.text}
