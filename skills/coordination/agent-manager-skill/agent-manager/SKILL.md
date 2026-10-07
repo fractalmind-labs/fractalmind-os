@@ -87,14 +87,21 @@ You are the Dev Agent...
 - `skills`: Array of skill names from `.agents/skills/` (optional, injected at start)
 - `schedules`: Array of scheduled jobs (optional, see Scheduling section)
 - `tmux`: Optional tmux layout metadata (layout + target pane)
+- `namespace`: Optional workspace-wide tmux namespace (normally set in root `AGENTS.md`; `AGENT_MANAGER_NAMESPACE` overrides it)
 
 ### Tmux Sessions
 
-Each agent runs in a dedicated tmux session (`agent-{name}`):
+Each agent runs in a dedicated tmux session (`agent-{name}`), or `<namespace>--agent-{name}` when a workspace namespace is configured. The reserved main agent uses `main` or `<namespace>--main`.
 
 - **Easy monitoring**: `tmux capture-pane -t agent-dev`
 - **Direct interaction**: `tmux attach -t agent-dev`
 - **Clean separation**: No process pollution
+
+Namespaces prevent collisions when multiple workspaces share one tmux server.
+Add `namespace: my-project` to the root `AGENTS.md` frontmatter, or set
+`AGENT_MANAGER_NAMESPACE=my-project` for a command. The environment variable
+wins; namespace values are normalized to tmux-safe letters, digits, `.`, `_`,
+and `-`. With no namespace configured, the legacy session names remain in use.
 
 ### Optional: Tmux Layouts
 
@@ -228,7 +235,7 @@ $CLI start dev --working-dir /path   # Override working dir
 - Rejects if already running (one agent, one terminal)
 - Rejects if agent is disabled (`enabled: false` in config)
 - Loads skills and injects as system prompt
-- Session named `agent-{name}`
+- Session named `agent-{name}` (or `<namespace>--agent-{name}` when configured)
 
 ### `stop` - Stop a Running Agent
 
