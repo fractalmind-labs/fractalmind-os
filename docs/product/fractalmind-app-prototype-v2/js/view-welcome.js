@@ -74,7 +74,9 @@
   function create() {
     const w = W();
     const step = w.step || 1;
-    const nav = stepsNav([['资料', 'Profile'], ['运行费', 'Run fee'], ['核对提交', 'Review'], ['恢复码', 'Recovery']], step);
+    // Step 5 (this computer as the execution host) continues in the App right
+    // after the organization opens (issue #64).
+    const nav = stepsNav([['资料', 'Profile'], ['运行费', 'Run fee'], ['核对提交', 'Review'], ['恢复码', 'Recovery'], ['执行主机', 'Host']], step);
     const name = wf('name', '');
     let body = '', foot = '';
     if (step === 1) {
@@ -292,6 +294,9 @@
       }
       if (FM.review) FM.review.mark('identity.created');
       enter(p.id);
+      // Desktops continue straight into "use this computer as an execution host".
+      const dev = M.find(p.devices, p.currentDeviceId);
+      if (dev && ['macos', 'windows', 'ubuntu'].includes(dev.platform)) U.openDialog('bootstrap');
     },
     'w-pair': () => {
       const tp = target();

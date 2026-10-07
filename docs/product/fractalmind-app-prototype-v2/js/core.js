@@ -33,7 +33,7 @@
   function seedRoot(now) {
     const demo = F.createDemoProfile(now, M);
     return {
-      schema: 'fm-prototype-v2', version: 2, rev: 0, seededAt: now,
+      schema: 'fm-prototype-v2', version: 3, rev: 0, seededAt: now,
       activeProfileId: demo.id, profiles: { [demo.id]: demo },
       faults: { nextTxFail: false, rpcDown: false, coordinatorDown: false, networkFail: false },
       network: F.networkDirectory(now, M),
@@ -42,7 +42,7 @@
   }
 
   let root = read(STATE_KEY);
-  if (!root || root.schema !== 'fm-prototype-v2' || root.version !== 2) root = seedRoot(Date.now());
+  if (!root || root.schema !== 'fm-prototype-v2' || root.version !== 3) root = seedRoot(Date.now());
 
   const prefs = Object.assign({ locale: 'zh-CN', theme: 'system' }, read(PREFS_KEY) || {});
 
@@ -338,6 +338,8 @@
     'invite.redeem': ['兑换邀请并入组', 'Redeem invitation and join'],
     'invite.revoke': ['撤销邀请', 'Revoke invitation'],
     'binding.create': ['绑定连接入口', 'Bind a connection endpoint'],
+    'host.prepare': ['创建连接入口与主机邀请', 'Create endpoint and host invitation'],
+    'binding.update': ['更新 Coordinator 入口', 'Update coordinator endpoint'],
     'host.revoke': ['撤销主机资格', 'Revoke host membership'],
     'device.grant': ['授权新设备', 'Authorize a new device'],
     'device.revoke': ['撤销设备', 'Revoke a device'],

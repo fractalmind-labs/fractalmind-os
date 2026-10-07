@@ -789,13 +789,18 @@
   }
 
   function createInvite(profile, org, opts, codeDigest, now) {
-    const binding = org.bindings.find(b => b.state === 'confirmed');
+    // A bootstrap PTB creates the binding and the invite together, so it may
+    // target a binding that is still pending in the same transaction.
+    const binding = opts.bindingId
+      ? org.bindings.find(b => b.id === opts.bindingId && (b.state === 'confirmed' || b.state === 'pending'))
+      : org.bindings.find(b => b.state === 'confirmed');
     if (!binding) return { ok: false, code: 'no_binding' };
     const ttl = INVITE_TTL[opts.ttl] ? opts.ttl : '1h';
     const inv = {
       id: nextId(profile, 'inv'), state: 'signing', ttl, createdAt: now, expiresAt: now + INVITE_TTL[ttl],
       grantDays: 7, desktop: !!opts.desktop, workspaceIds: opts.workspaceIds || [], bindingId: binding.id,
       codeDigest, maxUses: 1, pubKey: `ed25519:${codeDigest.slice(0, 12)}`,
+      bindingVersion: binding.version || 1,
     };
     org.invites.unshift(inv);
     return { ok: true, invite: inv };
@@ -814,6 +819,8 @@
     const st = inviteStatus(inv, now);
     if (st !== 'active') return { ok: false, code: st === 'signing' ? 'pending' : st };
     if (!device || device.proof !== redeemProof(inv.id, inv.codeDigest, device.deviceKey)) return { ok: false, code: 'bad_proof' };
+    const binding = find(org.bindings, inv.bindingId);
+    if (!binding || binding.state !== 'confirmed' || (binding.version || 1) !== (inv.bindingVersion || 1)) return { ok: false, code: 'binding_changed' };
     inv.state = 'consumed';
     inv.consumedAt = now;
     const host = {
@@ -827,6 +834,67 @@
     org.hosts.push(host);
     inv.consumedBy = host.id;
     return { ok: true, host };
+  }
+
+  /* ------------------------------------------- This computer's service */
+
+  /** Coordinator endpoint scopes. Only loopback may use plain HTTP. */
+  const ENDPOINT_SCOPES = ['loopback', 'lan', 'public'];
+  function validEndpoint(scope, endpoint) {
+    if (!ENDPOINT_SCOPES.includes(scope) || typeof endpoint !== 'string') return false;
+    if (scope === 'loopback') return /^http:\/\/127\.0\.0\.1:\d{2,5}$/.test(endpoint);
+    return /^https:\/\/[\w.-]+(:\d{2,5})?$/.test(endpoint) && !/^https:\/\/(127\.|localhost)/.test(endpoint);
+  }
+
+  /** Background service (envd as Host + Coordinator) on this computer. It is
+   * device-local state; chain membership and bindings stay in the org. */
+  function localServiceFor(profile) {
+    if (!profile.localService) profile.localService = { state: 'not_installed', hostId: null, bindingId: null, startAtLogin: true, keys: false };
+    return profile.localService;
+  }
+
+  function setLocalServiceRunning(profile, org, running, now) {
+    const svc = localServiceFor(profile);
+    if (svc.state === 'not_installed') return { ok: false, code: 'not_installed' };
+    svc.state = running ? 'running' : 'stopped';
+    const host = find(org.hosts, svc.hostId);
+    const binding = find(org.bindings, svc.bindingId);
+    if (binding) binding.online = running;
+    if (host) {
+      if (running) return connectHost(org, host.id, true, now);
+      host.status = 'offline';
+    }
+    return { ok: true };
+  }
+
+  /** New endpoint for a binding: a new version; invites signed for the old
+   * version can no longer be redeemed, and hosts reconnect to the new one. */
+  function updateBinding(org, bindingId, scope, endpoint, now) {
+    const b = find(org.bindings, bindingId);
+    if (!b || b.state !== 'confirmed') return { ok: false, code: 'not_confirmed' };
+    if (!validEndpoint(scope, endpoint)) return { ok: false, code: 'invalid_endpoint' };
+    b.version = (b.version || 1) + 1;
+    b.scope = scope;
+    b.endpoint = endpoint;
+    b.updatedAt = now;
+    org.invites.forEach(inv => {
+      if (inv.bindingId === b.id && (inv.state === 'active' || inv.state === 'signing') && (inv.bindingVersion || 1) !== b.version) {
+        inv.state = 'revoked';
+        inv.revokedAt = now;
+        inv.superseded = true;
+      }
+    });
+    org.hosts.forEach(h => { if (h.bindingId === b.id && h.status === 'online') h.status = 'connecting'; });
+    return { ok: true, binding: b };
+  }
+
+  /** Revoking this computer's host also uninstalls its service and keys. */
+  function removeLocalService(profile) {
+    const svc = localServiceFor(profile);
+    svc.state = 'not_installed';
+    svc.keys = false;
+    svc.hostId = null;
+    return { ok: true };
   }
 
   function revokeInvite(org, inviteId, now) {
@@ -1047,6 +1115,7 @@
   const FEES = {
     'identity.create': 3000000, 'okr.activate': 1200000, 'okr.update': 800000, 'okr.archive': 600000, 'approval.decide': 400000,
     'invite.create': 900000, 'invite.redeem': 1100000, 'invite.revoke': 500000, 'binding.create': 900000,
+    'host.prepare': 1500000, 'binding.update': 700000,
     'host.revoke': 600000, 'device.grant': 800000, 'device.revoke': 500000, 'recovery.set': 700000,
     'recovery.apply': 1500000, 'agent.import': 700000, 'agent.include': 900000, 'memory.write': 600000,
     'memory.archive': 400000, 'agent.policy': 600000,
@@ -1141,6 +1210,18 @@
         return { ok: true };
       }
       case 'invite.redeem': return redeemInvite(profile, org, p.inviteId, p.device, now);
+      // One device-signed PTB: confirm the Coordinator binding and activate the invite.
+      case 'host.prepare': {
+        const b = find(org.bindings, p.bindingId);
+        const inv = find(org.invites, p.inviteId);
+        if (!b || b.state !== 'pending' || !inv || inv.state !== 'signing' || inv.bindingId !== b.id) return { ok: false, code: 'not_pending' };
+        b.state = 'confirmed';
+        b.confirmedAt = now;
+        inv.state = 'active';
+        inv.txId = tx.id;
+        return { ok: true };
+      }
+      case 'binding.update': return updateBinding(org, p.bindingId, p.scope, p.endpoint, now);
       case 'invite.revoke': return revokeInvite(org, p.inviteId, now);
       case 'binding.create': {
         const b = find(org.bindings, p.bindingId);
@@ -1587,6 +1668,7 @@
     requestStop, confirmStop, resolveConfirmation, injectScenario, resolveScenario, resumeOkr,
     assignIssues, reassign, hostCommand, ackCommand,
     inviteStatus, createInvite, redeemProof, redeemInvite, revokeInvite, connectHost, revokeHost,
+    ENDPOINT_SCOPES, validEndpoint, localServiceFor, setLocalServiceRunning, updateBinding, removeLocalService,
     deviceActive, actionsForRole, can, createPairing, pairingStatus, approvePairing, confirmGrant, syncData, revokeDevice,
     B32, makeRecoveryCode, parseRecoveryCode, lookupRecovery, setRecovery, applyRecovery,
     feeFor, canPay, beginTx, commitTx, queryTx,

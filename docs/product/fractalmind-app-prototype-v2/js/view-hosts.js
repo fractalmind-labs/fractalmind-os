@@ -23,7 +23,7 @@
     const okrs = okrsOn(h);
     const online = h.status === 'online';
     return `<tr class="click" data-action="go" data-to="hosts/${esc(h.id)}">
-      <td><div class="host-name"><span class="host-ico">${icon(h.kind === 'cloud' ? 'cloud' : 'server')}</span><div><div class="strong">${esc(h.name)}${h.isThisDevice ? ` <span class="chip outline">${T('本机', 'This computer')}</span>` : ''}</div><div class="tiny muted">${esc(L(h.location) || '—')} · ${h.kind === 'cloud' ? T('云端', 'Cloud') : T('本地', 'Local')}</div></div></div></td>
+      <td><div class="host-name"><span class="host-ico">${icon(h.kind === 'cloud' ? 'cloud' : 'server')}</span><div><div class="strong">${esc(h.name)}${h.isThisDevice ? ` <span class="chip outline">${T('本机', 'This computer')}</span>` : ''}${(h.roles || []).includes('coordinator') ? ` <span class="chip brand">Coordinator</span>` : ''}</div><div class="tiny muted">${esc(L(h.location) || '—')} · ${h.kind === 'cloud' ? T('云端', 'Cloud') : T('本地', 'Local')}</div></div></div></td>
       <td class="small">${esc(h.os)}<div class="tiny muted">${esc(h.arch)}</div></td>
       <td>${U.hostState(h)}${!h.accepting && h.membership.state === 'active' ? `<div class="tiny" style="color:var(--warn)">${T('暂停接单', 'Not accepting')}</div>` : ''}</td>
       <td class="small">${U.agoTag(h.lastHeartbeatAt)}${online ? '' : `<div class="tiny muted">${T('显示最后观测', 'last observation')}</div>`}</td>
@@ -52,6 +52,7 @@
     const seg = (k, zh, en) => `<button data-action="set-tab" data-scope="hosts" data-tab="${k}" aria-pressed="${filter === k}">${esc(T(zh, en))}</button>`;
     return `<div class="page-h"><div><h1>${T('主机与算力', 'Hosts & compute')}</h1><p class="muted">${T('本地与云端执行主机、Agent 实例和正在执行的 OKR。每台主机的心跳与连接相互独立。', 'Local and cloud hosts, Agent instances and the OKRs they run. Heartbeats and connections are independent per host.')}</p></div>
       <div class="row wrap">${U.btn({ action: 'open', data: { dialog: 'bindings' }, label: T('管理连接', 'Connections'), icon: 'link' })}${U.btn({ action: 'open', data: { dialog: 'discover' }, label: T('发现已有 Agent', 'Discover Agents'), icon: 'scan' })}${U.btn({ action: 'open', data: { dialog: 'invite' }, label: T('接入主机', 'Add a host'), icon: 'plus', kind: 'primary', perm: 'manage_hosts' })}</div></div>
+      ${localCallout()}
       <div class="stats">
         <div class="stat kpi"><span class="kpi-v">${org.hosts.length}</span><span class="kpi-l">${T('台主机', 'hosts')} · ${org.hosts.filter(h => h.kind === 'local').length} ${T('本地', 'local')} / ${org.hosts.filter(h => h.kind === 'cloud').length} ${T('云端', 'cloud')}</span></div>
         <div class="stat kpi"><span class="kpi-v" style="color:var(--ok)">${online}</span><span class="kpi-l">${T('在线', 'online')}</span></div>
@@ -68,11 +69,48 @@
 
   /* -------------------------------------------------------------- Detail */
 
+  const SCOPE = {
+    loopback: ['仅本机', 'This computer only', 'outline'],
+    lan: ['局域网', 'Local network', 'info'],
+    public: ['公网', 'Internet', 'warn'],
+  };
+  const isDesktop = () => { const d = U.me(); return !!d && ['macos', 'windows', 'ubuntu'].includes(d.platform); };
+  const localService = () => M.localServiceFor(P());
+
+  function localCallout() {
+    const svc = localService();
+    if (svc.state !== 'not_installed' || !isDesktop()) return '';
+    return `<section class="card accent" style="margin-bottom:16px"><div class="row between wrap gap-lg">
+      <div class="row top"><span class="host-ico">${icon('server')}</span><div><div class="strong">${T('这台电脑还不是执行主机', 'This computer is not an execution host yet')}</div>
+      <div class="small muted">${T('一次确认：安装后台服务（Host + 仅本机 Coordinator），完成链上准入。', 'One confirmation installs the background service (Host + this-computer-only coordinator) and completes on-chain admission.')}</div></div></div>
+      ${U.btn({ action: 'open', data: { dialog: 'bootstrap' }, label: T('设为执行主机', 'Set up'), kind: 'primary', perm: 'manage_hosts' })}</div></section>`;
+  }
+
+  /** This computer's background service (envd as Host + Coordinator). */
+  function localServiceCard(h) {
+    const svc = localService();
+    if (!h.isThisDevice || svc.hostId !== h.id) return '';
+    const b = M.find(O().bindings, svc.bindingId) || bindingOf(h);
+    const scope = SCOPE[(b && b.scope) || 'loopback'];
+    const running = svc.state === 'running';
+    const dev = U.me() || {};
+    const service = { macos: 'launchd LaunchAgent', windows: T('Windows 计划任务', 'Windows scheduled task'), ubuntu: 'systemd user service' }[dev.platform] || 'launchd LaunchAgent';
+    return `<section class="card" style="margin-bottom:16px"><div class="card-h"><h2>${icon('server', 'sm')}${T('本机服务', 'This computer’s service')}</h2>
+        <span class="row gap-sm"><span class="chip brand">Host</span><span class="chip brand">Coordinator</span><span class="st ${running ? 'ok' : 'muted'}">${icon(running ? 'check' : 'pause')}${running ? T('运行中', 'Running') : T('已停止', 'Stopped')}</span></span></div>
+      <dl class="kv">
+        <dt>${T('后台服务', 'Background service')}</dt><dd>${esc(service)} · ${svc.startAtLogin ? T('登录后自动运行', 'Starts at login') : T('手动启动', 'Starts manually')}</dd>
+        <dt>${T('Coordinator 入口', 'Coordinator endpoint')}</dt><dd><span class="mono">${esc(b ? b.endpoint : '')}</span> <span class="chip ${scope[2]}">${esc(T(scope[0], scope[1]))}</span> <span class="tiny muted">v${(b && b.version) || 1}</span></dd>
+        <dt>${T('密钥', 'Keys')}</dt><dd>${svc.keys ? T('主机与 Coordinator 密钥在系统钥匙串', 'Host and coordinator keys in the system keychain') : '—'}</dd>
+      </dl>
+      ${(b && (b.scope || 'loopback') === 'loopback') ? `<div class="note mt-12">${icon('info')}<div>${T('入口仅本机可访问：手机等其他设备暂时连不上。需要时开放到局域网或公网（需 HTTPS）。', 'The endpoint is reachable from this computer only: phones and other devices cannot connect yet. Open it to your network or the internet (HTTPS) when needed.')}</div></div>` : ''}
+      <div class="card-f">${U.btn({ action: 'local-service-toggle', label: running ? T('停止服务', 'Stop service') : T('启动服务', 'Start service'), icon: running ? 'pause' : 'play', perm: 'manage_hosts' })}${U.btn({ action: 'open', data: { dialog: 'local-endpoint' }, label: T('修改入口', 'Change endpoint'), icon: 'link', perm: 'manage_hosts' })}</div></section>`;
+  }
+
   function overview(h) {
     const org = O();
     const online = h.status === 'online';
     const receipts = org.receipts.filter(r => r.hostId === h.id).slice(0, 5);
-    return `<div class="grid-2">
+    return `${localServiceCard(h)}<div class="grid-2">
       <section class="card"><div class="card-h"><h2>${T('资源', 'Resources')}</h2><span class="small muted">${T('采样', 'Sampled')} ${U.agoTag(h.sampledAt)}</span></div>
         ${online ? `${res('CPU', h.cpu, h.sampledAt, true)}<div class="mt-8">${res(T('内存', 'MEM'), h.mem, h.sampledAt, true)}</div>` : `<div class="note warn">${icon('offline')}<div>${T(`失去心跳：最后观测 CPU ${h.cpu}% · 内存 ${h.mem}%（历史快照，当前未知）`, `No heartbeat: last seen CPU ${h.cpu}% · MEM ${h.mem}% (history; current unknown)`)}</div></div>`}
         <dl class="kv mt-12"><dt>${T('系统', 'OS')}</dt><dd>${esc(h.os)} · ${esc(h.arch)}</dd><dt>${T('远程桌面', 'Desktop')}</dt><dd>${h.desktop === 'supported' ? T('支持（需授权）', 'Supported (needs grant)') : T('无图形会话', 'Headless')}</dd><dt>${T('接单', 'Accepting')}</dt><dd>${h.accepting ? T('接收新分配', 'Taking new work') : T('暂停接单：只影响新分配，现有运行继续', 'Paused: only new assignments stop; current work continues')}</dd></dl></section>
@@ -265,9 +303,45 @@
     },
     'host-revoke': el => U.openDialog('host-revoke', { id: el.dataset.id }),
     'host-revoke-do': el => {
+      const local = localService().hostId === el.dataset.id;
       U.submitTx({ kind: 'host.revoke', payload: { hostId: el.dataset.id } }, {
-        ok: T('主机资格与执行授权已撤销；新的受保护操作将被拒绝。', 'Membership and grant revoked; new protected operations will be refused.'),
-        onConfirmed: () => { ui.dialog = null; if (FM.review) FM.review.mark('host.revoked'); },
+        ok: local
+          ? T('本机主机资格已撤销；后台服务已停止并卸载，主机与 Coordinator 密钥已从钥匙串清理。', 'This computer’s membership is revoked; the background service was stopped and removed, and host and coordinator keys were cleared from the keychain.')
+          : T('主机资格与执行授权已撤销；新的受保护操作将被拒绝。', 'Membership and grant revoked; new protected operations will be refused.'),
+        onConfirmed: (r, pp) => {
+          if (local) M.removeLocalService(pp);
+          ui.dialog = null;
+          if (FM.review) FM.review.mark('host.revoked');
+        },
+      });
+    },
+    'local-service-toggle': () => {
+      const p = P();
+      const svc = localService();
+      const res = M.setLocalServiceRunning(p, O(), svc.state !== 'running', U.now());
+      U.save();
+      toast(svc.state === 'running'
+        ? T('本机服务已启动，主机重新上线。', 'The service started; this host is back online.')
+        : T('本机服务已停止：主机离线，链上资格保留；它负责的 OKR 会显示状态未知。', 'The service stopped: this host is offline and keeps its chain membership; its OKRs show an unknown state.'), res.ok || svc.state === 'stopped' ? 'info' : 'warn');
+      render();
+    },
+    'local-endpoint-save': () => {
+      const svc = localService();
+      const scope = U.f('ep.scope', 'loopback');
+      const endpoint = String(U.f('ep.url', '')).trim();
+      if (!M.validEndpoint(scope, endpoint)) {
+        toast(scope === 'loopback'
+          ? T('仅本机入口应为 http://127.0.0.1:<端口>', 'A this-computer-only endpoint is http://127.0.0.1:<port>')
+          : T('局域网与公网入口必须使用 HTTPS，且不能是本机回环地址。', 'Network and internet endpoints must use HTTPS and cannot be a loopback address.'), 'warn');
+        return;
+      }
+      U.submitTx({ kind: 'binding.update', payload: { bindingId: svc.bindingId, scope, endpoint } }, {
+        ok: T('入口已更新为新版本；旧版本的邀请已失效，本机主机正在重新连接。', 'The endpoint has a new version; old invitations are void and this host is reconnecting.'),
+        onConfirmed: (r, pp) => {
+          ui.dialog = null;
+          U.clearForm('ep');
+          U.later(800, () => { const o = pp.data[r.tx.orgId]; if (M.localServiceFor(pp).state === 'running') M.connectHost(o, M.localServiceFor(pp).hostId, true, U.now()); U.save(); render(); });
+        },
       });
     },
     desk: el => {
@@ -297,12 +371,40 @@
 
   FM.dialogs['host-revoke'] = ({ id }) => {
     const h = U.host(id);
+    const local = localService().hostId === id;
     const tx = U.latestTx(t => t.kind === 'host.revoke' && t.payload.hostId === id);
     return {
       title: T('撤销主机资格', 'Revoke host membership'), sub: esc(h.name), size: 'sm',
-      body: `<p class="small">${T('撤销 HostMembership 与执行授权。连接仍在时也会拒绝新的受保护操作；该主机上的 OKR 暂停。', 'Revokes HostMembership and the execution grant. New protected operations are refused even while connected; OKRs on this host pause.')}</p>${tx ? U.txLine(tx) : ''}`,
+      body: `<p class="small">${T('撤销 HostMembership 与执行授权。连接仍在时也会拒绝新的受保护操作；该主机上的 OKR 暂停。', 'Revokes HostMembership and the execution grant. New protected operations are refused even while connected; OKRs on this host pause.')}</p>${local ? `<div class="note warn">${icon('alert')}<div>${T('这是本机：确认后同时停止并卸载后台服务，并从钥匙串清理主机与 Coordinator 密钥。', 'This is this computer: confirming also stops and removes the background service and clears the host and coordinator keys from the keychain.')}</div></div>` : ''}${tx ? U.txLine(tx) : ''}`,
       foot: `<button class="btn" data-action="close-dialog">${T('取消', 'Cancel')}</button>${U.btn({ action: 'host-revoke-do', data: { id }, label: T('签名撤销', 'Sign and revoke'), kind: 'danger solid', perm: 'manage_hosts', disabled: !!(tx && tx.state === 'pending') })}`,
     };
+  };
+
+  FM.dialogs['local-endpoint'] = () => {
+    const svc = localService();
+    const b = M.find(O().bindings, svc.bindingId);
+    if (!b) return null;
+    const scope = U.f('ep.scope', b.scope || 'loopback');
+    const defaults = { loopback: 'http://127.0.0.1:7443', lan: 'https://fm-host.local:7443', public: 'https://' };
+    const url = U.f('ep.url', scope === (b.scope || 'loopback') ? b.endpoint : defaults[scope]);
+    const tx = U.latestTx(t => t.kind === 'binding.update' && t.payload.bindingId === b.id && t.state !== 'confirmed');
+    return {
+      title: T('修改 Coordinator 入口', 'Change the coordinator endpoint'), size: 'lg', sub: `${T('当前', 'Current')} <span class="mono">${esc(b.endpoint)}</span> · v${b.version || 1}`,
+      body: `<div class="col">${['loopback', 'lan', 'public'].map(k => `<button class="opt" data-action="ep-scope" data-scope="${k}" aria-pressed="${scope === k}"><span class="ico">${icon(k === 'loopback' ? 'laptop' : k === 'lan' ? 'link' : 'globe')}</span><span class="grow"><span class="strong">${esc(T(SCOPE[k][0], SCOPE[k][1]))}</span><span class="small muted" style="display:block">${esc({
+          loopback: T('只有这台电脑能访问；可以用 HTTP。', 'Only this computer can connect; HTTP is allowed.'),
+          lan: T('同一局域网的手机和电脑可以访问；需要 HTTPS 证书。', 'Phones and computers on the same network can connect; needs an HTTPS certificate.'),
+          public: T('任何网络都能访问，适合在外面用手机管理；需要 HTTPS 证书和可达的域名。', 'Reachable from anywhere, e.g. managing from your phone outside; needs HTTPS and a reachable domain.'),
+        }[k])}</span></span></button>`).join('')}</div>
+        <div class="field"><label for="ep-url">${T('入口地址', 'Endpoint')}</label><input id="ep-url" class="input mono" data-f="ep.url" value="${esc(url)}"></div>
+        <div class="note">${icon('info')}<div>${T('确认后绑定版本加一：用旧版本签发、尚未兑换的邀请会失效；这个入口下的主机重新连接到新地址，链上资格不变。', 'Confirming bumps the binding version: unredeemed invitations for the old version become void; hosts on this endpoint reconnect to the new address and keep their membership.')}</div></div>
+        ${tx ? U.txLine(tx) : ''}`,
+      foot: `<button class="btn" data-action="close-dialog">${T('取消', 'Cancel')}</button>${U.btn({ action: 'local-endpoint-save', label: T('签名更新入口', 'Sign and update'), kind: 'primary', perm: 'manage_hosts', disabled: !!(tx && tx.state === 'pending') || (scope === (b.scope || 'loopback') && url === b.endpoint), why: T('入口没有变化', 'The endpoint is unchanged') })}`,
+    };
+  };
+  FM.actions['ep-scope'] = el => {
+    U.setF('ep.scope', el.dataset.scope);
+    U.setF('ep.url', { loopback: 'http://127.0.0.1:7443', lan: 'https://fm-host.local:7443', public: 'https://' }[el.dataset.scope]);
+    render();
   };
 
   /* ------------------------------------------------------- Invitations */
@@ -438,7 +540,7 @@
       sub: T('组织认可的 Coordinator 端点。每个连接独立：一个断开不影响其他连接上的主机。', 'Coordinator endpoints the organization recognizes. Each is independent: one disconnecting leaves the others’ hosts alone.'),
       body: `<div class="list">${org.bindings.map(b => {
         const hosts = org.hosts.filter(h => h.bindingId === b.id);
-        return `<div class="item"><span class="host-ico">${icon('link')}</span><div class="grow"><div class="mono small strong">${esc(b.endpoint)}</div><div class="tiny muted">${esc(L(b.label) || '')} · ${T(`${hosts.length} 台主机`, `${hosts.length} hosts`)} · ${b.state === 'confirmed' ? T('链上已确认', 'Confirmed on chain') : T('待确认', 'Pending')}</div></div>
+        return `<div class="item"><span class="host-ico">${icon('link')}</span><div class="grow"><div class="mono small strong">${esc(b.endpoint)} ${b.scope ? `<span class="chip ${{ loopback: 'outline', lan: 'info', public: 'warn' }[b.scope]}" style="font-family:var(--font)">${esc({ loopback: T('仅本机', 'This computer only'), lan: T('局域网', 'Local network'), public: T('公网', 'Internet') }[b.scope])}</span>` : ''}</div><div class="tiny muted">${esc(L(b.label) || '')} · ${T(`${hosts.length} 台主机`, `${hosts.length} hosts`)} · ${b.state === 'confirmed' ? T('链上已确认', 'Confirmed on chain') : T('待确认', 'Pending')}</div></div>
           <span class="st ${b.online ? 'ok' : 'muted'}">${icon(b.online ? 'check' : 'offline')}${b.online ? T('已连接', 'Connected') : T('已断开', 'Disconnected')}</span>
           ${b.state === 'confirmed' ? U.btn({ action: 'bind-toggle', data: { id: b.id }, label: b.online ? T('断开', 'Disconnect') : T('重新连接', 'Reconnect'), size: 'sm', perm: 'manage_hosts' }) : ''}</div>`;
       }).join('') || `<div class="muted small">${T('还没有连接入口', 'No endpoints yet')}</div>`}</div>
