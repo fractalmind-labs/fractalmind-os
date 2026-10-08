@@ -294,7 +294,7 @@ export default function OkrNew() {
           <Icon name="check" />
           <span>{t("OKR 已创建（草稿）。", "The OKR is created (draft).")}</span>
         </div>
-        {okrId && agent ? (
+        {okrId && agent && !busy.has(agent.id) ? (
           <>
             <div className="label">{t("分配给 Agent", "Assign to the Agent")}</div>
             <AssignFlow
@@ -308,7 +308,14 @@ export default function OkrNew() {
         ) : (
           <div className="note">
             <Icon name="info" />
-            <div>{t("草稿已保存，可在 OKR 详情中分配给 Agent。", "The draft is saved; assign it to an Agent from the OKR detail.")}</div>
+            <div>
+              {agent && busy.has(agent.id)
+                ? t(
+                    `草稿已保存。${label(agent)} 还有一个进行中的目标：暂停或完成它之后，在这个 OKR 的详情里分配。`,
+                    `The draft is saved. ${label(agent)} still has an active goal: pause or finish it, then assign from this OKR's detail.`,
+                  )
+                : t("草稿已保存，可在 OKR 详情中分配给 Agent。", "The draft is saved; assign it to an Agent from the OKR detail.")}
+            </div>
           </div>
         )}
       </div>
@@ -348,9 +355,9 @@ export default function OkrNew() {
           <select id="w-owner" className="select" value={f.agentId} onChange={(e) => set({ agentId: e.target.value })}>
             <option value="">{t("先不分配（保存为草稿）", "Not yet (save as draft)")}</option>
             {agents.map((a) => (
-              <option key={a.id} value={a.id} disabled={busy.has(a.id)}>
+              <option key={a.id} value={a.id}>
                 {label(a)}
-                {busy.has(a.id) ? t("（已有进行中的目标）", " (has an active goal)") : ""}
+                {busy.has(a.id) ? t("（已有进行中的目标：先存为草稿）", " (has an active goal: saved as a draft)") : ""}
               </option>
             ))}
           </select>
@@ -601,7 +608,7 @@ export default function OkrNew() {
           </div>
         )}
         <div className="small muted">
-          {agent
+          {agent && !busy.has(agent.id)
             ? t("两笔链上交易：创建 OKR，然后分配给 Agent；每笔都会先显示费用。", "Two chain transactions: create the OKR, then assign it; each shows its fee first.")
             : t("一笔链上交易：创建 OKR 草稿。", "One chain transaction: create the OKR draft.")}
         </div>
@@ -631,7 +638,7 @@ export default function OkrNew() {
             ? t("计算费用…", "Estimating…")
             : phase === "signing"
               ? t("正在创建…", "Creating…")
-              : agent
+              : agent && !busy.has(agent.id)
                 ? t("创建并分配", "Create and assign")
                 : t("保存为草稿", "Save as draft")
         }
