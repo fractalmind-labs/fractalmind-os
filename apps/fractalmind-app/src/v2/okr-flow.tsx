@@ -86,15 +86,24 @@ export function useDelivery() {
     const here = local(agent);
     if (!here?.agent) return "not_here";
     const s = await session(app, [1]);
-    return deliverOkr({
-      ...s,
-      okrId,
-      invoke: (c, a) => invoke(c, a),
-      journal: new IndexedDbTransactionJournal(),
-      home: here.agent.home,
-      agent: here.agent.name || "main",
-      mode,
-    });
+    // Right after a transaction a node may still return the old state; the
+    // projection must show the new one, so wait for it instead of failing.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await deliverOkr({
+          ...s,
+          okrId,
+          invoke: (c, a) => invoke(c, a),
+          journal: new IndexedDbTransactionJournal(),
+          home: here.agent.home,
+          agent: here.agent.name || "main",
+          mode,
+        });
+      } catch (e) {
+        if (!(e instanceof OkrDeliveryError && e.code === "not_active") || attempt >= 7) throw e;
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
   };
 }
 
@@ -188,7 +197,8 @@ export function AssignFlow({
     };
   }, [okrId, agent.id]);
   async function afterAssigned() {
-    onAssigned?.();
+    // Deliver before refreshing: the refresh re-renders this panel as the
+    // active goal's, and the delivery result must stay visible here.
     setPhase("delivering");
     try {
       const r = await deliver(okrId, agent);
@@ -197,6 +207,7 @@ export function AssignFlow({
       if (live.current) setError(errorCode(e));
     }
     if (live.current) setPhase("done");
+    onAssigned?.();
   }
   async function sign() {
     if (!quote || !flow.current) return;
@@ -298,7 +309,6 @@ export function PauseFlow({ okrId, version, agent, onDone }: { okrId: string; ve
     }
   }
   async function paused() {
-    app.refresh();
     if (agent) {
       setPhase("notifying");
       try {
@@ -309,6 +319,7 @@ export function PauseFlow({ okrId, version, agent, onDone }: { okrId: string; ve
     }
     setPhase("done");
     onDone?.();
+    app.refresh();
   }
   async function sign() {
     if (!quote || !flow.current) return;
