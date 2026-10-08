@@ -8,7 +8,7 @@ import { Btn, date, Icon, shortId, useLang, useT } from "../ui";
 import { condOf, decisions, LIFE, lifeOf, nav, okrTitle, type Life } from "../model";
 import { CondBadge, RunState, Trust } from "./Workbench";
 import OkrNew from "./OkrNew";
-import { AssignFlow, DeliveryResult, assignable, errorCode, errorText, useAgentLabel, useDelivery } from "../okr-flow";
+import { AssignFlow, DeliveryResult, PauseFlow, assignable, errorCode, errorText, useAgentLabel, useDelivery } from "../okr-flow";
 import { trustState } from "../../v2-model";
 import { agentName, hostName } from "../../display";
 import type { OkrSnapshot } from "../../domain";
@@ -348,6 +348,7 @@ function AgentPanel({ row }: { row: OkrSnapshot }) {
   const [delivered, setDelivered] = useState<Awaited<ReturnType<typeof deliver>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [delivering, setDelivering] = useState(false);
+  const [pausing, setPausing] = useState(false);
   const owner = app.snapshot?.agents.value?.find((a) => a.id === row.okr.managed_agent) ?? null;
   if (row.okr.state === 1 && owner?.runtime === "agent-manager-v1")
     return (
@@ -370,7 +371,20 @@ function AgentPanel({ row }: { row: OkrSnapshot }) {
           </div>
         )}
         {delivered && <DeliveryResult result={delivered} t={t} />}
+        {pausing && (
+          <div className="mt-12">
+            <div className="label">{t("暂停目标", "Pause the goal")}</div>
+            <p className="small muted">
+              {t(
+                "暂停后目标不再进行，Agent 会收到停止通知；之后可以重新分配给它或其他 Agent。",
+                "Once paused the goal stops, and the Agent is told to stop; you can assign it again later, to it or another Agent.",
+              )}
+            </p>
+            <PauseFlow okrId={row.okr.id} version={row.okr.version} agent={owner} />
+          </div>
+        )}
         <div className="card-f">
+          {!pausing && <Btn label={t("暂停目标", "Pause the goal")} icon="pause" kind="ghost" onClick={() => setPausing(true)} />}
           <Btn
             label={delivering ? t("正在投递…", "Delivering…") : t("重新投递", "Deliver again")}
             icon="send"

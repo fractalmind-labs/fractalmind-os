@@ -33,6 +33,20 @@ export function deliveryTask(input: { objective: string; deadlineMs: string; okr
   ].join("\n");
 }
 
+/** Tells the Agent its goal was paused or archived, so it stops working on it. */
+export function stopTask(input: { objective: string; okrId: string; state: string }) {
+  return [
+    `FractalMind ${input.state === "ARCHIVED" ? "archived" : "paused"} this goal: stop working on it now.`,
+    "",
+    `Objective: ${input.objective}`,
+    "",
+    "Do not start new actions for it. Leave results and evidence as they are, and note in HEARTBEAT.md",
+    "where you stopped. {OKR_PATH} shows the current chain state; the owner resumes or reassigns it in FractalMind.",
+    "",
+    `OKR ID: ${input.okrId}`,
+  ].join("\n");
+}
+
 export async function deliverOkr(input: {
   chain: ChainReadSession;
   signer: NativeDeviceSigner;
@@ -43,6 +57,8 @@ export async function deliverOkr(input: {
   journal: TransactionJournal;
   home: string;
   agent: string;
+  /** "stop" tells the Agent a paused or archived goal is over. */
+  mode?: "deliver" | "stop";
   /** Tests replace the native call. */
   native?: (command: string, args: Record<string, unknown>) => Promise<unknown>;
 }): Promise<Delivered> {
@@ -50,13 +66,17 @@ export async function deliverOkr(input: {
     new OkrIntervention(input.chain, input.signer, input.grantId, input.organizationId, input.okrId, input.invoke, input.journal),
   );
   const view = await projection.read();
-  if (view.snapshot.state !== "ACTIVE") throw new OkrDeliveryError("not_active");
+  const stopping = input.mode === "stop";
+  if (stopping ? !["PAUSED", "ARCHIVED"].includes(view.snapshot.state) : view.snapshot.state !== "ACTIVE")
+    throw new OkrDeliveryError("not_active");
   const file = await projection.export(view, { reviewed: true });
-  const task = deliveryTask({
-    objective: view.snapshot.specification.objective,
-    deadlineMs: view.snapshot.specification.deadlineMs,
-    okrId: input.okrId,
-  });
+  const task = stopping
+    ? stopTask({ objective: view.snapshot.specification.objective, okrId: input.okrId, state: view.snapshot.state })
+    : deliveryTask({
+        objective: view.snapshot.specification.objective,
+        deadlineMs: view.snapshot.specification.deadlineMs,
+        okrId: input.okrId,
+      });
   const native = input.native ?? ((c: string, a: Record<string, unknown>) => tauriInvoke(c, a));
   let out: unknown;
   try {
