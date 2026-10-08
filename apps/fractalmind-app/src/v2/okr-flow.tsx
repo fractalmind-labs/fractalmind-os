@@ -14,6 +14,7 @@ import { deviceGrant } from "../device-grant";
 import { AgentManagerAssignment, OkrAssignError, AGENT_MANAGER_RUNTIME } from "../okr-assign";
 import { deliverOkr, OkrDeliveryError, type Delivered } from "../okr-delivery";
 import { awaitTransactionVisible } from "../transaction-visibility";
+import { OkrIntervention, OkrInterventionError } from "../okr-intervention";
 import { definitionName } from "../agents";
 import { agentName } from "../display";
 import type { Agent } from "../domain";
@@ -32,6 +33,10 @@ export const ERRORS: Record<string, [string, string]> = {
   home_unavailable: ["找不到这个 Agent 的 Home 目录。", "This Agent's Home could not be found."],
   delivery_failed: ["写入 Agent Home 失败。", "Writing to the Agent's Home failed."],
   not_active: ["目标还没有进行中。", "The goal is not active yet."],
+  unsettled_execution: ["还有未结算的执行，先在“操作”里处理它。", "A run is still unsettled; handle it under Actions first."],
+  invalid_source: ["只有目标的负责人能暂停它。", "Only the goal's owner can pause it."],
+  invalid_input: ["请写下原因。", "Write a reason."],
+  sync_pending: ["上一笔交易还在确认，稍后再试。", "The previous transaction is still confirming; try again shortly."],
 };
 export const errorCode = (e: unknown) =>
   e instanceof OkrAssignError ||
@@ -77,22 +82,32 @@ async function session(app: ReturnType<typeof useApp>, actions: number[]) {
 export function useDelivery() {
   const app = useApp();
   const { local } = useAgentLabel();
-  return async (okrId: string, agent: Agent): Promise<Delivered | "not_here"> => {
+  return async (okrId: string, agent: Agent, mode: "deliver" | "stop" = "deliver"): Promise<Delivered | "not_here"> => {
     const here = local(agent);
     if (!here?.agent) return "not_here";
     const s = await session(app, [1]);
-    return deliverOkr({
-      ...s,
-      okrId,
-      invoke: (c, a) => invoke(c, a),
-      journal: new IndexedDbTransactionJournal(),
-      home: here.agent.home,
-      agent: here.agent.name || "main",
-    });
+    // Right after a transaction a node may still return the old state; the
+    // projection must show the new one, so wait for it instead of failing.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await deliverOkr({
+          ...s,
+          okrId,
+          invoke: (c, a) => invoke(c, a),
+          journal: new IndexedDbTransactionJournal(),
+          home: here.agent.home,
+          agent: here.agent.name || "main",
+          mode,
+        });
+      } catch (e) {
+        if (!(e instanceof OkrDeliveryError && e.code === "not_active") || attempt >= 7) throw e;
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
   };
 }
 
-export function DeliveryResult({ result, t }: { result: Delivered | "not_here"; t: Translate }) {
+export function DeliveryResult({ result, t, stop = false }: { result: Delivered | "not_here"; t: Translate; stop?: boolean }) {
   if (result === "not_here")
     return (
       <div className="note">
@@ -114,7 +129,9 @@ export function DeliveryResult({ result, t }: { result: Delivered | "not_here"; 
         </div>
         <div className="small">
           {result.notified
-            ? t("已通过 agent-manager 通知 Agent 开始。", "The Agent was told to start through agent-manager.")
+            ? stop
+              ? t("已通过 agent-manager 通知 Agent 停止。", "The Agent was told to stop through agent-manager.")
+              : t("已通过 agent-manager 通知 Agent 开始。", "The Agent was told to start through agent-manager.")
             : t(
                 `未能通知 Agent（${result.notifyError ?? ""}）。它会在下次心跳读到这个文件。`,
                 `Could not notify the Agent (${result.notifyError ?? ""}). It will read the file on its next heartbeat.`,
@@ -180,7 +197,8 @@ export function AssignFlow({
     };
   }, [okrId, agent.id]);
   async function afterAssigned() {
-    onAssigned?.();
+    // Deliver before refreshing: the refresh re-renders this panel as the
+    // active goal's, and the delivery result must stay visible here.
     setPhase("delivering");
     try {
       const r = await deliver(okrId, agent);
@@ -189,6 +207,7 @@ export function AssignFlow({
       if (live.current) setError(errorCode(e));
     }
     if (live.current) setPhase("done");
+    onAssigned?.();
   }
   async function sign() {
     if (!quote || !flow.current) return;
@@ -253,6 +272,115 @@ export function AssignFlow({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+/** Pause an active goal (one signed transaction), then tell its Agent to stop. */
+export function PauseFlow({ okrId, version, agent, onDone }: { okrId: string; version: string; agent: Agent | null; onDone?: () => void }) {
+  const app = useApp();
+  const t = useT();
+  const deliver = useDelivery();
+  const [reason, setReason] = useState("");
+  const [quote, setQuote] = useState<SelfPayFeeQuote | null>(null);
+  const [phase, setPhase] = useState<"form" | "quoting" | "ready" | "signing" | "notifying" | "done">("form");
+  const [error, setError] = useState<string | null>(null);
+  const [notified, setNotified] = useState<Delivered | "not_here" | null>(null);
+  const flow = useRef<OkrIntervention | null>(null);
+  const intent = { kind: "pause" as const, expectedVersion: version };
+  async function quoteIt() {
+    setPhase("quoting");
+    setError(null);
+    try {
+      const s = await session(app, [1, 2]);
+      flow.current = new OkrIntervention(s.chain, s.signer, s.grantId, s.organizationId, okrId, (c, a) => invoke(c, a), new IndexedDbTransactionJournal());
+      const q = await flow.current.prepare(intent, { reviewed: true, reason: reason.trim() });
+      if ("status" in q) {
+        if (q.status === "confirmed") return await paused();
+        setError(q.status === "failed" ? "simulation_failed" : "read_unavailable");
+        setPhase("form");
+        return;
+      }
+      setQuote(q);
+      setPhase("ready");
+    } catch (e) {
+      setError(e instanceof OkrInterventionError ? e.code : errorCode(e));
+      setPhase("form");
+    }
+  }
+  async function paused() {
+    if (agent) {
+      setPhase("notifying");
+      try {
+        setNotified(await deliver(okrId, agent, "stop"));
+      } catch (e) {
+        setError(errorCode(e));
+      }
+    }
+    setPhase("done");
+    onDone?.();
+    app.refresh();
+  }
+  async function sign() {
+    if (!quote || !flow.current) return;
+    setPhase("signing");
+    try {
+      const outcome = await flow.current.submit(quote);
+      if (outcome.status !== "confirmed") {
+        setError(outcome.status === "failed" ? "simulation_failed" : "read_unavailable");
+        setPhase("form");
+        return;
+      }
+      await awaitTransactionVisible(flow.current.chain, outcome).catch(() => false);
+      await paused();
+    } catch (e) {
+      setError(e instanceof OkrInterventionError ? e.code : errorCode(e));
+      setPhase("form");
+    }
+  }
+  if (phase === "done")
+    return (
+      <div className="col">
+        <div className="calm">
+          <Icon name="check" />
+          <span>{t("目标已暂停。", "The goal is paused.")}</span>
+        </div>
+        {notified && <DeliveryResult result={notified} t={t} stop />}
+      </div>
+    );
+  return (
+    <div className="col">
+      <div className="field">
+        <label htmlFor="pause-reason">{t("暂停原因（写进约定记录）", "Reason (recorded in the agreement)")}</label>
+        <input id="pause-reason" className="input" value={reason} disabled={phase !== "form"} onChange={(e) => setReason(e.target.value)} />
+      </div>
+      {error && (
+        <div className="note warn" role="alert">
+          <Icon name="alert" />
+          <div>{errorText(error, t)}</div>
+        </div>
+      )}
+      <div className="row">
+        {phase === "ready" ? (
+          <Btn kind="danger" label={t(`签名暂停 · 预计 ${sui(quote!.estimatedGas)}`, `Sign pause · est. ${sui(quote!.estimatedGas)}`)} onClick={() => void sign()} />
+        ) : (
+          <Btn
+            kind="danger"
+            disabled={phase !== "form" || !reason.trim() || !app.deviceProfile}
+            why={t("写下暂停原因", "Write a reason")}
+            label={
+              phase === "quoting"
+                ? t("计算费用…", "Estimating…")
+                : phase === "signing"
+                  ? t("正在暂停…", "Pausing…")
+                  : phase === "notifying"
+                    ? t("正在通知 Agent…", "Telling the Agent…")
+                    : t("下一步：查看费用", "Next: see the fee")
+            }
+            onClick={() => void quoteIt()}
+          />
+        )}
+      </div>
     </div>
   );
 }

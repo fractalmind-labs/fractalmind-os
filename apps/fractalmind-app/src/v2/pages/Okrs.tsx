@@ -1,6 +1,6 @@
 // App v2 (#75): OKR list and detail (prototype view-okr.js). The detail's
 // actions are the tested flows of the first App until M2 redoes them.
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useApp } from "../store";
 import { go, type Route } from "../router";
@@ -8,10 +8,10 @@ import { Btn, date, Icon, shortId, useLang, useT } from "../ui";
 import { condOf, decisions, LIFE, lifeOf, nav, okrTitle, type Life } from "../model";
 import { CondBadge, RunState, Trust } from "./Workbench";
 import OkrNew from "./OkrNew";
-import { AssignFlow, DeliveryResult, assignable, errorCode, errorText, useAgentLabel, useDelivery } from "../okr-flow";
+import { AssignFlow, DeliveryResult, PauseFlow, assignable, errorCode, errorText, useAgentLabel, useDelivery } from "../okr-flow";
 import { trustState } from "../../v2-model";
 import { agentName, hostName } from "../../display";
-import type { OkrSnapshot } from "../../domain";
+import type { Agent, OkrSnapshot } from "../../domain";
 
 const OkrContinuation = lazy(() => import("../../OkrContinuation"));
 const OkrVerification = lazy(() => import("../../OkrVerification"));
@@ -348,7 +348,43 @@ function AgentPanel({ row }: { row: OkrSnapshot }) {
   const [delivered, setDelivered] = useState<Awaited<ReturnType<typeof deliver>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [delivering, setDelivering] = useState(false);
+  const [pausing, setPausing] = useState(false);
+  const pauseAgent = useRef<Agent | null>(null);
+  const pauseVersion = useRef("");
   const owner = app.snapshot?.agents.value?.find((a) => a.id === row.okr.managed_agent) ?? null;
+  const chosen = agents.find((a) => a.id === agentId) ?? null;
+  // A flow that has started stays on screen through the refresh that changes
+  // the goal's state, so its result (delivery, stop notice) remains visible.
+  if (start && chosen)
+    return (
+      <section className="card">
+        <div className="card-h">
+          <h2>{t("分配给 Agent", "Assign to an Agent")}</h2>
+        </div>
+        <AssignFlow
+          okrId={row.okr.id}
+          agent={chosen}
+          budgetLimit={limit.trim()}
+          allowedPaths={paths.split("\n").map((p) => p.trim()).filter(Boolean)}
+          onAssigned={app.refresh}
+        />
+      </section>
+    );
+  if (pausing && pauseAgent.current)
+    return (
+      <section className="card">
+        <div className="card-h">
+          <h2>{t("暂停目标", "Pause the goal")}</h2>
+        </div>
+        <p className="small muted">
+          {t(
+            "暂停后目标不再进行，Agent 会收到停止通知；之后可以重新分配给它或其他 Agent。",
+            "Once paused the goal stops, and the Agent is told to stop; you can assign it again later, to it or another Agent.",
+          )}
+        </p>
+        <PauseFlow okrId={row.okr.id} version={pauseVersion.current} agent={pauseAgent.current} />
+      </section>
+    );
   if (row.okr.state === 1 && owner?.runtime === "agent-manager-v1")
     return (
       <section className="card">
@@ -371,6 +407,16 @@ function AgentPanel({ row }: { row: OkrSnapshot }) {
         )}
         {delivered && <DeliveryResult result={delivered} t={t} />}
         <div className="card-f">
+          <Btn
+            label={t("暂停目标", "Pause the goal")}
+            icon="pause"
+            kind="ghost"
+            onClick={() => {
+              pauseAgent.current = owner;
+              pauseVersion.current = row.okr.version;
+              setPausing(true);
+            }}
+          />
           <Btn
             label={delivering ? t("正在投递…", "Delivering…") : t("重新投递", "Deliver again")}
             icon="send"

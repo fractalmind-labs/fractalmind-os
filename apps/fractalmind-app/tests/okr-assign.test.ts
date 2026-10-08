@@ -359,3 +359,18 @@ test("an Agent's OKR proposal fills the wizard but stays unsubmitted until revie
     krs: [1, 2, 3, 4].map(() => ({ title: "x", baseline: "0", target: "1" })),
   });
 });
+
+test("a paused goal tells its Agent to stop", async () => {
+  const { stopTask } = await import("../src/okr-delivery");
+  const task = stopTask({
+    objective: "Beat the market",
+    okrId: a("1"),
+    state: "PAUSED",
+  });
+  assert.match(task, /paused this goal: stop working on it now/);
+  assert.match(task, /\{OKR_PATH\}/);
+  assert.match(
+    stopTask({ objective: "x", okrId: a("1"), state: "ARCHIVED" }),
+    /archived this goal/,
+  );
+});
