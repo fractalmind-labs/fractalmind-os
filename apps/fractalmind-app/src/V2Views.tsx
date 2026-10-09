@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { OrganizationSnapshot } from "./domain";
 import { decisionFacts, type TrustLevel } from "./v2-model";
+import { shortId } from "./display";
 
 type Translate = (zh: string, en: string) => string;
 export function BrandMark() {
@@ -61,6 +62,80 @@ const icons: Record<string, ReactNode> = {
       <path d="M3 12h18M12 3a19 19 0 0 1 0 18 19 19 0 0 1 0-18" />
     </>
   ),
+  // Shell icons, same paths as the prototype's core.js.
+  folder: (
+    <path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />
+  ),
+  down: <path d="m6 9 6 6 6-6" />,
+  right: <path d="m9 6 6 6-6 6" />,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  x: <path d="M6 6l12 12M18 6 6 18" />,
+  refresh: (
+    <>
+      <path d="M20 11.5A8 8 0 0 0 6.2 6.3L4 8.5" />
+      <path d="M4 4v4.5h4.5" />
+      <path d="M4 12.5a8 8 0 0 0 13.8 5.2L20 15.5" />
+      <path d="M20 20v-4.5h-4.5" />
+    </>
+  ),
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+    </>
+  ),
+  moon: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />,
+  monitor: (
+    <>
+      <rect x="3" y="4" width="18" height="12.5" rx="2" />
+      <path d="M8.5 20.5h7M12 16.5v4" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.2-4.2" />
+    </>
+  ),
+  grid: (
+    <>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" />
+    </>
+  ),
+  laptop: (
+    <>
+      <rect x="4.5" y="5" width="15" height="10" rx="1.5" />
+      <path d="M2.5 19h19" />
+    </>
+  ),
+  info: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5.5M12 7.8h.01" />
+    </>
+  ),
+  alert: (
+    <>
+      <path d="M12 4 2.8 19.5h18.4z" />
+      <path d="M12 10v4.5M12 17.4h.01" />
+    </>
+  ),
+  lock: (
+    <>
+      <rect x="5" y="10.5" width="14" height="10" rx="2" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+    </>
+  ),
+  logout: (
+    <>
+      <path d="M9.5 20.5h-4A1.5 1.5 0 0 1 4 19V5a1.5 1.5 0 0 1 1.5-1.5h4" />
+      <path d="M16 16.5l4.5-4.5L16 7.5" />
+      <path d="M20.5 12H9.5" />
+    </>
+  ),
 };
 export function NavIcon({ name }: { name: string }) {
   return (
@@ -69,7 +144,7 @@ export function NavIcon({ name }: { name: string }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -166,6 +241,7 @@ const decisions: Record<string, [string, string, string, string]> = {
     "The original Run and result remain; a new attempt needs a new decision.",
   ],
 };
+/** OKR attention cards for "Needs your decision"; the caller renders the heading. */
 export function Decisions({
   snapshot,
   now,
@@ -180,90 +256,66 @@ export function Decisions({
   open: (id: string) => void;
 }) {
   const facts = decisionFacts(snapshot, now, reachable);
-  return (
-    <section
-      className="decisions"
-      aria-label={t("需要你决定", "Needs your decision")}
-    >
-      <div className="section-heading">
-        <h2>{t("需要你决定", "Needs your decision")}</h2>
-        {!facts.unavailable && (
-          <span className="badge">
-            {facts.items.length} {t("项 OKR 需关注", "OKRs need attention")}
-          </span>
-        )}
+  if (facts.unavailable)
+    return (
+      <div className="note warn" role="status">
+        <NavIcon name="alert" />
+        <span>
+          {t(
+            "OKR 待办未知：请先恢复连接并重新查询，不能据此判断没有待办。",
+            "OKR attention items are unknown. Restore the connection and query again; this does not mean there are none.",
+          )}
+        </span>
       </div>
-      <p className="muted">
-        {t(
-          "根据已读取的链上事实整理 OKR 待办；Agent 超权申请在下方单列，设备配对从身份页面发起。",
-          "OKR attention items from the chain records read. Agent boundary requests appear below; start device pairing from My identity.",
-        )}
-      </p>
-      {facts.unavailable ? (
-        <div className="panel warn" role="status">
-          {t(
-            "当前数据未知，请先恢复连接并重新查询。",
-            "Current data is unknown. Restore the connection and query again.",
-          )}
-        </div>
-      ) : facts.items.length ? (
-        <div className="decision-grid">
-          {facts.items.map(({ row, nav }) => {
-            const copy = decisions[nav.condition];
-            const budget = row.budget.value;
-            return (
-              <article
-                key={row.okr.id}
-                className={`panel decision-card ${nav.condition === "unknown" || nav.condition === "failed" ? "blocked" : ""}`}
-              >
-                <div className="decision-title">
-                  <span className="decision-signal" aria-hidden="true">
-                    !
-                  </span>
-                  <div>
-                    <h3>{t(copy[0], copy[1])}</h3>
-                    <small>{row.okr.logical_id}</small>
-                  </div>
-                </div>
-                <p>{t(copy[2], copy[3])}</p>
-                <dl>
-                  <dt>{t("影响范围", "Scope")}</dt>
-                  <dd>
-                    {t("此 OKR", "This OKR")} · v{row.okr.agreement_version}
-                  </dd>
-                  <dt>{t("预算影响", "Budget effect")}</dt>
-                  <dd>
-                    {budget
-                      ? `${budget.spent} + ${budget.reserved} / ${row.okr.budget_limit} ${budget.asset}`
-                      : t("未知", "Unknown")}{" "}
-                    · {t("新动作费用待评估", "New action cost not estimated")}
-                  </dd>
-                  <dt>{t("替代方案", "Alternative")}</dt>
-                  <dd>
-                    {t(
-                      "先查看原 Run 与证据，保持现有约定。",
-                      "Review the original Run and evidence; retain the current agreement.",
-                    )}
-                  </dd>
-                  <dt>{t("约定有效至", "Agreement expires")}</dt>
-                  <dd>{formatDeadline(row.okr.expires_at_ms, t)}</dd>
-                </dl>
-                <button onClick={() => open(row.okr.id)}>
-                  {t("查看事实与证据", "Review facts and evidence")} →
-                </button>
-              </article>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="panel">
-          {t(
-            "已读取的 OKR 中未发现需处理事项。实时 Agent 观测尚未接入，不能据此判断持续运行正常。",
-            "No attention items in the OKRs read. Live Agent observations are not connected, so this does not establish healthy ongoing execution.",
-          )}
-        </div>
-      )}
-    </section>
+    );
+  if (!facts.items.length) return null;
+  return (
+    <div className="decision-grid">
+      {facts.items.map(({ row, nav }) => {
+        const copy = decisions[nav.condition];
+        const budget = row.budget.value;
+        const blocked = nav.condition === "unknown" || nav.condition === "failed";
+        return (
+          <article
+            key={row.okr.id}
+            className={`panel decision-card ${blocked ? "blocked" : ""}`}
+          >
+            <div className="d-top">
+              <span className={`chip ${blocked ? "danger" : "warn"}`}>
+                <NavIcon name="alert" />
+                {t(copy[0], copy[1])}
+              </span>
+              <span title={row.okr.logical_id}>
+                OKR {shortId(row.okr.logical_id)} · v{row.okr.agreement_version}
+              </span>
+            </div>
+            <p>{t(copy[2], copy[3])}</p>
+            <dl>
+              <dt>{t("预算", "Budget")}</dt>
+              <dd>
+                {budget
+                  ? `${budget.spent} + ${budget.reserved} / ${row.okr.budget_limit} ${budget.asset}`
+                  : t("未知", "Unknown")}
+              </dd>
+              <dt>{t("替代方案", "Alternative")}</dt>
+              <dd>
+                {t(
+                  "先查看原 Run 与证据，保持现有约定",
+                  "Review the original Run and evidence; keep the agreement",
+                )}
+              </dd>
+              <dt>{t("约定有效至", "Agreement expires")}</dt>
+              <dd>{formatDeadline(row.okr.expires_at_ms, t)}</dd>
+            </dl>
+            <div className="actions">
+              <button className="primary" onClick={() => open(row.okr.id)}>
+                {t("查看事实与证据", "Review facts and evidence")}
+              </button>
+            </div>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 function formatDeadline(ms: string, t: Translate) {

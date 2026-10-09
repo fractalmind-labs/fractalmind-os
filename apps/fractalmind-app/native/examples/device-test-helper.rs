@@ -43,6 +43,22 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "org.fractalmind.app.device.test",
         std::env::temp_dir().join("fractalmind-device-vault-test-locks"),
     );
+    // Each helper run is a fresh process, like an App start: actions that use
+    // device keys unlock the test profile's session first (one store read).
+    const DEVICE_KEY_ACTIONS: [&str; 9] = [
+        "public",
+        "signTransaction",
+        "signNodeCommand",
+        "proveDevice",
+        "encryptRecord",
+        "decryptRecord",
+        "wrapOrganizationKeys",
+        "wrapCommandResultKey",
+        "encryptCommandDelivery",
+    ];
+    if DEVICE_KEY_ACTIONS.contains(&request.action.as_str()) {
+        vault.unlock(&request.profile)?;
+    }
     let output = match request.action.as_str() {
         "initialize" => serde_json::to_value(vault.initialize(&request.profile)?)?,
         "public" => serde_json::to_value(vault.public(&request.profile)?)?,

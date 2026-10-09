@@ -63,6 +63,11 @@ export function parseHostInviteCode(code: string, network: NetworkName) {
   try { return { inviteId: parts[2], signer: inviteSigner(entropy, network) }; } finally { entropy.fill(0); }
 }
 
+/** agent-manager-v1: a Codex/Claude Agent run by agent-manager; controllable
+ * through agent-manager (goals, stop, claimed evidence), not its tools. */
+export type ManagedRuntime = 'tmux-observe' | 'bounded-process-v1' | 'agent-manager-v1';
+export const CONTROLLABLE_RUNTIMES: readonly ManagedRuntime[] = ['bounded-process-v1', 'agent-manager-v1'];
+
 export class HostApi {
   constructor(private readonly fm: FractalMindClient) {}
   private call(name: string, tx: Transaction, args: Parameters<Transaction['moveCall']>[0]['arguments']): Transaction {
@@ -113,7 +118,7 @@ export class HostApi {
     const params = { organizationId: invite.org_id, inviteId: invite.id, bindingId: binding.id, issuerHumanId: invite.issuer_human, issuerGrantId: invite.issuer_grant, hostPublicKey: input.hostPublicKey, encryptionPublicKey: input.encryptionPublicKey, name: input.name, proofExpiresAtMs, proofSignature };
     return { transaction: this.redeemInvite(params), params, binding, hostAddress };
   }
-  importAgent(input: MembershipInput & { instanceId: string; runtime: 'tmux-observe' | 'bounded-process-v1'; workspaceHash: Uint8Array; controlConfirmed: boolean }): Transaction {
+  importAgent(input: MembershipInput & { instanceId: string; runtime: ManagedRuntime; workspaceHash: Uint8Array; controlConfirmed: boolean }): Transaction {
     const tx = this.fm.useTransaction(input.tx);
     return this.call('import_agent', tx, [...this.authorized(tx, input), tx.object(input.membershipId), tx.object(input.bindingId), tx.pure.string(input.instanceId), tx.pure.string(input.runtime), tx.pure.vector('u8', input.workspaceHash), tx.pure.bool(input.controlConfirmed), tx.object('0x6')]);
   }
@@ -121,7 +126,7 @@ export class HostApi {
     const tx = this.fm.useTransaction(input.tx);
     return this.call('revoke_agent', tx, [...this.authorized(tx, input), tx.object(input.managedAgentId), tx.object('0x6')]);
   }
-  rebindAgent(input: MembershipInput & { managedAgentId: string; expectedVersion?: bigint | string | number; runtime: 'tmux-observe' | 'bounded-process-v1'; workspaceHash: Uint8Array; controlConfirmed: boolean }): Transaction {
+  rebindAgent(input: MembershipInput & { managedAgentId: string; expectedVersion?: bigint | string | number; runtime: ManagedRuntime; workspaceHash: Uint8Array; controlConfirmed: boolean }): Transaction {
     const tx = this.fm.useTransaction(input.tx);
     const version = input.expectedVersion === undefined ? [] : [tx.pure.u64(toBigInt(input.expectedVersion))];
     return this.call(input.expectedVersion === undefined ? 'rebind_agent' : 'rebind_agent_at_version', tx, [...this.authorized(tx, input), tx.object(input.membershipId), tx.object(input.bindingId), tx.object(input.managedAgentId), ...version, tx.pure.string(input.runtime), tx.pure.vector('u8', input.workspaceHash), tx.pure.bool(input.controlConfirmed), tx.object('0x6')]);

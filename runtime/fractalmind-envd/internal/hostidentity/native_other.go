@@ -58,3 +58,14 @@ func (s nativeStore) Create(profile string, data []byte) error {
 	}
 	return s.ring.Set(keyring.Item{Key: name, Data: data, Label: "FractalMind Host " + profile, KeychainNotSynchronizable: true})
 }
+func (s nativeStore) Delete(profile string) error {
+	name, err := account(profile)
+	if err != nil {
+		return err
+	}
+	err = s.ring.Remove(name)
+	if errors.Is(err, keyring.ErrKeyNotFound) {
+		return ErrNotFound
+	}
+	return err
+}

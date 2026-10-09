@@ -1,9 +1,11 @@
 use fractalmind_device_vault::{
     DevicePublic, DeviceVault, OnboardingCreated, OnboardingPublic, RecoveryImported,
-    RecoveryPrepared, RecoveryPublic, SignedBytes, DEVICE_SERVICE,
+    RecoveryPrepared, RecoveryPublic, SessionStatus, SignedBytes, DEVICE_SERVICE,
 };
 use std::sync::Arc;
 use tauri::{Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+pub mod agents;
+pub mod local_host;
 mod okr_export;
 
 fn local_origin(url: &tauri::Url) -> bool {
@@ -82,6 +84,58 @@ async fn fm_device_public(
     tauri::async_runtime::spawn_blocking(move || vault.public(&profile).map_err(|e| e.to_string()))
         .await
         .map_err(|_| "NativeTaskFailed".to_string())?
+}
+/// Reads the device keys from the OS store once and keeps them in native memory
+/// for this session. Returns public material only.
+#[tauri::command]
+async fn fm_device_unlock(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+) -> Result<DevicePublic, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || vault.unlock(&profile).map_err(|e| e.to_string()))
+        .await
+        .map_err(|_| "NativeTaskFailed".to_string())?
+}
+/// Zeroizes one profile's session, or all sessions when no profile is given.
+#[tauri::command]
+async fn fm_device_lock(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: Option<String>,
+) -> Result<(), String> {
+    main_window(&window)?;
+    vault.lock(profile.as_deref()).map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn fm_device_session(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+) -> Result<SessionStatus, String> {
+    main_window(&window)?;
+    vault.session_status(&profile).map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn fm_device_touch(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+) -> Result<SessionStatus, String> {
+    main_window(&window)?;
+    vault.touch(&profile).map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn fm_device_set_idle_timeout(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    ms: String,
+) -> Result<u64, String> {
+    main_window(&window)?;
+    let ms: u64 = ms.parse().map_err(|_| "InvalidTimeout".to_string())?;
+    vault.set_idle_timeout(ms).map_err(|e| e.to_string())
 }
 #[tauri::command]
 async fn fm_device_initialize(
@@ -172,6 +226,24 @@ async fn fm_onboarding_create(
     tauri::async_runtime::spawn_blocking(move || {
         vault
             .create_onboarding(&profile, &network)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
+/// Shows an unfinished setup's recovery code again (unlocked session only).
+#[tauri::command]
+async fn fm_onboarding_reveal(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    network: String,
+) -> Result<String, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        vault
+            .reveal_onboarding_code(&profile, &network)
             .map_err(|e| e.to_string())
     })
     .await
@@ -430,12 +502,18 @@ pub fn run() {
             fm_app_appearance,
             okr_export::fm_export_okr,
             fm_device_public,
+            fm_device_unlock,
+            fm_device_lock,
+            fm_device_session,
+            fm_device_touch,
+            fm_device_set_idle_timeout,
             fm_device_initialize,
             fm_device_sign_transaction,
             fm_device_sign_node_command,
             fm_device_prove,
             fm_onboarding_create,
             fm_onboarding_public,
+            fm_onboarding_reveal,
             fm_onboarding_sign_transaction,
             fm_device_decrypt_record,
             fm_device_encrypt_record,
@@ -446,7 +524,23 @@ pub fn run() {
             fm_recovery_sign_transaction,
             fm_device_wrap_organization_keys,
             fm_device_wrap_command_result_key,
-            fm_device_encrypt_command_delivery
+            fm_device_encrypt_command_delivery,
+            local_host::fm_local_host_status,
+            local_host::fm_local_host_keys,
+            local_host::fm_local_host_configure,
+            local_host::fm_local_host_join,
+            local_host::fm_local_host_service,
+            local_host::fm_local_host_uninstall,
+            local_host::fm_local_host_discover,
+            agents::fm_agent_catalog,
+            agents::fm_agent_launchers,
+            agents::fm_agent_home_check,
+            agents::fm_agent_create,
+            agents::fm_agent_start,
+            agents::fm_agent_deliver_okr,
+            agents::fm_agent_send,
+            agents::fm_agent_output,
+            agents::fm_agent_read_proposal
         ])
         .run(tauri::generate_context!())
         .expect("FractalMind App runtime failed");

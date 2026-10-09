@@ -28,6 +28,7 @@ module fractalmind_protocol::host {
     const E_EXECUTION_COVERAGE: u64 = 9209;
     const E_UNSETTLED_EXECUTION: u64 = 9210;
     const E_HANDOVER_REQUIRED: u64 = 9211;
+    const AGENT_MANAGER_RUNTIME: vector<u8> = b"agent-manager-v1";
     const DAY: u64 = 86400000;
     const MAX_INVITE_TTL: u64 = DAY;
     const MAX_MEMBER_TTL: u64 = 90 * DAY;
@@ -271,10 +272,13 @@ module fractalmind_protocol::host {
     ): ID {
         identity::assert_can(human, grant, org, identity::manage_hosts_action(), clock, ctx);
         assert_member(org, member, binding, clock);
-        assert!(!control_confirmed, E_HANDOVER_REQUIRED);
+        // A running bounded process needs the reviewed handover to gain control.
+        // An agent-manager Agent is controlled through agent-manager itself, so
+        // the person confirms its (partial) limits at import instead.
+        assert!(!control_confirmed || runtime == string::utf8(AGENT_MANAGER_RUNTIME), E_HANDOVER_REQUIRED);
         assert!(string::length(&instance_id) > 0 && string::length(&instance_id) <= 128 && vector::length(&workspace_hash) == 32, E_INPUT);
-        assert!(runtime == string::utf8(b"tmux-observe") || runtime == string::utf8(b"bounded-process-v1"), E_INPUT);
-        if (control_confirmed) assert!(runtime == string::utf8(b"bounded-process-v1"), E_INPUT);
+        assert!(runtime_known(&runtime), E_INPUT);
+        if (control_confirmed) assert!(runtime_controllable(&runtime), E_INPUT);
         let key = InstanceKey { host_address: member.host_address, instance_id };
         let org_id = object::id(org);
         let idx = index(org, ctx);
@@ -349,8 +353,8 @@ module fractalmind_protocol::host {
         assert!(record.org_id == object::id(org) && record.host_address == member.host_address, E_SCOPE);
         assert_agent_execution_idle(org, object::id(record));
         assert!(vector::length(&workspace_hash) == 32, E_INPUT);
-        assert!(runtime == string::utf8(b"tmux-observe") || runtime == string::utf8(b"bounded-process-v1"), E_INPUT);
-        if (control_confirmed) assert!(runtime == string::utf8(b"bounded-process-v1"), E_INPUT);
+        assert!(runtime_known(&runtime), E_INPUT);
+        if (control_confirmed) assert!(runtime_controllable(&runtime), E_INPUT);
         let key = InstanceKey { host_address: member.host_address, instance_id: record.instance_id };
         let confirmed_device = tx_context::sender(ctx);
         let pointer = table::borrow_mut(&mut index(org, ctx).instances, key);
@@ -437,7 +441,16 @@ module fractalmind_protocol::host {
     public fun assert_managed(org: &Organization, member: &HostMembership, managed: &ManagedAgent, require_control: bool) {
         assert!(managed.org_id == object::id(org) && managed.membership_id == object::id(member) && managed.host_address == member.host_address, E_SCOPE);
         assert!(!managed.revoked, E_REVOKED);
-        if (require_control) assert!(managed.control_confirmed && managed.runtime == string::utf8(b"bounded-process-v1"), E_INPUT);
+        if (require_control) assert!(managed.control_confirmed && runtime_controllable(&managed.runtime), E_INPUT);
+    }
+    /// Runtimes a ManagedAgent may record. `agent-manager-v1`: a Codex/Claude
+    /// Agent run by agent-manager in tmux; FractalMind delivers goals, stops it
+    /// and records claimed evidence, but cannot intercept its tools or spending.
+    public fun runtime_known(runtime: &String): bool {
+        *runtime == string::utf8(b"tmux-observe") || *runtime == string::utf8(b"bounded-process-v1") || *runtime == string::utf8(AGENT_MANAGER_RUNTIME)
+    }
+    public fun runtime_controllable(runtime: &String): bool {
+        *runtime == string::utf8(b"bounded-process-v1") || *runtime == string::utf8(AGENT_MANAGER_RUNTIME)
     }
     fun classify_host_actions(actions: &vector<String>): u8 {
         let mut i = 0u64;

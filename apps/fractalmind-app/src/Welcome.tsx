@@ -1,4 +1,5 @@
 import { lazy, Suspense, useId, useState } from "react";
+import { isTauri } from "@tauri-apps/api/core";
 import type { ReactNode } from "react";
 import { normalizeProfile } from "./chain";
 import type { ConnectionProfile } from "./domain";
@@ -14,16 +15,22 @@ export default function Welcome({
   t,
   appearance,
   connect,
+  newDevice = false,
 }: {
   t: (zh: string, en: string) => string;
   appearance: ReactNode;
   connect: (profile: ConnectionProfile) => void;
+  /** No device keys on this machine: start the full setup. */
+  newDevice?: boolean;
 }) {
   const [text, setText] = useState(""),
     [error, setError] = useState(false);
   const [mode, setMode] = useState<"create" | "existing" | "recover" | null>(
-    null,
+    newDevice ? "create" : null,
   );
+  // The read-only browser is a development tool for the web preview only;
+  // the native App always sets up or recovers a real device identity.
+  const devPreview = !isTauri();
   const [creatingBusy, setCreatingBusy] = useState(false);
   const gradient = `welcome-${useId().replace(/:/g, "")}`;
   return (
@@ -218,6 +225,7 @@ export default function Welcome({
               "There is no FractalMind cloud account: identity, device grants and organizations live on Sui; private keys stay on your devices.",
             )}
           </p>
+          {devPreview && (
           <details className="panel connection-preview">
             <summary>
               {t(
@@ -271,6 +279,7 @@ export default function Welcome({
               </button>
             </form>
           </details>
+          )}
         </div>
       </main>
     </div>

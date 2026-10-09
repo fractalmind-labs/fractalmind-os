@@ -33,6 +33,136 @@ contacts the configured Sui RPC directly. That RPC must support browser
 gRPC-Web requests and permit the preview origin. The production bundle has a
 CSP restricting scripts and styles to this origin; development uses Vite HMR.
 
+## New device setup
+
+The native App sets up a new device instead of browsing read-only: without
+device keys it opens "Create my identity" (device keys and one recovery code,
+funds, Human identity, personal organization), with pairing and recovery as
+alternatives. The read-only chain browser exists only in the web preview.
+
+The network and contracts come from the build. For a local network, put the
+public deployment and faucet in `.env.local` (not committed):
+
+```sh
+VITE_FRACTALMIND_DEPLOYMENT={"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","okrPackageId":"0x…","directPackageId":"0x…","registryId":"0x…"}
+VITE_FRACTALMIND_FAUCET=http://127.0.0.1:29123
+```
+
+Without a built-in deployment the setup asks for the deployment JSON under
+"Advanced". Faucets are offered only for localnet and devnet.
+
+A v0.2.0 deployment on Sui testnet is recorded in
+[`v021-testnet-deployment.json`](../../docs/product/evidence/v021-testnet-deployment.json);
+use its `deployment` object as `VITE_FRACTALMIND_DEPLOYMENT` for a testnet
+build. Testnet has no faucet the App can call: fund the two setup addresses at
+faucet.sui.io or by transfer.
+
+## Styles
+
+The interface follows prototype v2 in three layers:
+
+- `src/prototype-v2-tokens.css`: the prototype's color and spacing tokens.
+- `src/prototype-v2-components.css`: the prototype's component classes
+  (buttons, chips, cards, notes, tabs, shell, decision cards and so on),
+  generated from the prototype stylesheet. Do not edit it by hand; change the
+  prototype, then run `node scripts/port-prototype-v2-components.mjs`. CI runs
+  it with `--check` to catch drift.
+- `src/styles.css`: maps existing App markup (`panel`, `badge`, `notice`, bare
+  controls, native dialogs) onto those components and holds App-only views
+  such as the run map. Use prototype class names for new markup.
+
+`src/display.ts` holds display-name rules: a readable name first, and chain
+IDs only shortened as secondary detail.
+
+## Device session
+
+The native App unlocks device keys once per sign-in instead of reading the OS
+credential store (Keychain, Keystore, Credential Manager, Secret Service) for
+every operation:
+
+- `fm_device_unlock` reads the store once and keeps the keys in native process
+  memory (`DeviceVault` session, zeroized on drop). Signing, decryption and the
+  other device operations use only that session; a locked or expired session
+  returns `Locked` and never falls back to the store.
+- The App unlocks automatically at start. It locks on "Lock this app", after
+  the idle timeout (default 15 minutes, set in Settings; machine sleep counts
+  as idle), after more than a minute in the background on phones, and when this
+  device's grant is revoked. While locked nothing from the organization is
+  rendered.
+- Keys never cross IPC; the WebView only sees public keys, signatures and
+  decrypted results. With the session unlocked, OKR titles are decrypted
+  automatically (`src/use-okr-texts.ts`) and kept in memory only. The browser
+  preview has no device keys and keeps the "Title encrypted" fallback.
+
+## This computer as Host
+
+Personal setup ends by making this computer the organization's Host and
+Coordinator (#64), and the Hosts page can do the same later. One confirmation
+runs:
+
+1. envd (bundled as a sidecar) creates the Host key in the OS credential store.
+   The same key signs for both roles in one process; the App gets only public
+   keys.
+2. This device creates a Coordinator binding for that key at
+   `http://127.0.0.1:<port>` (7443 or the next free port, loopback only).
+   `create_coordinator_binding` does not return the binding, so the invitation
+   is a second device transaction.
+3. The App writes a public `sentinel.yaml` (Host + Coordinator roles, pinned
+   binding, runtime with a workspace folder) under the App data directory.
+4. A one-use invitation (15 minutes) is created and, in the same PTB, the Host
+   address receives 0.1 SUI for its own Gas, since it signs its join and later
+   execution results. The invitation goes from memory to envd's stdin;
+   `--app-join-host` joins only if the chain plan matches the configured
+   organization, binding, this Host's key and the loopback endpoint.
+5. The service is installed as a per-user background service (macOS launchd
+   LaunchAgent, Linux systemd user unit, Windows logon task), starts at login
+   and keeps running after the App closes.
+
+Every step is resumable: an original transaction is queried, never
+broadcast again, and a known failure waits for an explicit retry. The Hosts
+page shows the service state, endpoint, log and workspace, stops and starts it,
+and "Revoke this host" revokes the membership on chain and then removes the
+service, configuration and Host key (the workspace stays). Changing the
+endpoint to LAN or internet HTTPS is not offered yet.
+
+Building the desktop App needs Go: `scripts/build-envd.mjs` builds
+`src-tauri/binaries/fractalmind-envd-<target>` before the Rust build
+(`tauri.{macos,linux,windows}.conf.json`). The localnet acceptance script
+`scripts/local-host-localnet.ts` drives the same native code through
+`src-tauri/examples/local-host-helper.rs`; see
+[`v021-local-host-localnet.json`](../../docs/product/evidence/v021-local-host-localnet.json).
+
+## Agents: create from a ROM, or import a running one
+
+An Agent is a Home directory (#67). Its Agent OS files (SYSTEM, SOUL,
+AGENTS, USER, HEARTBEAT, OKR, `memory/`, `okrs/`…) and skills
+(`.agents/skills`) make it up; the root `AGENTS.md` frontmatter names it
+(`namespace`), says how to launch it (`launcher` + `launcher_args`, e.g.
+`codex --profile main`, whose profile decides the model) and when it wakes
+(`heartbeat`, `schedules`). agent-manager runs it in tmux as
+`<namespace>--main` and installs its heartbeat in the Home's own crontab
+block.
+
+- **Import** (Team & Agents → Import from a host): envd discovers tmux
+  sessions whose working directory is an agent-manager Home and reports the
+  definition it read from `AGENTS.md` (name, Home, launch, model,
+  heartbeat, ROM, skill and employee counts). Import stays observe-only and
+  changes nothing on the host.
+- **New Agent**: a name (namespace and tmux session), a Home directory
+  (empty or new) and a ROM from `roms/agent-os-roms/roms`, plus optional
+  skills and a launcher profile detected on this computer. The App writes
+  the ROM's files and skills, rewrites `AGENTS.md` (namespace, launcher and
+  profile, installed skills, `rom:`), runs `git init`, starts the session
+  and syncs the heartbeat, then you register it with the organization
+  through Import (one transaction). On macOS, writing the crontab from an
+  app asks you to allow FractalMind to administer the computer.
+
+`scripts/build-agent-assets.mjs` bundles the ROMs and the skills they
+install from this repository into `src-tauri/resources/agent-assets`;
+skills this repository does not contain are listed as unavailable and
+reported as an incomplete install. `src-tauri/examples/agent-helper.rs`
+runs the same creation code outside the App for acceptance tests.
+
 ## Public read-only connection
 
 The welcome page's development preview accepts a public profile for an existing

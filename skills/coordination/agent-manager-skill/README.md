@@ -90,6 +90,10 @@ python3 .agents/skills/agent-manager/scripts/main.py start EMP_0001 --tmux-layou
 tmux attach -t agent-manager
 # (Optional) Customize the shared session name via: $AGENT_MANAGER_TMUX_GROUP_SESSION
 
+# Optional: isolate tmux names when several workspaces share one tmux server.
+# Add `namespace: my-project` to root AGENTS.md frontmatter, or set:
+AGENT_MANAGER_NAMESPACE=my-project python3 .agent/skills/agent-manager/scripts/main.py list
+
 # If you want to run the CLI from a cloned copy of this repo:
 REPO_ROOT="$PWD/your-project" python3 agent-manager/scripts/main.py doctor
 ```
@@ -142,6 +146,7 @@ Want an animated GIF instead? You can record it with tools like `termttogif` (or
 
 - Repo root is resolved in this priority order: `$REPO_ROOT` → git superproject (submodule-safe) → git toplevel → parent-walk fallback.
 - `schedule sync` writes crontab entries that call the *installed* `main.py` absolute path (so cron keeps working regardless of where the skill is installed).
+- Set a workspace namespace with `namespace: my-project` in root `AGENTS.md` frontmatter or the `AGENT_MANAGER_NAMESPACE` environment variable. The environment variable wins. Namespaced sessions use `my-project--main` and `my-project--agent-emp-0001`; when unset, legacy names are unchanged.
 
 ## Skills Resolution
 

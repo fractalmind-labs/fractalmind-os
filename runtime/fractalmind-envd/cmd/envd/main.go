@@ -55,12 +55,22 @@ func main() {
 	showVersion := flag.Bool("version", false, "show version")
 	initHost := flag.Bool("init-host", false, "initialize Host signing/encryption keys in the system credential store")
 	joinHost := flag.Bool("join-host", false, "redeem an organization invitation entered through hidden terminal input")
+	appJoinHost := flag.Bool("app-join-host", false, "desktop App setup: redeem the invitation from stdin only for this config's organization and local Coordinator binding")
+	hostPublic := flag.Bool("host-public", false, "print this Host's public keys without creating them")
+	removeHostKeys := flag.Bool("remove-host-keys", false, "delete this Host's private keys from the system credential store")
+	discoverOnly := flag.Bool("discover", false, "print this computer's Agent discovery (tmux sessions and Home definitions) as JSON; reads no keys")
 	joinStatus := flag.Bool("host-join-status", false, "query the original Host admission transaction without accessing private keys")
 	newJoinAttempt := flag.Bool("new-host-join-attempt", false, "explicitly prepare another admission after a known terminal original receipt")
 	joinAddress := flag.String("host-address", "", "public Host address for --host-join-status")
 	settleReview := flag.Bool("settle-stopped-review", false, "acknowledge an explicitly stopped expired zero-tool handover review; original signed command is read from stdin")
 	flag.Parse()
-	if flag.NArg() != 0 || *initHost && (*joinHost || *joinStatus) || *joinHost && *joinStatus || *newJoinAttempt && !*joinHost || *joinAddress != "" && !*joinStatus || *settleReview && (*initHost || *joinHost || *joinStatus || *showVersion) {
+	exclusive := 0
+	for _, set := range []bool{*initHost, *joinHost, *appJoinHost, *joinStatus, *hostPublic, *removeHostKeys, *settleReview, *discoverOnly} {
+		if set {
+			exclusive++
+		}
+	}
+	if flag.NArg() != 0 || exclusive > 1 || *newJoinAttempt && !*joinHost && !*appJoinHost || *joinAddress != "" && !*joinStatus || *settleReview && *showVersion {
 		fmt.Fprintln(os.Stderr, "invalid Host command options; invitations are entered through stdin, never argv")
 		os.Exit(2)
 	}
@@ -86,22 +96,49 @@ func main() {
 		}
 		return
 	}
-	if *joinHost || *joinStatus {
-		if err := runHostJoinCLI(context.Background(), cfg, *joinStatus, *newJoinAttempt, *joinAddress, os.Stdin, os.Stdout, os.Stderr); err != nil {
+	if *joinHost || *joinStatus || *appJoinHost {
+		ui := hostJoinInteraction(os.Stdin, os.Stdout, os.Stderr)
+		if *appJoinHost {
+			ui = appHostJoinInteraction(os.Stdin, os.Stdout, cfg)
+		}
+		if err := runHostJoinCLI(context.Background(), cfg, *joinStatus, *newJoinAttempt, *joinAddress, ui, os.Stdout); err != nil {
 			log.Print(err)
 			os.Exit(1)
 		}
 		return
 	}
 
-	if *initHost {
+	if *discoverOnly {
+		// The same scan the Host reports, for the desktop App on this computer.
+		d := agent.NewScannerAtSocket(cfg.Agents.ScanMethod, cfg.Agents.TmuxSocket).Discover()
+		if err := json.NewEncoder(os.Stdout).Encode(d); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *removeHostKeys {
+		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := hostidentity.Remove(store, cfg.Identity.KeyProfile); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *initHost || *hostPublic {
 		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
 		if err != nil {
 			log.Fatal(err)
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		keys, err := hostidentity.Initialize(ctx, store, cfg.Identity.KeyProfile, "")
+		var keys *hostidentity.Keys
+		if *hostPublic {
+			keys, err = hostidentity.Load(store, cfg.Identity.KeyProfile)
+		} else {
+			keys, err = hostidentity.Initialize(ctx, store, cfg.Identity.KeyProfile, "")
+		}
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -122,6 +159,9 @@ func main() {
 	}
 
 	runtimeExecutor, err := newRuntimeCommandExecutorFromEnv(cfg)
+	if errors.Is(err, hostidentity.ErrAccessDenied) {
+		waitAfterDeniedKey(err)
+	}
 	if err != nil {
 		log.Fatalf("[runtimeadapter] failed to initialize persistent signed-command runtime: %v", err)
 	}
@@ -204,7 +244,11 @@ func main() {
 		if err != nil {
 			log.Fatal("[auth] native Host store unavailable")
 		}
+		log.Printf("[auth] reading Host key %q from the system credential store (the OS may ask to allow access)", cfg.Identity.KeyProfile)
 		connectionKeys, err = hostidentity.Load(store, cfg.Identity.KeyProfile)
+		if errors.Is(err, hostidentity.ErrAccessDenied) {
+			waitAfterDeniedKey(err)
+		}
 		if err != nil {
 			log.Fatal("[auth] initialize native Host keys with --init-host first")
 		}
@@ -636,6 +680,13 @@ func main() {
 			lastAgents = agents
 
 		case <-heartbeatTicker.C:
+			// A signed observation is valid for 60s; send this moment's scan
+			// rather than the last periodic one, so readers get its full window.
+			if connectionKeys != nil {
+				if agents, err := scan(); err == nil {
+					lastAgents = agents
+				}
+			}
 			payload := heartbeat.NewPayload(
 				cfg.Identity.HostID,
 				cfg.Identity.Hostname,
@@ -1072,4 +1123,16 @@ func truncAddr(s string) string {
 		return s[:16]
 	}
 	return s
+}
+
+// waitAfterDeniedKey keeps a service process alive after the person cancelled
+// or denied the OS prompt for the Host key. Exiting would let the service
+// manager restart it and ask again in a loop; the App restarts it on request.
+func waitAfterDeniedKey(err error) {
+	log.Printf("[auth] %v; waiting. Restart the service from the FractalMind App to ask again.", err)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+	log.Printf("[auth] stopped while waiting for Host key access")
+	os.Exit(0)
 }
