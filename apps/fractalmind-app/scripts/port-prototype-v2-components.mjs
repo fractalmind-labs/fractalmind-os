@@ -114,7 +114,7 @@ ${desktop.join("\n")}
 
 /* Phone layout (prototype .app.m) */
 @media (max-width: 760px) {
-  ${phone.join("\n  ")}
+${phone.map((rule) => `  ${rule}`).join("\n")}
 }
 `;
 }
