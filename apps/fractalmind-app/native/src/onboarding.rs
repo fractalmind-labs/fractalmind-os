@@ -98,12 +98,20 @@ impl DeviceVault {
         if *self.load_onboarding(profile, network)? != *stored {
             return Err(VaultError::InvalidStoredKey);
         }
-        let prefix = Zeroizing::new(format!("FM1:{network}:{}", hex::encode(&stored[5..37])));
-        let checksum = hex::encode(Sha256::digest(prefix.as_bytes()));
         Ok(OnboardingCreated {
             public,
-            recovery_code: format!("{}:{}", prefix.as_str(), &checksum[..8]),
+            recovery_code: recovery_code(network, &stored),
         })
+    }
+    /// Shows the setup's recovery code again. The App offers this only while
+    /// the Human is not yet on chain, so an interrupted setup does not lose
+    /// the one code; it requires the unlocked device session.
+    pub fn reveal_onboarding_code(&self, profile: &str, network: &str) -> Result<String> {
+        self.load(profile)?;
+        Ok(recovery_code(
+            network,
+            &self.load_onboarding(profile, network)?,
+        ))
     }
     pub fn onboarding_public(&self, profile: &str, network: &str) -> Result<OnboardingPublic> {
         self.onboarding_output(profile, network, &self.load_onboarding(profile, network)?)
@@ -155,6 +163,12 @@ impl DeviceVault {
         let stored = self.load_onboarding(profile, network)?;
         sign_transaction_keys(&derived_keys(&stored[5..37])?, profile, encoded)
     }
+}
+/// The one recovery code for a setup: network, recovery entropy and checksum.
+fn recovery_code(network: &str, stored: &[u8]) -> String {
+    let prefix = Zeroizing::new(format!("FM1:{network}:{}", hex::encode(&stored[5..37])));
+    let checksum = hex::encode(Sha256::digest(prefix.as_bytes()));
+    format!("{}:{}", prefix.as_str(), &checksum[..8])
 }
 pub(super) fn network_index(network: &str) -> Result<u8> {
     NETWORKS
@@ -234,6 +248,31 @@ pub(super) fn wrap(plaintext: &[u8], recipient: &[u8; 32], context: &str) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn recovery_code_is_checksummed_and_stable() {
+        let mut stored = vec![0u8; 69];
+        stored[5..37].copy_from_slice(&[0xab; 32]);
+        let code = recovery_code("localnet", &stored);
+        let parts: Vec<_> = code.split(':').collect();
+        assert_eq!(parts.len(), 4);
+        assert_eq!((parts[0], parts[1]), ("FM1", "localnet"));
+        assert_eq!(parts[2], "ab".repeat(32));
+        let prefix = format!("FM1:localnet:{}", parts[2]);
+        assert_eq!(
+            parts[3],
+            &hex::encode(Sha256::digest(prefix.as_bytes()))[..8]
+        );
+        assert_eq!(recovery_code("localnet", &stored), code);
+        assert_ne!(recovery_code("devnet", &stored), code);
+    }
+    #[test]
+    fn revealing_the_code_needs_an_unlocked_session() {
+        let vault = DeviceVault::new("org.fractalmind.app.device.test", std::path::PathBuf::new());
+        assert_eq!(
+            vault.reveal_onboarding_code("test-a", "localnet"),
+            Err(VaultError::Locked)
+        );
+    }
     #[test]
     fn recovery_domains_are_network_bounded_and_reproducible() {
         let entropy = [7u8; 32];

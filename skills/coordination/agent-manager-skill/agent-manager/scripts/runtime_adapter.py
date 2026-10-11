@@ -12,6 +12,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Optional
 
+from tmux_helper import session_name_for_agent
+
 SCHEMA_VERSION = '1'
 ADAPTER_NAME = 'agent-manager-runtime'
 SUPPORTED_OPERATIONS = (
@@ -296,7 +298,7 @@ def _build_runtime_snapshot(deps: Any, *, agent_id: str, agent_name: str) -> dic
     if isinstance(session_info, dict):
         session_name = str(session_info.get('session') or '')
     if not session_name:
-        session_name = 'main' if agent_id == 'main' else f'agent-{agent_id}'
+        session_name = session_name_for_agent(agent_id)
 
     observed_at = _utc_now()
     repo_root = get_repo_root() if callable(get_repo_root) else None

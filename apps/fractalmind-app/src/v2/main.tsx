@@ -1,0 +1,15 @@
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "./App";
+import { AppBoundary } from "../AppBoundary";
+import "../styles.css";
+import "./prototype-extra.css";
+import "./app.css";
+
+createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <AppBoundary>
+      <App />
+    </AppBoundary>
+  </React.StrictMode>,
+);

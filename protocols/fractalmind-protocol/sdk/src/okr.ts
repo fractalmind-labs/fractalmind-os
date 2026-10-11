@@ -71,6 +71,22 @@ export class OkrApi {
     const tx = this.fm.useTransaction(input.tx);
     return this.call(tx, 'pause', [tx.object(input.okrId), ...this.authorized(tx, input), tx.pure.u64(toBigInt(input.expectedVersion)), tx.pure.u64(toBigInt(input.expectedRecordRevision)), ...this.body(tx, input), tx.object('0x6')]);
   }
+  /** Assigns the OKR to an agent-manager Agent imported with control (#75).
+   * No Host review or command capability: FractalMind delivers the goal and
+   * can stop it, and the Agent's reports are recorded as Agent-claimed. */
+  assignAgentManager(input: Mutation & Body & {
+    membershipId: string; bindingId: string; managedAgentId: string;
+    workspaceHash: Uint8Array; boundaryHash: Uint8Array; budgetAsset: string; budgetLimit: U64;
+    expiresAtMs: U64; expectedRecordRevision: U64;
+  }) {
+    if (input.workspaceHash.length !== 32 || input.boundaryHash.length !== 32) throw new Error('Workspace and boundary hashes are 32 bytes.');
+    if (!input.budgetAsset || input.budgetAsset.length > 32 || toBigInt(input.budgetLimit) < 1n) throw new Error('Invalid budget.');
+    const tx = this.fm.useTransaction(input.tx);
+    return this.call(tx, 'assign_agent_manager', [tx.object(input.okrId), ...this.authorized(tx, input), tx.object(input.membershipId), tx.object(input.bindingId), tx.object(input.managedAgentId),
+      tx.pure.u64(toBigInt(input.expectedVersion)), tx.pure.vector('u8', Array.from(input.workspaceHash)), tx.pure.vector('u8', Array.from(input.boundaryHash)),
+      tx.pure.string(input.budgetAsset), tx.pure.u64(toBigInt(input.budgetLimit)), tx.pure.u64(toBigInt(input.expiresAtMs)),
+      tx.pure.u64(toBigInt(input.expectedRecordRevision)), ...this.body(tx, input), tx.object('0x6')]);
+  }
   replaceSpec(input: Mutation & Criteria & Body) {
     const tx = this.fm.useTransaction(input.tx);
     return this.call(tx, 'replace_spec', [tx.object(input.okrId), ...this.authorized(tx, input), tx.pure.u64(toBigInt(input.expectedVersion)), ...this.criteria(tx, input), ...this.body(tx, input), tx.object('0x6')]);

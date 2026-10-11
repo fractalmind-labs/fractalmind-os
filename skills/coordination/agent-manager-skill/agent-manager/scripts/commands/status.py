@@ -3,9 +3,11 @@ import json
 import re
 from typing import Any, Optional
 
+from tmux_helper import session_name_for_agent
+
 
 def _session_label(agent_id: str) -> str:
-    return 'main' if str(agent_id).strip().lower() == 'main' else f"agent-{agent_id}"
+    return session_name_for_agent(agent_id)
 
 
 def _heartbeat_audit_path(repo_root, agent_id: str):

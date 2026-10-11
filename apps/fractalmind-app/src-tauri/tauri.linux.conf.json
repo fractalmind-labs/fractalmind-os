@@ -1,0 +1,10 @@
+{
+  "build": {
+    "beforeDevCommand": "node scripts/build-envd.mjs && node scripts/build-agent-assets.mjs && npm run dev",
+    "beforeBuildCommand": "npm run build && node scripts/build-envd.mjs && node scripts/build-agent-assets.mjs"
+  },
+  "bundle": {
+    "externalBin": ["binaries/fractalmind-envd"],
+    "resources": { "resources/agent-assets/": "agent-assets/" }
+  }
+}

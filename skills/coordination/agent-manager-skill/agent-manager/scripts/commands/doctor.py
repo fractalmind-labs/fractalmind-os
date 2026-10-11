@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Any
 
+from tmux_helper import session_name_for_agent
+
 
 def cmd_doctor(args, *, deps: Any):
     """Run basic environment checks for agent-manager."""
@@ -76,7 +78,7 @@ def cmd_doctor(args, *, deps: Any):
             enabled = config.get('enabled', True)
 
             status = "✅" if enabled else "⛔"
-            print(f"{status} {file_id} (agent-{agent_id})")
+            print(f"{status} {file_id} ({session_name_for_agent(agent_id)})")
             if working_dir:
                 wd_ok = Path(working_dir).exists()
                 print(f"   Working dir: {working_dir} ({'ok' if wd_ok else 'missing'})")

@@ -18,7 +18,7 @@ func TestDiscoveryFailsClosedAcrossRacesAndUnverifiedProcesses(t *testing.T) {
 		t.Skip("tmux continuity unsupported on this OS")
 	}
 	workspace := t.TempDir()
-	base := "123\tagent-existing\t%1\t456\t0\t" + workspace + "\n"
+	base := strings.Join([]string{"123", "agent-existing", "%1", "456", "0", workspace}, discoverySep) + "\n"
 	for _, mode := range []string{"valid", "birth-unavailable", "birth-changed", "metadata-changed", "read-failed", "malformed", "dead", "workspace-missing", "duplicate-pane"} {
 		t.Run(mode, func(t *testing.T) {
 			reads, births := 0, 0
@@ -35,7 +35,7 @@ func TestDiscoveryFailsClosedAcrossRacesAndUnverifiedProcesses(t *testing.T) {
 					value = "invalid\n"
 				}
 				if mode == "dead" {
-					value = strings.Replace(value, "\t0\t", "\t1\t", 1)
+					value = strings.Replace(value, discoverySep+"0"+discoverySep, discoverySep+"1"+discoverySep, 1)
 				}
 				if mode == "workspace-missing" {
 					value = strings.Replace(value, workspace, workspace+"/missing", 1)

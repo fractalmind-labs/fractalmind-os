@@ -16,6 +16,7 @@ tauri = { version = "=2.12.1", features = [] }
 fractalmind-device-vault = { path = "../native" }
 zeroize = "1"
 serde_json = "1"
+serde = { version = "1", features = ["derive"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "=0.21.1"

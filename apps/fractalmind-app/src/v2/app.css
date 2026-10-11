@@ -1,0 +1,8 @@
+/* App v2 (#75): the few rules the prototype markup needs inside the App.
+ * Everything else comes from the prototype design system (styles.css,
+ * prototype-v2-components.css, prototype-extra.css). */
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+a.item { color: inherit; text-decoration: none; }
+a.item:hover { background: var(--hover); }
+.dialog .dialog-b > dialog { position: static; }

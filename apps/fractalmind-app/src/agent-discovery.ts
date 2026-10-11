@@ -1,3 +1,5 @@
+import { agentDefinition, type AgentDefinition } from "./agents";
+
 /** Read only from independently verified Host body bytes. A pane is an
  * observation target, not an independently authenticated AI Agent. */
 export type DiscoveredInstance = {
@@ -9,6 +11,8 @@ export type DiscoveredInstance = {
   continuity: "kernel-process-v1" | "envd-process-v1" | "unverified";
   workspace: string;
   workspaceHash: string;
+  /** The Home's AGENTS.md definition as observed by the Host, if any. */
+  agent: AgentDefinition | null;
 };
 export type AgentDiscovery = {
   state: "complete" | "unavailable" | "unsupported" | "unknown" | "expired";
@@ -125,6 +129,7 @@ export async function agentDiscovery(
         continuity: r.continuity as DiscoveredInstance["continuity"],
         workspace,
         workspaceHash,
+        agent: r.state === "observed" ? agentDefinition(r.agent) : null,
       });
     }
     return {

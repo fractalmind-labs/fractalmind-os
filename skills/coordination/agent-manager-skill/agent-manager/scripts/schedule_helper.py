@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-from agent_config import list_all_schedules, list_all_heartbeats, resolve_agent, get_schedule_task, parse_duration
+from agent_config import list_all_schedules, list_all_heartbeats, resolve_agent, get_schedule_task, parse_duration, get_configured_namespace
 from repo_root import get_repo_root
 
 
@@ -80,21 +80,45 @@ def set_crontab(content: str) -> bool:
         return False
 
 
-def remove_agent_manager_section(crontab: str) -> str:
-    """Remove agent-manager section from crontab content."""
+def _section_marker(repo_root) -> str:
+    """Unique crontab START marker for one repo, so multiple projects can coexist in a shared crontab."""
+    return f"{CRONTAB_START_MARKER} for {repo_root}"
+
+
+def remove_agent_manager_section(crontab: str, repo_root=None) -> str:
+    """Remove THIS repo's agent-manager section, preserving other projects' sections.
+
+    When repo_root is None, falls back to removing all agent-manager blocks
+    (original single-project behavior).
+    """
     lines = crontab.split('\n')
     result = []
-    in_section = False
+    in_our_block = False
+    in_other_block = False
+
+    our_marker = _section_marker(str(repo_root)) if repo_root is not None else None
 
     for line in lines:
+        stripped = line.strip()
         if CRONTAB_START_MARKER in line:
-            in_section = True
+            if our_marker is None or stripped == our_marker:
+                in_our_block = True
+                in_other_block = False
+                continue
+            in_our_block = False
+            in_other_block = True
+            result.append(line)
             continue
         if CRONTAB_END_MARKER in line:
-            in_section = False
-            continue
-        if not in_section:
+            if in_our_block:
+                in_our_block = False
+                continue
+            in_other_block = False
             result.append(line)
+            continue
+        if in_our_block:
+            continue
+        result.append(line)
 
     # Remove trailing empty lines
     while result and not result[-1].strip():
@@ -119,12 +143,16 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
     if not schedules and not heartbeats:
         return ""
 
-    lines = [CRONTAB_START_MARKER]
+    lines = [_section_marker(str(repo_root))]
 
     # Add PATH environment variable for crontab execution
     # This ensures commands like tmux can be found when running via cron
     lines.append("# Set PATH for cron jobs (include user-local bins for CLIs like codex)")
     lines.append('PATH=$HOME/.local/bin:$HOME/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin')
+    # Isolate tmux sessions by workspace namespace (PR #184): export AGENT_MANAGER_NAMESPACE
+    # so this project's sessions (e.g. <namespace>--main) never collide with other projects.
+    _namespace = get_configured_namespace(repo_root)
+    _ns = f'AGENT_MANAGER_NAMESPACE={_namespace} ' if _namespace else ''
     lines.append("")
 
     # Group by agent file_id for readability (names may not be unique)
@@ -174,7 +202,7 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
         cmd_parts = [
             f"cd {repo_root_q}",
             f"mkdir -p {log_dir_q}",
-            f"python3 {main_script_q} schedule run {file_id_q} --job {job_name_q}",
+            f"{_ns}python3 {main_script_q} schedule run {file_id_q} --job {job_name_q}",
         ]
 
         if max_runtime:
@@ -228,8 +256,8 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
         cmd_parts = [
             f"cd {repo_root_q}",
             f"mkdir -p {log_dir_q}",
-            f"python3 {main_script_q} start {file_id_q} --restore",
-            f"python3 {main_script_q} heartbeat run {file_id_q}",
+            f"{_ns}python3 {main_script_q} start {file_id_q} --restore",
+            f"{_ns}python3 {main_script_q} heartbeat run {file_id_q}",
         ]
 
         if max_runtime:
@@ -258,7 +286,8 @@ def sync_crontab(dry_run: bool = False) -> dict:
         Dict with 'success', 'added', 'removed', 'content'
     """
     current = get_current_crontab()
-    cleaned = remove_agent_manager_section(current)
+    repo_root = get_repo_root()
+    cleaned = remove_agent_manager_section(current, repo_root)
     new_section = generate_crontab_entries()
 
     # Build new crontab

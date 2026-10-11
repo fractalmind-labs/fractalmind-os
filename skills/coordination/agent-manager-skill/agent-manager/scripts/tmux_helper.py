@@ -2,7 +2,9 @@
 Tmux session helper for agent-manager skill.
 
 Wraps tmux commands for managing agent sessions.
-Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g., emp-0001)
+Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase
+(e.g., emp-0001). When ``AGENT_MANAGER_NAMESPACE`` is set, names are prefixed
+with ``<namespace>--`` to isolate workspaces sharing one tmux server.
 """
 
 from __future__ import annotations
@@ -27,10 +29,59 @@ MAIN_AGENT_ID = "main"
 # Optional "single session" mode: keep all agents in one tmux session, each in its own window.
 DEFAULT_GROUP_SESSION_NAME = "agent-manager"
 GROUP_SESSION_ENV_VAR = "AGENT_MANAGER_TMUX_GROUP_SESSION"
+NAMESPACE_ENV_VAR = "AGENT_MANAGER_NAMESPACE"
+
+
+def _normalize_namespace(value: Any) -> str:
+    """Return a tmux-safe namespace, or an empty string when unset."""
+    text = str(value or '').strip()
+    if not text:
+        return ''
+    text = re.sub(r'[^A-Za-z0-9_.-]+', '-', text)
+    return text.strip('._-')
+
+
+def get_namespace() -> str:
+    """Return the active workspace namespace from the environment."""
+    return _normalize_namespace(os.environ.get(NAMESPACE_ENV_VAR, ''))
+
+
+def _namespace_prefix() -> str:
+    namespace = get_namespace()
+    return f'{namespace}--' if namespace else ''
+
+
+def _namespaced_name(name: str) -> str:
+    return f'{_namespace_prefix()}{name}'
+
+
+def _agent_id_from_tmux_name(name: str) -> Optional[str]:
+    """Map a tmux session/window name to an agent id in this namespace."""
+    expected_prefix = _namespace_prefix()
+    if expected_prefix and not name.startswith(expected_prefix):
+        return None
+    base_name = name[len(expected_prefix):]
+    if base_name.startswith(SESSION_PREFIX):
+        return base_name[len(SESSION_PREFIX):]
+    if base_name == MAIN_AGENT_ID:
+        return MAIN_AGENT_ID
+    return None
+
+
+def _base_session_name(agent_id: str) -> str:
+    if _is_main_agent_id(agent_id):
+        return MAIN_AGENT_ID
+    return f"{SESSION_PREFIX}{agent_id}"
+
+
+def session_name_for_agent(agent_id: str) -> str:
+    """Return the actual tmux session/window name for an agent."""
+    return _namespaced_name(_base_session_name(agent_id))
 
 
 def get_group_session_name() -> str:
-    return os.environ.get(GROUP_SESSION_ENV_VAR, DEFAULT_GROUP_SESSION_NAME)
+    configured = os.environ.get(GROUP_SESSION_ENV_VAR, DEFAULT_GROUP_SESSION_NAME)
+    return _namespaced_name(configured)
 
 
 def _ensure_tmux_in_path() -> bool:
@@ -69,15 +120,11 @@ def _is_main_agent_id(agent_id: str) -> bool:
 
 
 def _session_name_for_agent(agent_id: str) -> str:
-    if _is_main_agent_id(agent_id):
-        return MAIN_AGENT_ID
-    return f"{SESSION_PREFIX}{agent_id}"
+    return session_name_for_agent(agent_id)
 
 
 def _window_name_for_agent(agent_id: str) -> str:
-    if _is_main_agent_id(agent_id):
-        return MAIN_AGENT_ID
-    return f"{SESSION_PREFIX}{agent_id}"
+    return session_name_for_agent(agent_id)
 
 
 def _tmux_has_session(session_name: str) -> bool:
@@ -184,11 +231,12 @@ def list_sessions() -> List[str]:
     if result.returncode == 0:
         for line in result.stdout.split('\n'):
             if ':' in line:
-                session_name = line.split(':')[0]
-                if session_name.startswith(SESSION_PREFIX):
-                    agent_ids.add(session_name[len(SESSION_PREFIX):])
-                elif session_name == MAIN_AGENT_ID:
-                    agent_ids.add(MAIN_AGENT_ID)
+                session_name = line.split(':', 1)[0]
+                if session_name == get_group_session_name():
+                    continue
+                agent_id = _agent_id_from_tmux_name(session_name)
+                if agent_id:
+                    agent_ids.add(agent_id)
 
     group = get_group_session_name()
     result = subprocess.run(
@@ -198,11 +246,9 @@ def list_sessions() -> List[str]:
     )
     if result.returncode == 0:
         for window_name in result.stdout.splitlines():
-            window_name = window_name.strip()
-            if window_name.startswith(SESSION_PREFIX):
-                agent_ids.add(window_name[len(SESSION_PREFIX):])
-            elif window_name == MAIN_AGENT_ID:
-                agent_ids.add(MAIN_AGENT_ID)
+            agent_id = _agent_id_from_tmux_name(window_name.strip())
+            if agent_id:
+                agent_ids.add(agent_id)
 
     return sorted(agent_ids)
 

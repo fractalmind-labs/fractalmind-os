@@ -3,7 +3,8 @@
 Agent Manager - CLI for managing employee agents in tmux sessions.
 
 A simple alternative to CAO using only tmux + Python.
-Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g., emp-0001)
+Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase
+(e.g., emp-0001). A configured workspace namespace is applied by tmux_helper.
 """
 
 from __future__ import annotations
@@ -35,6 +36,8 @@ from agent_config import (
     get_agent_schedule,
     get_schedule_task,
     parse_duration,
+    AGENT_MANAGER_NAMESPACE_ENV,
+    get_configured_namespace,
 )
 
 from repo_root import get_repo_root
@@ -3783,6 +3786,13 @@ def cmd_adapter(args):
 def main():
     parser = create_parser()
     args = parser.parse_args()
+
+    # Resolve the workspace namespace before any command touches tmux. An
+    # explicit environment value wins; otherwise root AGENTS.md can provide it.
+    if AGENT_MANAGER_NAMESPACE_ENV not in os.environ:
+        namespace = get_configured_namespace(get_repo_root())
+        if namespace:
+            os.environ[AGENT_MANAGER_NAMESPACE_ENV] = namespace
 
     if not args.command:
         parser.print_help()

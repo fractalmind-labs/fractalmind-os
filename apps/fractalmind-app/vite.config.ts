@@ -25,5 +25,10 @@ export default defineConfig({
   ],
   base: "./",
   server: { host: "127.0.0.1", port: 4189, strictPort: true },
-  build: { target: "es2022" },
+  build: {
+    target: "es2022",
+    // App v2 (#75) is index.html; the first App stays at legacy.html during
+    // the transition.
+    rollupOptions: { input: { main: "index.html", legacy: "legacy.html" } },
+  },
 });

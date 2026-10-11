@@ -57,9 +57,10 @@ export class FractalMindSDK {
 export { FractalMindClient } from './client.js';
 export { NodeExecutionApi, CommandExecutionBcs, AgentExecutionIndexBcs, AgentExecutionPointerBcs, AgentExecutionReadError, EXECUTION_STATES, nodeCommandSigningBytes, nodeCommandIntentHash, verifySignedNodeCommand } from './node-execution.js';
 export type { WrappedCommandResultKey, CommandResultKeyInput } from './node-execution.js';
-export { HostApi, HostInviteBcs, HostMembershipBcs, ManagedAgentBcs, CoordinatorBindingBcs,
+export { HostApi, CONTROLLABLE_RUNTIMES, HostInviteBcs, HostMembershipBcs, ManagedAgentBcs, CoordinatorBindingBcs,
   HostIndexBcs, AuthorityBindingBcs, HostJoinIntentBcs, createHostInviteMaterial,
   encodeHostInviteCode, parseHostInviteCode } from './host.js';
+export type { ManagedRuntime } from './host.js';
 export { IdentityApi, IdentityRegistryBcs, RecoveryLocationBcs, HumanIdentityBcs, DeviceGrantBcs, RecoveryRecordBcs, DevicePairingRequestBcs, DEVICE_ACTIONS } from './identity.js';
 export type { DeviceAction } from './identity.js';
 export { ProductRecordApi, PRODUCT_RECORD_KINDS, EncryptedRecordBcs, recordContext } from './product-record.js';

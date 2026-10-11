@@ -347,6 +347,7 @@ MAIN_AGENT_FILE_ID = "main"
 MAIN_AGENT_WORKSPACE_ENV = "AGENT_MANAGER_MAIN_WORKSPACE"
 MAIN_AGENT_LAUNCHER_ENV = "AGENT_MANAGER_MAIN_LAUNCHER"
 MAIN_AGENT_LAUNCHER_ARGS_ENV = "AGENT_MANAGER_MAIN_LAUNCHER_ARGS"
+AGENT_MANAGER_NAMESPACE_ENV = "AGENT_MANAGER_NAMESPACE"
 
 
 def _bundled_main_codex_model_file() -> Optional[Path]:
@@ -431,7 +432,8 @@ def _build_main_agent_config(
                 override = parse_agent_file(candidate)
                 override = expand_config_env_vars(override)
                 for key in ('heartbeat', 'schedules', 'skills', 'mcps', 'description', 'role_definition',
-                            'launcher', 'launcher_args', 'launcher_config', 'working_directory'):
+                            'launcher', 'launcher_args', 'launcher_config', 'working_directory',
+                            'namespace', 'tmux'):
                     val = override.get(key)
                     if val is not None:
                         base[key] = val
@@ -440,6 +442,33 @@ def _build_main_agent_config(
                 continue
 
     return base
+
+
+def get_configured_namespace(
+    repo_root: Optional[Path] = None,
+    *,
+    env_vars: Optional[Dict[str, str]] = None,
+) -> str:
+    """Resolve the optional workspace tmux namespace.
+
+    The environment variable is an explicit override, while ``namespace`` in
+    the reserved main-agent config (usually root ``AGENTS.md`` frontmatter)
+    provides a checked-in workspace default. ``tmux.namespace`` is accepted as
+    a backwards-compatible nested form.
+    """
+    if repo_root is None:
+        repo_root = get_repo_root()
+    if env_vars is None:
+        env_vars = dict(os.environ)
+
+    if AGENT_MANAGER_NAMESPACE_ENV in env_vars:
+        return str(env_vars.get(AGENT_MANAGER_NAMESPACE_ENV) or '').strip()
+
+    config = _build_main_agent_config(repo_root=repo_root, env_vars=env_vars)
+    namespace = config.get('namespace')
+    if namespace is None and isinstance(config.get('tmux'), dict):
+        namespace = config['tmux'].get('namespace')
+    return str(namespace or '').strip()
 
 
 def _file_id_from_profile_path(profile_path: Path) -> str:

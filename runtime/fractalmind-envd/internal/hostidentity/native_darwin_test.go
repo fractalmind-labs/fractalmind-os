@@ -77,3 +77,14 @@ func TestNativeHostKeychainAcceptance(t *testing.T) {
 	evidence, _ := json.Marshal(map[string]any{"backend": "macOS Keychain", "generatedTestIdentityOnly": true, "reloadStable": true, "duplicateCreationRejected": true, "localSecretFileCreated": false})
 	t.Logf("FM_HOST_VAULT_EVIDENCE %s", evidence)
 }
+
+func TestDeniedKeychainPromptIsNotRetriedAutomatically(t *testing.T) {
+	for _, err := range []error{errUserCanceled, keychain.ErrorAuthFailed, keychain.ErrorInteractionNotAllowed} {
+		if !deniedByPerson(err) {
+			t.Fatalf("%v not treated as a denied prompt", err)
+		}
+	}
+	if deniedByPerson(keychain.ErrorItemNotFound) || deniedByPerson(keychain.ErrorDecode) {
+		t.Fatal("other failures treated as a denied prompt")
+	}
+}

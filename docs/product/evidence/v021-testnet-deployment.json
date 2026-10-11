@@ -1,0 +1,78 @@
+{
+  "schema": "fractalmind.deployment-record.v1",
+  "network": "testnet",
+  "chainIdentifier": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+  "rpcUrl": "https://fullnode.testnet.sui.io:443",
+  "publishedAt": "2026-10-06",
+  "sourceCommit": "e9b733c5125adcd8daf329fc6ae546a8510f49dc",
+  "toolchain": "sui 1.80.1",
+  "publisher": "0x5874b1e59a62fbee32732d97fe9cc012870adebaaea3f75c1915d7e4901f1d91",
+  "kind": "fresh v0.2.0 package graph; the v0.1 testnet lineage 0x685d…df24 is untouched",
+  "deployment": {
+    "network": "testnet",
+    "rpcUrl": "https://fullnode.testnet.sui.io:443",
+    "packageId": "0x4c0cb05c43ef5c45720b1e584ce78f39047b006e63c7e20a0a3cd6615c4dc32c",
+    "okrPackageId": "0x3eebdb2361d0bbcbb1b6e8b6a03fcb2876b595457d28c14b7ba02953876e81bc",
+    "directPackageId": "0x1977842bde7e0aa412aa39feac5edd3c69c72335942f801c84517387281e3a17",
+    "registryId": "0xe4405efce88948122a5ea2e1bf61523b4bad1e4e155dad0c8cef61867f7b7ca2",
+    "originalPackageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95",
+    "originalOkrPackageId": "0x120eb48c3b9c2a28451bea22c42b28bd3d3749526c4cc6f86701de0a697a7fe7"
+  },
+  "identityRegistryId": "0x267faa6a730523fc8d6b12c5a6a426bfefeed16aa3718f03bdee9e05fd962e0b",
+  "identityInitialization": "atomic_with_core_publish",
+  "packages": {
+    "protocol": {
+      "packageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95",
+      "digest": "4trzDVPxQhrDbqjAaFCQWBjpJPocpRBVuUZ35pG6HQBF",
+      "modules": 19,
+      "actualGasMist": "713849200",
+      "upgradeCap": "0x7305b9d39263b6b9dcaaad9f099e85bcd1fcd24f94a1b72aa5a3b8492da6b61a"
+    },
+    "okr": {
+      "packageId": "0x120eb48c3b9c2a28451bea22c42b28bd3d3749526c4cc6f86701de0a697a7fe7",
+      "digest": "3Ggi58RckFJoPzByzWLPiYv5JHLPVWcLtoEzZxRVW9QN",
+      "modules": 2,
+      "actualGasMist": "147808000",
+      "upgradeCap": "0x9cd30b42c3ae0dbd25439e47e70ecea9deb3bc7fbc254cd0f7fc56b8431a88a3"
+    },
+    "direct-agent": {
+      "packageId": "0x1977842bde7e0aa412aa39feac5edd3c69c72335942f801c84517387281e3a17",
+      "digest": "FFtYGhU5rNRkAzMjqPwHN8rgPa2ChtAHoBqvqynsUzh9",
+      "modules": 1,
+      "actualGasMist": "105747600",
+      "upgradeCap": "0x3e67c90c2ce6457327bcfe9f990b675f114331cc1d3a4fb38ea804131c060ea2"
+    }
+  },
+  "totalGasMist": "967404800",
+  "verified": [
+    "identity registry resolves from ProtocolRegistry",
+    "validateCreationDeployment passes"
+  ],
+  "privateKeysInRecord": false,
+  "upgrades": [
+    {
+      "date": "2026-10-07",
+      "package": "protocol",
+      "version": 2,
+      "policy": "compatible",
+      "packageId": "0x4c0cb05c43ef5c45720b1e584ce78f39047b006e63c7e20a0a3cd6615c4dc32c",
+      "originalPackageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95",
+      "digest": "2U3wAsueMmV434et7zzBggUcyYt1DL3sEVtm3oJ2G2JE",
+      "actualGasMist": "707898740",
+      "reason": "#70: agent-manager-v1 runtime; import_agent may confirm control for agent-manager Homes",
+      "notes": "okr and direct-agent still link protocol v1 and are upgraded with #70 phase 2"
+    },
+    {
+      "date": "2026-10-07",
+      "package": "okr",
+      "version": 2,
+      "policy": "compatible",
+      "packageId": "0x3eebdb2361d0bbcbb1b6e8b6a03fcb2876b595457d28c14b7ba02953876e81bc",
+      "originalPackageId": "0x120eb48c3b9c2a28451bea22c42b28bd3d3749526c4cc6f86701de0a697a7fe7",
+      "digest": "7CsAiUHquqzypitArLfWWSaqh8sWj1Bm9dZpw2UcKFx2",
+      "actualGasMist": "147957140",
+      "reason": "#75 M2: okr::assign_agent_manager assigns an OKR to an agent-manager Agent imported with control; links protocol v2",
+      "notes": "direct-agent still links protocol v1"
+    }
+  ]
+}

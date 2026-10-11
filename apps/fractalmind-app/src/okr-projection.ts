@@ -16,6 +16,7 @@ import {
   type OkrInterventionView,
 } from "./okr-intervention";
 import { normalizeDraft, type DraftInput } from "./okr-draft";
+import { AGENT_MANAGER_RUNTIME, validateAgentManagerAgreement } from "./okr-assign";
 
 export class OkrProjectionError extends Error {
   constructor(
@@ -63,6 +64,9 @@ export type OkrProjectionSnapshot = {
     approvedPlan: NativeFileOkrPlan | null;
     approvalId: string | null;
     maxCallsPerRun: string | null;
+    /** Only for an agent-manager Agent (#75): declared paths, and what
+     * FractalMind does not enforce. Absent for bounded-process agreements. */
+    agentManager?: { allowedPaths: string[]; notEnforced: string[] };
   };
   budget: {
     asset: string;
@@ -195,7 +199,18 @@ async function snapshotOf(
   let approvedPlan: NativeFileOkrPlan | null = null;
   let approvalId: string | null = null,
     maxCallsPerRun: string | null = null;
-  if ([1, 3, 4].includes(okr.state) && okr.agreement_record) {
+  let agentManager: { allowedPaths: string[]; notEnforced: string[] } | undefined;
+  const agentManagerBody =
+    okr.agreement_record &&
+    (view.agreementBody as { kind?: unknown } | null)?.kind === AGENT_MANAGER_RUNTIME;
+  if ([1, 3, 4].includes(okr.state) && agentManagerBody) {
+    try {
+      const a = validateAgentManagerAgreement(view.agreementBody, okr);
+      agentManager = { allowedPaths: a.allowedPaths, notEnforced: a.notEnforced };
+    } catch {
+      throw new OkrProjectionError("invalid_projection");
+    }
+  } else if ([1, 3, 4].includes(okr.state) && okr.agreement_record) {
     const body = object(view.agreementBody),
       acceptance = object(body.hostAcceptance) as HandoverAcceptance,
       proposal = object(acceptance.proposal);
@@ -262,6 +277,7 @@ async function snapshotOf(
       approvedPlan,
       approvalId,
       maxCallsPerRun,
+      ...(agentManager ? { agentManager } : {}),
     },
     budget: view.budget
       ? {

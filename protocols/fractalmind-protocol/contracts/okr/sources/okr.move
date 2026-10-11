@@ -212,6 +212,25 @@ module fractalmind_okr::okr {
         okr.activated_at_ms = clock::timestamp_ms(clock); okr.state = ACTIVE;
         changed(okr);
     }
+    /// Assigns the OKR to an agent-manager Agent imported with control (#70,
+    /// #75). It runs no bounded task FractalMind could hand over, so there is
+    /// no Host review: FractalMind delivers the goal to its Home, stops it on
+    /// deadline or request and records its reports as Agent-claimed. Its tool
+    /// use and spending are not enforced, and no command capability is ever
+    /// issued for it (issue_capability needs a handover policy).
+    public fun assign_agent_manager(
+        okr: &mut Okr, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
+        expected_version: u64, workspace_hash: vector<u8>, boundary_hash: vector<u8>,
+        budget_asset: String, budget_limit: u64, expires_at_ms: u64,
+        expected_record_revision: u64, key_version: u64, encrypted_agreement: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        identity::assert_can(human, grant, org, identity::operate_action(), clock, ctx);
+        assert!(host::managed_runtime(managed) == string::utf8(b"agent-manager-v1"), E_HANDOVER_REQUIRED);
+        activate_reviewed(okr, org, human, grant, member, binding, managed, expected_version, workspace_hash, boundary_hash,
+            budget_asset, budget_limit, expires_at_ms, expected_record_revision, key_version, encrypted_agreement, clock, ctx);
+    }
+    public fun managed_agent(okr: &Okr): Option<ID> { okr.managed_agent }
     fun budget(okr: &mut Okr, ctx: &mut TxContext): &mut BudgetState {
         if (!df::exists_(&okr.id, BudgetKey {})) {
             df::add(&mut okr.id, BudgetKey {}, BudgetState { asset: okr.budget_asset, spent: 0, reserved: 0, claims: table::new(ctx) });

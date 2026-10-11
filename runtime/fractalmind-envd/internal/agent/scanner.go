@@ -105,7 +105,7 @@ func (s *Scanner) tmuxCommand(args ...string) *exec.Cmd {
 	if s.tmuxSocket != "" {
 		args = append([]string{"-S", s.tmuxSocket}, args...)
 	}
-	return exec.Command("tmux", args...)
+	return exec.Command(tmuxBinary(), args...)
 }
 
 // isAgentSession checks if a tmux session name matches agent naming convention.

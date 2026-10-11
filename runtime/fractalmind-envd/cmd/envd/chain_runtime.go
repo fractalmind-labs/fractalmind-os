@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -186,6 +187,9 @@ func newRuntimeCommandExecutorWithStore(cfg *config.Config, store hostidentity.S
 	if err != nil || !enabled {
 		return nil, err
 	}
+	// After an update the OS may ask the person to allow this binary to read
+	// the Host key; say so instead of appearing stuck.
+	log.Printf("[auth] reading Host key %q from the system credential store (the OS may ask to allow access)", cfg.Identity.KeyProfile)
 	keys, err := hostidentity.Load(store, cfg.Identity.KeyProfile)
 	if err != nil {
 		return nil, fmt.Errorf("load secure Host identity; initialize with envd --init-host: %w", err)

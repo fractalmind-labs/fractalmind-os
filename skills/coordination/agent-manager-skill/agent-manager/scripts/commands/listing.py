@@ -1,9 +1,11 @@
 from __future__ import annotations
 from typing import Any
 
+from tmux_helper import session_name_for_agent
+
 
 def _session_label(agent_id: str) -> str:
-    return 'main' if str(agent_id).strip().lower() == 'main' else f"agent-{agent_id}"
+    return session_name_for_agent(agent_id)
 
 
 def cmd_list(args, *, deps: Any):

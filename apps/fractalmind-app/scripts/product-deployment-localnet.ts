@@ -41,8 +41,12 @@ assert.match(
   await readFile(join(corePath, "Move.toml"), "utf8"),
   /fractalmind_protocol = "0x0"/,
 );
+const baseUrl = process.env.FM_LOCALNET_RPC ?? "http://127.0.0.1:29000",
+  faucet = process.env.FM_LOCALNET_FAUCET ?? "http://127.0.0.1:29123";
+for (const url of [baseUrl, faucet])
+  assert.match(url, /^http:\/\/127\.0\.0\.1:\d+$/, "loopback localnet only");
 const client = new SuiGrpcClient({
-    baseUrl: "http://127.0.0.1:29000",
+    baseUrl,
     network: "localnet",
   }),
   signer = Ed25519Keypair.generate();
@@ -57,7 +61,7 @@ const report: Record<string, any> = {
 const save = () => writeFile(progress, JSON.stringify(report, null, 2) + "\n");
 await save();
 await requestSuiFromFaucetV2({
-  host: "http://127.0.0.1:29123",
+  host: faucet,
   recipient: signer.toSuiAddress(),
 });
 const manager = new SelfPayTransactionManager({

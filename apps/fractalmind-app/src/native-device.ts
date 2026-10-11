@@ -1,4 +1,5 @@
 import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
+import { defaultDeviceProfile, matchesTarget } from "./build-target";
 import { fromBase64, toBase64 } from "@mysten/sui/utils";
 import {
   verifyPersonalMessageSignature,
@@ -9,12 +10,18 @@ import {
  * file path is accepted from the WebView. Possession is not chain authority. */
 export type NativeDeviceCommand =
   | "fm_device_public"
+  | "fm_device_unlock"
+  | "fm_device_lock"
+  | "fm_device_session"
+  | "fm_device_touch"
+  | "fm_device_set_idle_timeout"
   | "fm_device_initialize"
   | "fm_device_sign_transaction"
   | "fm_device_sign_node_command"
   | "fm_device_prove"
   | "fm_onboarding_create"
   | "fm_onboarding_public"
+  | "fm_onboarding_reveal"
   | "fm_onboarding_sign_transaction"
   | "fm_device_decrypt_record"
   | "fm_device_encrypt_record"
@@ -62,15 +69,19 @@ export class NativeDeviceError extends Error {
       | "invalid_proof"
       | "invalid_recovery"
       | "invalid_envelope"
-      | "already_initialized",
+      | "already_initialized"
+      | "locked",
   ) {
     super(code);
     this.name = "NativeDeviceError";
   }
 }
+/** Dispatched on window when a native operation reports a locked session. */
+export const DEVICE_LOCKED_EVENT = "fractalmind:device-locked";
 const id = /^0x[0-9a-f]{64}$/;
 const profilePattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
-/** Disposable local connection preference; it is never identity authority. */
+/** Disposable local connection preference; it is never identity authority.
+ * Records for another network than this build's are ignored. */
 export function preferredDeviceProfile() {
   try {
     const preferred = JSON.parse(
@@ -79,7 +90,8 @@ export function preferredDeviceProfile() {
     if (
       preferred &&
       typeof preferred.profile === "string" &&
-      profilePattern.test(preferred.profile)
+      profilePattern.test(preferred.profile) &&
+      matchesTarget(preferred, undefined, { registry: false })
     )
       return preferred.profile as string;
     const stored = JSON.parse(
@@ -89,11 +101,32 @@ export function preferredDeviceProfile() {
     if (
       stored &&
       typeof stored.profile === "string" &&
-      profilePattern.test(stored.profile)
+      profilePattern.test(stored.profile) &&
+      matchesTarget(stored.deployment)
     )
       return stored.profile as string;
   } catch {}
-  return "primary";
+  return defaultDeviceProfile;
+}
+/** The identity this device was set up, paired or recovered for. Written
+ * only when setup, pairing or recovery finishes; a public read-only connection
+ * never writes it. */
+export function deviceConnection(): { profile: string; humanId: string } | null {
+  try {
+    const value = JSON.parse(
+      localStorage.getItem("fractalmind.app.device-connection.v1") ?? "null",
+    );
+    if (
+      value &&
+      typeof value.profile === "string" &&
+      profilePattern.test(value.profile) &&
+      typeof value.humanId === "string" &&
+      id.test(value.humanId) &&
+      matchesTarget(value, undefined, { registry: false })
+    )
+      return { profile: value.profile, humanId: value.humanId };
+  } catch {}
+  return null;
 }
 export function profileCheck(profile: string) {
   if (!profilePattern.test(profile))
@@ -162,6 +195,13 @@ export async function call(
       throw new NativeDeviceError("invalid_command");
     if (code === "AlreadyInitialized")
       throw new NativeDeviceError("already_initialized");
+    if (code === "Locked") {
+      // Any operation can find the session locked (lock, idle timeout); the
+      // App shows its lock screen instead of each flow failing on its own.
+      if (typeof window !== "undefined")
+        window.dispatchEvent(new Event(DEVICE_LOCKED_EVENT));
+      throw new NativeDeviceError("locked");
+    }
     throw new NativeDeviceError("native_unavailable");
   }
 }

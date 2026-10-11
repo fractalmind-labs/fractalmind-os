@@ -260,9 +260,12 @@ impl DeviceVault {
         self.entry(profile)?
             .set_secret(&device_keys)
             .map_err(|_| VaultError::StorageUnavailable)?;
-        if *self.load(profile)? != *device_keys {
+        let readback = self.read_stored(profile)?;
+        if *readback != *device_keys {
             return Err(VaultError::InvalidStoredKey);
         }
+        // The recovered device is in use right away: start its session.
+        self.start_session(profile, readback);
         let mut stored = Zeroizing::new(IMPORTED.to_vec());
         stored.push(onboarding::network_index(network)?);
         stored.extend_from_slice(entropy.as_ref());

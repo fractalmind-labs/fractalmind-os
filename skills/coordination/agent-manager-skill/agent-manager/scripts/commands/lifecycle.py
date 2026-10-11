@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Any, Callable, Optional, Tuple
 
+from tmux_helper import session_name_for_agent
+
 
 def _script_name(deps: Any) -> str:
     try:
@@ -10,7 +12,7 @@ def _script_name(deps: Any) -> str:
 
 
 def _session_label(agent_id: str) -> str:
-    return "main" if str(agent_id).strip().lower() == "main" else f"agent-{agent_id}"
+    return session_name_for_agent(agent_id)
 
 
 def _queue_main_inbound_message(

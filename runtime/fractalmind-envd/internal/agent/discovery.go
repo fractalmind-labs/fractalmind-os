@@ -36,9 +36,14 @@ type Instance struct {
 	Continuity    string `json:"continuity"`
 	Workspace     string `json:"workspace"`
 	WorkspaceHash string `json:"workspace_hash"`
+	// Agent is the agent-manager definition read from the Home, if any.
+	Agent *Definition `json:"agent,omitempty"`
 }
 
-const discoveryFormat = "#{pid}\t#{session_name}\t#{pane_id}\t#{pane_pid}\t#{pane_dead}\t#{pane_current_path}"
+// tmux 3.4+ prints control characters in formats (including a tab) as "_"
+// when the locale is not UTF-8, as under launchd; use a printable separator.
+const discoverySep = "|~|"
+const discoveryFormat = "#{pid}" + discoverySep + "#{session_name}" + discoverySep + "#{pane_id}" + discoverySep + "#{pane_pid}" + discoverySep + "#{pane_dead}" + discoverySep + "#{pane_current_path}"
 
 var panePattern = regexp.MustCompile(`^%[0-9]+$`)
 var hashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
@@ -49,7 +54,7 @@ func readTmux(ctx context.Context, socket string) ([]byte, error) {
 	if socket != "" {
 		args = append([]string{"-S", socket}, args...)
 	}
-	cmd := exec.CommandContext(ctx, "tmux", args...)
+	cmd := exec.CommandContext(ctx, tmuxBinary(), args...)
 	var out limitedOutput
 	cmd.Stdout = &out
 	cmd.Stderr = io.Discard
@@ -104,12 +109,20 @@ func discover(method string, read func(context.Context) ([]byte, error), birth f
 		if line == "" {
 			continue
 		}
-		fields := strings.Split(line, "\t")
+		fields := strings.Split(line, discoverySep)
 		if len(fields) != 6 {
 			return d
 		}
+		// Legacy prefixes, or any session whose working directory is an
+		// agent-manager Home (e.g. `main`, `<namespace>--main`).
+		var def *Definition
 		if !isAgentSession(fields[1]) {
-			continue
+			if len(fields) != 6 || !safeText(fields[5], 4096) {
+				continue
+			}
+			if def = ReadDefinition(fields[5]); def == nil {
+				continue
+			}
 		}
 		if !safeText(fields[1], 256) || len(fields[2]) > 64 || !panePattern.MatchString(fields[2]) || (fields[4] != "0" && fields[4] != "1") || !safeText(fields[5], 4096) {
 			return d
@@ -155,6 +168,10 @@ func discover(method string, read func(context.Context) ([]byte, error), birth f
 		identity, _ := json.Marshal([]string{"FM-TMUX-INSTANCE:1", strconv.Itoa(server), serverBorn, fields[2], strconv.Itoa(pid), paneBorn})
 		sum := sha256.Sum256(identity)
 		r.InstanceID = "tmux-" + hex.EncodeToString(sum[:])
+		if def == nil {
+			def = ReadDefinition(path)
+		}
+		r.Agent = def
 		r.State = "observed"
 		r.Continuity = "kernel-process-v1"
 		r.Workspace = path
@@ -201,6 +218,9 @@ func ValidateDiscovery(d *Discovery, heartbeatAt time.Time) error {
 			return fmt.Errorf("invalid discovery instance")
 		}
 		panes[r.Pane] = true
+		if r.Agent != nil && (r.State != "observed" || !r.Agent.valid()) {
+			return fmt.Errorf("invalid Agent definition")
+		}
 		if r.State == "observed" {
 			if r.Continuity != "kernel-process-v1" || !strings.HasPrefix(r.InstanceID, "tmux-") || !hashPattern.MatchString(strings.TrimPrefix(r.InstanceID, "tmux-")) || !hashPattern.MatchString(r.WorkspaceHash) || r.Workspace == "" || seen[r.InstanceID] {
 				return fmt.Errorf("invalid instance continuity")

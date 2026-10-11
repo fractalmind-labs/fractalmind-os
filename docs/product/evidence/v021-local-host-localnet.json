@@ -1,0 +1,106 @@
+{
+  "issue": "https://github.com/fractalmind-labs/fractalmind-os/issues/64",
+  "scope": "This computer as Host + Coordinator through the production setup controller (src/local-host.ts), the App's native Layout code (src-tauri/src/local_host.rs via examples/local-host-helper.rs) and the bundled envd sidecar, installed as a real launchd LaunchAgent on macOS.",
+  "reproduce": [
+    "sui start --force-regenesis --with-faucet=127.0.0.1:39123 --fullnode-rpc-port 39000",
+    "FM_LOCALNET_RPC=http://127.0.0.1:39000 FM_LOCALNET_FAUCET=http://127.0.0.1:39123 node --import tsx scripts/product-deployment-localnet.ts <isolated contracts copy>/protocol <deployment.json>",
+    "node scripts/build-envd.mjs && cargo build --manifest-path src-tauri/Cargo.toml --example local-host-helper",
+    "FM_LOCALNET_RPC=http://127.0.0.1:39000 FM_LOCALNET_FAUCET=http://127.0.0.1:39123 node --import tsx scripts/local-host-localnet.ts <deployment.json> <new-report.json> src-tauri/target/debug/examples/local-host-helper src-tauri/binaries/fractalmind-envd-<target>"
+  ],
+  "network": "localnet",
+  "chainIdentifier": "HsBNz765epHUpQPWxZU8cwz3EAqgBGFUTcpyCkUjaVkc",
+  "checks": [
+    "fresh profile: not configured, service not installed, free loopback port suggested",
+    "one call: keys → device binding → config → funded invite → Host join over stdin → service, no invitation outside memory/stdin",
+    "chain: binding to this Host's key on loopback, invitation consumed, membership active",
+    "the Host was funded in the invite PTB and paid its own join Gas",
+    "launchd LaunchAgent installed with RunAtLoad/KeepAlive and running",
+    "device-authenticated Coordinator read shows this Host online with a verified signed observation",
+    "launchd restarts a killed envd (KeepAlive)",
+    "stop disables and frees the port; start re-enables and listens again",
+    "re-running setup signs and broadcasts nothing new",
+    "revoke: membership revoked on chain, service removed, configuration removed",
+    "Host key removed from the credential store"
+  ],
+  "phases": [
+    "keys",
+    "binding",
+    "configure",
+    "join",
+    "invite",
+    "join",
+    "service",
+    "online"
+  ],
+  "nativeCalls": [
+    "status",
+    "keys",
+    "configure",
+    "join:none",
+    "join:code",
+    "service",
+    "status",
+    "status"
+  ],
+  "host": {
+    "address": "0x81c8c9e6c2c9364845dc63f2636d38b8097920c26ebcbb367948c6f25dadf6cd",
+    "bindingId": "0xd16eb34ae6a024fa68d6f503161d43d25c622fdaba2fb1c6095f7fa2cf37ed9c",
+    "membershipId": "0x61c60b6edba24802d99d72a8d021541c5316e1120b4e55ce72becc1f13b13f1a",
+    "endpoint": "http://127.0.0.1:7443"
+  },
+  "hostBalanceAfterJoinMist": "84673948",
+  "online": {
+    "hostname": "Acceptance Mac",
+    "system": {
+      "os": "darwin",
+      "arch": "arm64",
+      "cpu": 10
+    }
+  },
+  "setupMs": 5292,
+  "transactions": [
+    {
+      "label": "fixture Human",
+      "digest": "4A2CWijMABAqPLjvGMyAQ41foZ26pS143yZ22XubRRWe",
+      "status": "confirmed",
+      "actualGas": "17708548"
+    },
+    {
+      "label": "fixture organization",
+      "digest": "DmTM2baYbXKpxHynPcmx4LW77UnX3VjeHAuZW2VwxPpa",
+      "status": "confirmed",
+      "actualGas": "15141616"
+    },
+    {
+      "label": "setup (device-signed)",
+      "digest": "CoEjguxP1n1Nz15TDxUbVPEbvcDofvAdS8ZdJ331JgZc",
+      "status": "confirmed",
+      "actualGas": "6816576"
+    },
+    {
+      "label": "setup (device-signed)",
+      "digest": "EHy3VUV6RSeZeFVFptcQ153CSHHt5kmR6XAJ2BxNGYxF",
+      "status": "confirmed",
+      "actualGas": "5939872"
+    },
+    {
+      "label": "setup join (Host-signed)",
+      "actualFeeMist": "15326052"
+    },
+    {
+      "label": "revoke membership (device-signed)",
+      "digest": "567mQa6ETzgjR4KAf4uFbkKCWh5m8AX2aFLjMBTurAL4",
+      "status": "confirmed",
+      "actualGas": "-594564"
+    }
+  ],
+  "complete": true,
+  "limits": {
+    "deviceKeys": "fresh in-memory fixture, not the device vault",
+    "hostKey": "real macOS Keychain entry under a throwaway profile, removed at the end",
+    "installedAppUi": "not exercised by this script",
+    "relogin": "RunAtLoad is set and KeepAlive restart was observed; an actual logout/login was not performed",
+    "invitationIncluded": false,
+    "linuxWindows": "service definitions are unit tested; not installed on those platforms"
+  }
+}

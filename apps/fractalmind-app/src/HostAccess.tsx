@@ -46,11 +46,16 @@ export default function HostAccess({
   organizationId,
   t,
   onChanged,
+  request,
 }: {
   profile: ConnectionProfile;
   organizationId: string;
   t: (zh: string, en: string) => string;
   onChanged: () => void;
+  /** Opened from the Hosts page (#73): each new `n` opens the dialog on that
+   * operation, unless an earlier attempt is still being reconciled. Without
+   * it the component shows its own button. */
+  request?: { kind: HostOperation["kind"]; target?: string; n: number } | null;
 }) {
   const [open, setOpen] = useState(false),
     [directory, setDirectory] = useState<HostDirectory | null>(null);
@@ -99,6 +104,9 @@ export default function HostAccess({
   useEffect(() => {
     if (open && !dialog.current?.open) dialog.current?.showModal();
   }, [open]);
+  useEffect(() => {
+    if (request && !open) start(request.kind, request.target);
+  }, [request?.n]);
   const clockMs = directory
     ? directory.clockMs + BigInt(Math.max(0, now - directory.loadedAtMs))
     : BigInt(now);
@@ -161,7 +169,7 @@ export default function HostAccess({
         setCode(null);
     }
   }
-  function start() {
+  function start(kind?: HostOperation["kind"], target = "") {
     setOpen(true);
     setError(null);
     try {
@@ -176,7 +184,7 @@ export default function HostAccess({
         setAttempt(stored);
         setDeviceProfile(stored.deviceProfile);
         setOperation(stored.kind);
-      }
+      } else if (kind) edit(kind, target);
     } catch {
       setError("journal_unavailable");
     }
@@ -476,7 +484,9 @@ export default function HostAccess({
   } catch {}
   return (
     <>
-      <button onClick={start}>{t("接入主机", "Connect Host")}</button>
+      {request === undefined && (
+        <button onClick={() => start()}>{t("接入主机", "Connect Host")}</button>
+      )}
       {open && (
         <dialog
           ref={dialog}

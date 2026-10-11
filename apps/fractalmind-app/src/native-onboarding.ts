@@ -162,3 +162,22 @@ export class NativeRecoverySigner {
     return { bytes: encoded, signature: data.signature };
   }
 }
+
+/** The unfinished setup's recovery code, shown again so an interrupted setup
+ * does not lose it. Callers offer this only before the Human is on chain. */
+export async function revealRecoveryCode(
+  invoke: NativeInvoke,
+  profile: string,
+  network: NetworkName,
+): Promise<string> {
+  profileCheck(profile);
+  const code = await call(invoke, "fm_onboarding_reveal", { profile, network });
+  if (
+    typeof code !== "string" ||
+    code.length > 100 ||
+    !/^FM1:[a-z]+:[0-9a-f]{64}:[0-9a-f]{8}$/.test(code) ||
+    code.split(":")[1] !== network
+  )
+    throw new NativeDeviceError("invalid_response");
+  return code;
+}
