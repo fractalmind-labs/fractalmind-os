@@ -320,7 +320,7 @@ func (m *Manager) processInbound(ctx context.Context, msg *protocol.Message) (st
 		return out, nil
 	}
 
-	if m.activeRouter() == "claudeDesktop" && m.isClaudeDesktopEnabled() {
+	routeClaudeDesktop := func() (string, error) {
 		agentName, _ := data["agent"].(string)
 		out, err := m.assignClaudeDesktop(ctx, text, agentName, data)
 		if err != nil {
@@ -335,6 +335,16 @@ func (m *Manager) processInbound(ctx context.Context, msg *protocol.Message) (st
 			return channels.TruncateTelegramReply(out), nil
 		}
 		return out, nil
+	}
+
+	if m.activeRouter() == "claudeDesktop" && m.isClaudeDesktopEnabled() {
+		return routeClaudeDesktop()
+	}
+
+	// A receiver target may move its bot to another runtime while the others
+	// keep the agent-manager.
+	if m.isOhMyCodeEnabled() && m.ohMyCodeTargetRuntime(data) == "claudeDesktop" && m.isClaudeDesktopEnabled() {
+		return routeClaudeDesktop()
 	}
 
 	if m.isOhMyCodeEnabled() {
@@ -424,6 +434,23 @@ func (m *Manager) notifyInboundRouted(runtimeName, agentName string) {
 	if hook != nil {
 		hook(runtimeName, agentName)
 	}
+}
+
+// ohMyCodeTargetRuntime returns the runtime a receiver-matched ohMyCode target
+// asks for, or "" when no target matched or it uses the agent-manager.
+func (m *Manager) ohMyCodeTargetRuntime(inboundData map[string]interface{}) string {
+	if m.config == nil || m.config.OhMyCode == nil {
+		return ""
+	}
+	_, target, matched := config.FindOhMyCodeTarget(m.config.OhMyCode, promptContextValue(inboundData, "channel"), promptContextValue(inboundData, "receiver_id"))
+	if !matched {
+		return ""
+	}
+	runtime := strings.TrimSpace(target.Runtime)
+	if runtime == "ohMyCode" {
+		return ""
+	}
+	return runtime
 }
 
 func (m *Manager) activeRouter() string {
@@ -762,10 +789,10 @@ func runOhMyCodeAgentManager(ctx context.Context, workspace, script, stdin strin
 
 	if err != nil {
 		if errText != "" {
-			return "", fmt.Errorf("oh-my-code agent-manager failed: %s", errText)
+			return outText, fmt.Errorf("oh-my-code agent-manager failed: %s", errText)
 		}
 		if outText != "" {
-			return "", fmt.Errorf("oh-my-code agent-manager failed: %s", outText)
+			return outText, fmt.Errorf("oh-my-code agent-manager failed: %s", outText)
 		}
 		return "", fmt.Errorf("oh-my-code agent-manager failed: %w", err)
 	}

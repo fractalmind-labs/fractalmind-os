@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -155,6 +156,38 @@ func TestLoadConfigAcceptsReceiverTargetWithoutLegacyFallback(t *testing.T) {
 	}
 	if cfg.Agents.OhMyCode.Workspace != "" || cfg.Agents.OhMyCode.Targets["support"].Workspace != targetWorkspace {
 		t.Fatalf("unexpected target-only config: %#v", cfg.Agents.OhMyCode)
+	}
+}
+
+func TestLoadConfigReceiverTargetRuntime(t *testing.T) {
+	workspace := t.TempDir()
+	targets := "    targets:\n      xiaoyi:\n        receivers: [{channel: feishu, receiverId: cli_xiaoyi}]\n        defaultAgent: main\n        runtime: %s\n      burry:\n        receivers: [{channel: feishu, receiverId: cli_burry}]\n        workspace: \"" + workspace + "\"\n        defaultAgent: main\n"
+	desktop := "  claudeDesktop:\n    enabled: %t\n    inboxPath: \"" + filepath.Join(workspace, "inbox") + "\"\n    defaultAgent: main\n"
+	load := func(runtime string, desktopEnabled bool) (*Config, error) {
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		content := "agents:\n  router: ohMyCode\n  ohMyCode:\n    enabled: true\n" + fmt.Sprintf(targets, runtime) + fmt.Sprintf(desktop, desktopEnabled)
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatalf("write config: %v", err)
+		}
+		return LoadConfig(path)
+	}
+
+	cfg, err := load("claudeDesktop", true)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Agents.OhMyCode.Targets["xiaoyi"].Runtime != "claudeDesktop" || cfg.Agents.OhMyCode.Targets["burry"].Runtime != "" {
+		t.Fatalf("unexpected targets: %#v", cfg.Agents.OhMyCode.Targets)
+	}
+	// Without a workspace, the agent-manager runtime still needs one.
+	if _, err := load("ohMyCode", true); err == nil || !strings.Contains(err.Error(), "workspace") {
+		t.Fatalf("expected a workspace error, got %v", err)
+	}
+	if _, err := load("claudeDesktop", false); err == nil || !strings.Contains(err.Error(), "claudeDesktop runtime is not enabled") {
+		t.Fatalf("expected a disabled-runtime error, got %v", err)
+	}
+	if _, err := load("codexAppCDP", true); err == nil || !strings.Contains(err.Error(), "unsupported runtime") {
+		t.Fatalf("expected an unsupported-runtime error, got %v", err)
 	}
 }
 
@@ -631,6 +664,38 @@ func TestLoadConfigAcceptsHeartbeatJobs(t *testing.T) {
 	}
 }
 
+func TestLoadConfigAcceptsOhMyCodeHeartbeatRunMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte(`agents:
+  ohMyCode:
+    enabled: true
+    workspace: /tmp/oh-my-code
+    defaultAgent: main
+    allowedAgents: [main]
+  heartbeat:
+    enabled: true
+    jobs:
+      - id: main
+        runtime: ohMyCode
+        agent: main
+        dispatchMode: heartbeatRun
+        timeoutSeconds: 480
+        cron: "*/5 * * * *"
+        timezone: Asia/Shanghai
+`)
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	job := cfg.Agents.Heartbeat.Jobs[0]
+	if job.DispatchMode != "heartbeatRun" || job.TimeoutSeconds != 480 || job.Text != "" {
+		t.Fatalf("unexpected heartbeatRun job: %#v", job)
+	}
+}
+
 func TestValidateHeartbeatConfigRejectsInvalidJobs(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -706,6 +771,34 @@ func TestValidateHeartbeatConfigRejectsInvalidJobs(t *testing.T) {
 				cfg.Agents.Heartbeat.Jobs[0].AgentCronProfiles[" idle "] = "0 */2 * * *"
 			},
 			wantError: "duplicate profile",
+		},
+		{
+			name: "unsupported dispatch mode",
+			mutate: func(cfg *Config) {
+				cfg.Agents.Heartbeat.Jobs[0].DispatchMode = "other"
+			},
+			wantError: "unsupported mode",
+		},
+		{
+			name: "heartbeat run requires oh my code",
+			mutate: func(cfg *Config) {
+				cfg.Agents.Heartbeat.Jobs[0].DispatchMode = "heartbeatRun"
+			},
+			wantError: "requires runtime ohMyCode",
+		},
+		{
+			name: "negative timeout",
+			mutate: func(cfg *Config) {
+				cfg.Agents.Heartbeat.Jobs[0].TimeoutSeconds = -1
+			},
+			wantError: "timeoutSeconds",
+		},
+		{
+			name: "timeout above one day",
+			mutate: func(cfg *Config) {
+				cfg.Agents.Heartbeat.Jobs[0].TimeoutSeconds = 86401
+			},
+			wantError: "timeoutSeconds",
 		},
 	}
 

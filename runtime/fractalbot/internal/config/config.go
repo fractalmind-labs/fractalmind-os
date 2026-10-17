@@ -15,6 +15,8 @@ import (
 
 var agentNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]*$`)
 
+const maxHeartbeatTimeoutSeconds = 24 * 60 * 60
+
 // Config represents the main configuration.
 type Config struct {
 	Gateway  *GatewayConfig  `yaml:"gateway"`
@@ -283,6 +285,12 @@ type OhMyCodeTargetConfig struct {
 
 	// AssignTimeoutSeconds limits the target-specific assignment wait.
 	AssignTimeoutSeconds int `yaml:"assignTimeoutSeconds,omitempty"`
+
+	// Runtime delivers this target's messages through another Agent Runtime
+	// instead of the agent-manager: "" or "ohMyCode" (the default) or
+	// "claudeDesktop", which must be enabled under agents.claudeDesktop. Other
+	// targets keep the agent-manager, so one bot can move without the others.
+	Runtime string `yaml:"runtime,omitempty"`
 }
 
 // ReceiverTargetConfig binds one normalized channel + receiver identity pair
@@ -415,6 +423,8 @@ type HeartbeatJobConfig struct {
 	Runtime            string            `yaml:"runtime"`
 	Agent              string            `yaml:"agent"`
 	Text               string            `yaml:"text"`
+	DispatchMode       string            `yaml:"dispatchMode,omitempty"`
+	TimeoutSeconds     int               `yaml:"timeoutSeconds,omitempty"`
 	Cron               string            `yaml:"cron"`
 	Timezone           string            `yaml:"timezone"`
 	AgentCronProfiles  map[string]string `yaml:"agentCronProfiles,omitempty"`
@@ -655,6 +665,7 @@ func validateHeartbeatConfig(cfg *Config) error {
 		job.Runtime = strings.TrimSpace(job.Runtime)
 		job.Agent = strings.TrimSpace(job.Agent)
 		job.Text = strings.TrimSpace(job.Text)
+		job.DispatchMode = strings.TrimSpace(job.DispatchMode)
 		job.Cron = strings.TrimSpace(job.Cron)
 		job.Timezone = strings.TrimSpace(job.Timezone)
 
@@ -675,8 +686,20 @@ func validateHeartbeatConfig(cfg *Config) error {
 		if err := validateAgentName(job.Agent); err != nil {
 			return fmt.Errorf("%s.agent: %w", prefix, err)
 		}
-		if job.Text == "" {
+		if job.Text == "" && job.DispatchMode != "heartbeatRun" {
 			return fmt.Errorf("%s.text: required", prefix)
+		}
+		if job.TimeoutSeconds < 0 || job.TimeoutSeconds > maxHeartbeatTimeoutSeconds {
+			return fmt.Errorf("%s.timeoutSeconds: must be between 0 and %d", prefix, maxHeartbeatTimeoutSeconds)
+		}
+		switch job.DispatchMode {
+		case "":
+		case "heartbeatRun":
+			if job.Runtime != "ohMyCode" {
+				return fmt.Errorf("%s.dispatchMode: heartbeatRun requires runtime ohMyCode", prefix)
+			}
+		default:
+			return fmt.Errorf("%s.dispatchMode: unsupported mode %q", prefix, job.DispatchMode)
 		}
 		if job.Cron == "" {
 			return fmt.Errorf("%s.cron: required", prefix)
@@ -848,8 +871,23 @@ func validateOhMyCodeConfig(cfg *Config) error {
 		if err := validateRoutingAgents(prefix, target.DefaultAgent, target.AllowedAgents); err != nil {
 			return err
 		}
-		if err := validateOhMyCodeWorkspaceAndScript(prefix, target.Workspace, target.AgentManagerScript); err != nil {
-			return err
+		switch strings.TrimSpace(target.Runtime) {
+		case "", "ohMyCode":
+			if err := validateOhMyCodeWorkspaceAndScript(prefix, target.Workspace, target.AgentManagerScript); err != nil {
+				return err
+			}
+		case "claudeDesktop":
+			if cfg.Agents.ClaudeDesktop == nil || !cfg.Agents.ClaudeDesktop.Enabled {
+				return fmt.Errorf("%s.runtime: claudeDesktop runtime is not enabled", prefix)
+			}
+			// The agent-manager isn't used; a workspace, if given, is still checked.
+			if strings.TrimSpace(target.Workspace) != "" {
+				if err := validateOhMyCodeWorkspaceAndScript(prefix, target.Workspace, target.AgentManagerScript); err != nil {
+					return err
+				}
+			}
+		default:
+			return fmt.Errorf("%s.runtime: unsupported runtime %q", prefix, target.Runtime)
 		}
 	}
 

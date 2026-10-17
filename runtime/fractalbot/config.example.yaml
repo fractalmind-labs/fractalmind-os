@@ -288,3 +288,15 @@ agents:
   #       # ohMyCode only. Default false. Start a missing tmux session
   #       # before this heartbeat tick; failed starts cooldown for 90s.
   #       startIfMissing: false
+  #
+  #     # Optional completion-aware ohMyCode delivery. This calls
+  #     # `agent-manager heartbeat run main --timeout 8m0s` instead of generic
+  #     # `assign`, so the job remains in flight until the heartbeat reaches a
+  #     # terminal ACK, skip, or failure. `text` is not required in this mode.
+  #     - id: "main-native-heartbeat"
+  #       runtime: "ohMyCode"
+  #       agent: "main"
+  #       dispatchMode: "heartbeatRun"
+  #       timeoutSeconds: 480
+  #       cron: "*/5 * * * *"
+  #       timezone: "Asia/Shanghai"
