@@ -3,7 +3,7 @@ package channels
 import (
 	"testing"
 
-	"github.com/fractalmind-ai/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 )
 
 func TestValidateOhMyCodeAgentConfig(t *testing.T) {
