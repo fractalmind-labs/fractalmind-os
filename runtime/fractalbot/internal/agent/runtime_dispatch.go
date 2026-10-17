@@ -54,6 +54,9 @@ func (m *Manager) dispatchOhMyCodeRuntime(ctx context.Context, request agentrunt
 	if m.config.OhMyCode.AssignTimeoutSeconds > 0 {
 		timeout = time.Duration(m.config.OhMyCode.AssignTimeoutSeconds) * time.Second
 	}
+	if request.Timeout > 0 {
+		timeout = request.Timeout
+	}
 	dispatchCtx := ctx
 	if timeout > 0 {
 		var cancel context.CancelFunc
@@ -146,6 +149,12 @@ func buildRuntimePrompt(request agentruntime.DispatchRequest) string {
 	builder.WriteString(fmt.Sprintf("- run_id: %s\n", strings.TrimSpace(request.RunID)))
 	builder.WriteString(fmt.Sprintf("- runtime: %s\n", strings.TrimSpace(request.Runtime)))
 	builder.WriteString(fmt.Sprintf("- agent: %s\n", strings.TrimSpace(request.Agent)))
+	if kind := strings.TrimSpace(request.Kind); kind != "" {
+		builder.WriteString(fmt.Sprintf("- kind: %s\n", kind))
+	}
+	if window := strings.TrimSpace(request.DreamWindow); window != "" {
+		builder.WriteString(fmt.Sprintf("- dream_window: %s\n", window))
+	}
 	if !request.ScheduledAt.IsZero() {
 		builder.WriteString(fmt.Sprintf("- scheduled_at: %s\n", request.ScheduledAt.UTC().Format(time.RFC3339Nano)))
 	}

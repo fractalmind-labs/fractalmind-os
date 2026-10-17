@@ -126,6 +126,23 @@ func TestDispatchRuntimeRejectsInvalidTargetAndText(t *testing.T) {
 	}
 }
 
+func TestBuildRuntimePromptIncludesDreamKind(t *testing.T) {
+	request := runtimeTestRequest(agentruntime.OhMyCode, "run-1")
+	request.Kind = "dream"
+	request.DreamWindow = "13:00-13:30"
+	request.Text = "Read DREAM.md"
+	prompt := buildRuntimePrompt(request)
+	for _, expected := range []string{
+		"- kind: dream",
+		"- dream_window: 13:00-13:30",
+		"Instruction:\nRead DREAM.md",
+	} {
+		if !strings.Contains(prompt, expected) {
+			t.Fatalf("prompt missing %q: %s", expected, prompt)
+		}
+	}
+}
+
 func TestBuildRuntimePromptOnlyOffersConfiguredProfiles(t *testing.T) {
 	request := runtimeTestRequest(agentruntime.CodexAppCDP, "run-1")
 	request.CronProfiles = []string{"deep-idle", "idle"}

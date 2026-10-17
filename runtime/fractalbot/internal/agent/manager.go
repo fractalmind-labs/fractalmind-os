@@ -34,6 +34,7 @@ const (
 
 	gatewayToolCommandsUnavailableMessage = "⚠️ /tool and /tools are not available in gateway mode."
 	markerHeartbeatOK                     = "HEARTBEAT_OK"
+	markerDreamOK                         = "DREAM_OK"
 	markerNoReply                         = "NO_REPLY"
 
 	// managerSeenMsgMax caps retained inbound message IDs before eviction;
@@ -975,7 +976,7 @@ func defaultPromptContextValue(value string) string {
 
 func normalizeUserReply(reply string) string {
 	trimmed := strings.TrimSpace(reply)
-	if trimmed == markerHeartbeatOK || trimmed == markerNoReply {
+	if trimmed == markerHeartbeatOK || trimmed == markerDreamOK || trimmed == markerNoReply {
 		return ""
 	}
 	return reply
