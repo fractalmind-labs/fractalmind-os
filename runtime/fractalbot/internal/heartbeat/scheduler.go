@@ -46,6 +46,7 @@ type JobStatus struct {
 	EffectiveProfile      string `json:"effective_profile,omitempty"`
 	EffectiveCron         string `json:"effective_cron"`
 	Timezone              string `json:"timezone"`
+	StartIfMissing        bool   `json:"start_if_missing,omitempty"`
 	NextRunAt             string `json:"next_run_at,omitempty"`
 	InFlight              bool   `json:"in_flight"`
 	LastScheduledAt       string `json:"last_scheduled_at,omitempty"`
@@ -385,18 +386,19 @@ func (s *Scheduler) runDue(now time.Time) {
 			due = append(due, dueDispatch{
 				jobID: id,
 				request: agentruntime.DispatchRequest{
-					Runtime:      job.config.Runtime,
-					Agent:        job.config.Agent,
-					Text:         job.config.Text,
-					Source:       "heartbeat",
-					JobID:        id,
-					RunID:        runID,
-					ScheduledAt:  scheduledAt,
-					ExpiresAt:    job.state.NextRunAt,
-					CoalesceKey:  "heartbeat:" + id,
-					CronProfiles: profiles,
-					DispatchMode: job.config.DispatchMode,
-					Timeout:      time.Duration(job.config.TimeoutSeconds) * time.Second,
+					Runtime:        job.config.Runtime,
+					Agent:          job.config.Agent,
+					Text:           job.config.Text,
+					Source:         "heartbeat",
+					JobID:          id,
+					RunID:          runID,
+					ScheduledAt:    scheduledAt,
+					ExpiresAt:      job.state.NextRunAt,
+					CoalesceKey:    "heartbeat:" + id,
+					CronProfiles:   profiles,
+					StartIfMissing: job.config.StartIfMissing,
+					DispatchMode:   job.config.DispatchMode,
+					Timeout:        time.Duration(job.config.TimeoutSeconds) * time.Second,
 				},
 			})
 		default:
@@ -494,6 +496,7 @@ func (s *Scheduler) jobStatusLocked(job *compiledJob) JobStatus {
 		EffectiveProfile:      job.state.EffectiveProfile,
 		EffectiveCron:         job.effectiveCron(),
 		Timezone:              job.config.Timezone,
+		StartIfMissing:        job.config.StartIfMissing,
 		NextRunAt:             formatTime(job.state.NextRunAt),
 		InFlight:              job.state.InFlight,
 		LastScheduledAt:       formatTime(job.state.LastScheduledAt),
