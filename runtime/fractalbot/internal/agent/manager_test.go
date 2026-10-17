@@ -1228,6 +1228,78 @@ func TestHandleIncomingClaudeDesktopWritesInboxEnvelope(t *testing.T) {
 	}
 }
 
+func TestHandleIncomingReceiverTargetRoutesOneBotToClaudeDesktop(t *testing.T) {
+	inbox := filepath.Join(t.TempDir(), "inbox")
+	manager := NewManager(&config.AgentsConfig{
+		Router: "ohMyCode",
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled: true,
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"xiaoyi": {
+					Receivers:    []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "cli_xiaoyi"}},
+					DefaultAgent: "main",
+					Runtime:      "claudeDesktop",
+				},
+				"burry": {
+					Receivers:    []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "cli_burry"}},
+					Workspace:    "/workspace/burry",
+					DefaultAgent: "main",
+				},
+			},
+		},
+		ClaudeDesktop: &config.ClaudeDesktopConfig{
+			Enabled:      true,
+			InboxPath:    inbox,
+			DefaultAgent: "main",
+		},
+	})
+
+	// The xiaoyi bot's message goes to Claude Desktop (queued here: no CDP endpoint).
+	reply, err := manager.HandleIncoming(context.Background(), &protocol.Message{
+		Data: map[string]interface{}{
+			"channel":     "feishu",
+			"text":        "hello from Feishu",
+			"chat_id":     "oc_123",
+			"receiver_id": "cli_xiaoyi",
+		},
+	})
+	if err != nil {
+		t.Fatalf("HandleIncoming failed: %v", err)
+	}
+	if reply != claudeDesktopAssignAckMessage {
+		t.Fatalf("reply=%q", reply)
+	}
+	entries, err := os.ReadDir(inbox)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("expected one inbox envelope, got %d (%v)", len(entries), err)
+	}
+	data, err := os.ReadFile(filepath.Join(inbox, entries[0].Name()))
+	if err != nil {
+		t.Fatalf("read inbox: %v", err)
+	}
+	var queued claudeDesktopInboxEnvelope
+	if err := json.Unmarshal(data, &queued); err != nil {
+		t.Fatalf("decode inbox envelope: %v", err)
+	}
+	if queued.Envelope.Text != "hello from Feishu" || !strings.Contains(queued.Prompt, "- receiver_id: cli_xiaoyi") || !strings.Contains(queued.Prompt, "--receiver-id") {
+		t.Fatalf("unexpected queued envelope: %#v\n%s", queued.Envelope, queued.Prompt)
+	}
+	if telemetry := manager.LastRoutingOutcome(); telemetry == nil || telemetry.Backend != "claudeDesktop" {
+		t.Fatalf("unexpected telemetry: %#v", telemetry)
+	}
+
+	// The other bots keep the agent-manager.
+	for _, data := range []map[string]interface{}{
+		{"channel": "feishu", "receiver_id": "cli_burry"},
+		{"channel": "feishu", "receiver_id": "cli_unknown"},
+		{"channel": "slack", "receiver_id": "cli_xiaoyi"},
+	} {
+		if runtime := manager.ohMyCodeTargetRuntime(data); runtime != "" {
+			t.Fatalf("receiver %v routed to %q", data, runtime)
+		}
+	}
+}
+
 func TestHandleIncomingClaudeDesktopDeliversViaCDP(t *testing.T) {
 	var evaluated string
 	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}

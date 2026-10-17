@@ -285,6 +285,12 @@ type OhMyCodeTargetConfig struct {
 
 	// AssignTimeoutSeconds limits the target-specific assignment wait.
 	AssignTimeoutSeconds int `yaml:"assignTimeoutSeconds,omitempty"`
+
+	// Runtime delivers this target's messages through another Agent Runtime
+	// instead of the agent-manager: "" or "ohMyCode" (the default) or
+	// "claudeDesktop", which must be enabled under agents.claudeDesktop. Other
+	// targets keep the agent-manager, so one bot can move without the others.
+	Runtime string `yaml:"runtime,omitempty"`
 }
 
 // ReceiverTargetConfig binds one normalized channel + receiver identity pair
@@ -861,8 +867,23 @@ func validateOhMyCodeConfig(cfg *Config) error {
 		if err := validateRoutingAgents(prefix, target.DefaultAgent, target.AllowedAgents); err != nil {
 			return err
 		}
-		if err := validateOhMyCodeWorkspaceAndScript(prefix, target.Workspace, target.AgentManagerScript); err != nil {
-			return err
+		switch strings.TrimSpace(target.Runtime) {
+		case "", "ohMyCode":
+			if err := validateOhMyCodeWorkspaceAndScript(prefix, target.Workspace, target.AgentManagerScript); err != nil {
+				return err
+			}
+		case "claudeDesktop":
+			if cfg.Agents.ClaudeDesktop == nil || !cfg.Agents.ClaudeDesktop.Enabled {
+				return fmt.Errorf("%s.runtime: claudeDesktop runtime is not enabled", prefix)
+			}
+			// The agent-manager isn't used; a workspace, if given, is still checked.
+			if strings.TrimSpace(target.Workspace) != "" {
+				if err := validateOhMyCodeWorkspaceAndScript(prefix, target.Workspace, target.AgentManagerScript); err != nil {
+					return err
+				}
+			}
+		default:
+			return fmt.Errorf("%s.runtime: unsupported runtime %q", prefix, target.Runtime)
 		}
 	}
 

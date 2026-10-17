@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -155,6 +156,38 @@ func TestLoadConfigAcceptsReceiverTargetWithoutLegacyFallback(t *testing.T) {
 	}
 	if cfg.Agents.OhMyCode.Workspace != "" || cfg.Agents.OhMyCode.Targets["support"].Workspace != targetWorkspace {
 		t.Fatalf("unexpected target-only config: %#v", cfg.Agents.OhMyCode)
+	}
+}
+
+func TestLoadConfigReceiverTargetRuntime(t *testing.T) {
+	workspace := t.TempDir()
+	targets := "    targets:\n      xiaoyi:\n        receivers: [{channel: feishu, receiverId: cli_xiaoyi}]\n        defaultAgent: main\n        runtime: %s\n      burry:\n        receivers: [{channel: feishu, receiverId: cli_burry}]\n        workspace: \"" + workspace + "\"\n        defaultAgent: main\n"
+	desktop := "  claudeDesktop:\n    enabled: %t\n    inboxPath: \"" + filepath.Join(workspace, "inbox") + "\"\n    defaultAgent: main\n"
+	load := func(runtime string, desktopEnabled bool) (*Config, error) {
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		content := "agents:\n  router: ohMyCode\n  ohMyCode:\n    enabled: true\n" + fmt.Sprintf(targets, runtime) + fmt.Sprintf(desktop, desktopEnabled)
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatalf("write config: %v", err)
+		}
+		return LoadConfig(path)
+	}
+
+	cfg, err := load("claudeDesktop", true)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Agents.OhMyCode.Targets["xiaoyi"].Runtime != "claudeDesktop" || cfg.Agents.OhMyCode.Targets["burry"].Runtime != "" {
+		t.Fatalf("unexpected targets: %#v", cfg.Agents.OhMyCode.Targets)
+	}
+	// Without a workspace, the agent-manager runtime still needs one.
+	if _, err := load("ohMyCode", true); err == nil || !strings.Contains(err.Error(), "workspace") {
+		t.Fatalf("expected a workspace error, got %v", err)
+	}
+	if _, err := load("claudeDesktop", false); err == nil || !strings.Contains(err.Error(), "claudeDesktop runtime is not enabled") {
+		t.Fatalf("expected a disabled-runtime error, got %v", err)
+	}
+	if _, err := load("codexAppCDP", true); err == nil || !strings.Contains(err.Error(), "unsupported runtime") {
+		t.Fatalf("expected an unsupported-runtime error, got %v", err)
 	}
 }
 

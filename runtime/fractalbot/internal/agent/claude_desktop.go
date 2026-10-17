@@ -158,6 +158,10 @@ func buildClaudeDesktopPrompt(envelope ClaudeDesktopEnvelope, inboundData map[st
 	sb.WriteString("Inbound routing context:\n")
 	sb.WriteString(fmt.Sprintf("- channel: %s\n", defaultPromptContextValue(envelope.Channel)))
 	sb.WriteString(fmt.Sprintf("- chat_id: %s\n", defaultPromptContextValue(envelope.ChatID)))
+	receiverID := promptContextValue(inboundData, "receiver_id")
+	if receiverID != "" {
+		sb.WriteString(fmt.Sprintf("- receiver_id: %s\n", receiverID))
+	}
 	sb.WriteString(fmt.Sprintf("- user_id: %s\n", defaultPromptContextValue(envelope.UserID)))
 	sb.WriteString(fmt.Sprintf("- username: %s\n", defaultPromptContextValue(envelope.Username)))
 	sb.WriteString(fmt.Sprintf("- selected_agent: %s\n", defaultPromptContextValue(envelope.SelectedAgent)))
@@ -174,6 +178,9 @@ func buildClaudeDesktopPrompt(envelope ClaudeDesktopEnvelope, inboundData map[st
 	sb.WriteString("\nRouting instructions:\n")
 	sb.WriteString("- This message was delivered by FractalBot into Claude Desktop.\n")
 	sb.WriteString("- For outbound messaging intent, prefer `use-fractalbot` skill.\n")
+	if receiverID != "" {
+		sb.WriteString("- For outbound Feishu replies, include `--receiver-id` with the current receiver_id so the message is sent by the receiving bot identity.\n")
+	}
 	sb.WriteString("- If channel=telegram and recipient is omitted, default to current chat_id.\n")
 	sb.WriteString("- If thread_ts is present, reply in the same thread.\n")
 	sb.WriteString("- Do not scrape or export unrelated Claude Desktop history.\n")
