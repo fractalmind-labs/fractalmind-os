@@ -249,12 +249,13 @@ agents:
       - "main"
     deliveryTimeoutSeconds: 20
 
-  # Optional: route channel messages into an already-authenticated Claude
-  # Desktop chat target exposed by CDP. FractalBot does not launch, patch, or
-  # bypass Claude Desktop's CDP auth guard. Failed delivery is queued to inbox.
+  # Optional: route channel messages into Claude Desktop. Leave cdpEndpoint
+  # empty when the signed Desktop build blocks remote debugging, then start
+  # `fractalbot claude-desktop relay` from that Claude session's SessionStart
+  # hook so it inherits the per-session socket token. See docs/routing.md.
   claudeDesktop:
     enabled: false
-    cdpEndpoint: "http://127.0.0.1:19334"
+    cdpEndpoint: ""
     # Optional title or URL match. Empty selects the first authenticated chat page.
     targetSelector: ""
     inboxPath: "/Users/you/.fractalbot/claude-desktop-inbox"

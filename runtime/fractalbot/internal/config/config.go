@@ -381,8 +381,8 @@ type CodexAppCDPWatchConfig struct {
 }
 
 // ClaudeDesktopConfig contains routing settings for Claude Desktop delivery.
-// FractalBot only uses an already-authenticated Claude chat target exposed by
-// CDP. It does not launch, patch, or otherwise bypass Claude Desktop.
+// FractalBot can use an authenticated chat target exposed by CDP or queue to a
+// private inbox consumed by a relay started from the target Claude session.
 type ClaudeDesktopConfig struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 
@@ -393,7 +393,8 @@ type ClaudeDesktopConfig struct {
 	// TargetSelector optionally matches a Claude chat target title or URL.
 	TargetSelector string `yaml:"targetSelector,omitempty"`
 
-	// InboxPath is a durable queue used when CDP delivery is unavailable.
+	// InboxPath is a durable queue used by the authenticated session relay and
+	// as fallback when CDP delivery is unavailable.
 	InboxPath string `yaml:"inboxPath,omitempty"`
 
 	// FallbackToInbox queues to InboxPath when CDP delivery fails.
