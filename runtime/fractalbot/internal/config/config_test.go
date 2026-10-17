@@ -580,7 +580,151 @@ func TestLoadConfigRequiresClaudeDesktopEndpointOrInboxWhenEnabled(t *testing.T)
 		t.Fatal("expected endpoint or inboxPath error")
 	}
 	if !strings.Contains(err.Error(), "agents.claudeDesktop.cdpEndpoint") || !strings.Contains(err.Error(), "agents.claudeDesktop.inboxPath") {
+		t.Fatalf("expected endpoint or inboxPath error, got %v", err)
+	}
+}
+
+func TestLoadConfigAcceptsGrokBotAppRouter(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte(`agents:
+  router: grokBotApp
+  grokBotApp:
+    enabled: true
+    cdpEndpoint: "http://127.0.0.1:9222"
+    targetSelector: "Grok Bot"
+    urlScheme: "grokbot:"
+    inboxPath: "/tmp/grok-bot-inbox"
+    fallbackToInbox: true
+    defaultAgent: "main"
+    allowedAgents:
+      - "main"
+    deliveryTimeoutSeconds: 20
+`)
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.Agents.Router != "grokBotApp" || cfg.Agents.GrokBotApp == nil {
+		t.Fatalf("unexpected Grok Bot config: %#v", cfg.Agents)
+	}
+	if cfg.Agents.GrokBotApp.TargetSelector != "Grok Bot" || cfg.Agents.GrokBotApp.URLScheme != "grokbot:" || !cfg.Agents.GrokBotApp.FallbackToInbox || cfg.Agents.GrokBotApp.DeliveryTimeoutSeconds != 20 {
+		t.Fatalf("unexpected Grok Bot settings: %#v", cfg.Agents.GrokBotApp)
+	}
+}
+
+func TestLoadConfigRequiresGrokBotAppInboxWhenEnabled(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("agents:\n  router: grokBotApp\n  grokBotApp:\n    enabled: true\n    defaultAgent: main\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected inboxPath error")
+	}
+	if !strings.Contains(err.Error(), "agents.grokBotApp.inboxPath") {
+		t.Fatalf("expected inboxPath error, got %v", err)
+	}
+}
+
+func TestLoadConfigAcceptsPerAgentRouters(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte(`agents:
+  router: ohMyCode
+  agentRouters:
+    trader: grokBotApp
+  ohMyCode:
+    enabled: true
+    workspace: /tmp/oh-my-code
+    defaultAgent: main
+    allowedAgents:
+      - main
+  grokBotApp:
+    enabled: true
+    inboxPath: /tmp/grok-bot-inbox
+    fallbackToInbox: true
+    targetSelector: "Trader Bot"
+    defaultAgent: trader
+    allowedAgents:
+      - trader
+`)
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.Agents.Router != "ohMyCode" {
+		t.Fatalf("router=%q", cfg.Agents.Router)
+	}
+	if cfg.Agents.AgentRouterFor("trader") != "grokBotApp" {
+		t.Fatalf("agentRouters=%v", cfg.Agents.AgentRouters)
+	}
+	if cfg.Agents.GrokBotApp == nil || cfg.Agents.GrokBotApp.TargetSelector != "Trader Bot" {
+		t.Fatalf("unexpected grokBotApp: %#v", cfg.Agents.GrokBotApp)
+	}
+}
+
+func TestLoadConfigRejectsAgentRouterWhenRuntimeDisabled(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte(`agents:
+  router: ohMyCode
+  agentRouters:
+    trader: grokBotApp
+  ohMyCode:
+    enabled: true
+    workspace: /tmp/oh-my-code
+    defaultAgent: main
+  grokBotApp:
+    enabled: false
+    inboxPath: /tmp/grok-bot-inbox
+    defaultAgent: trader
+    allowedAgents:
+      - trader
+`)
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected agentRouters runtime error")
+	}
+	if !strings.Contains(err.Error(), "agents.agentRouters.trader") || !strings.Contains(err.Error(), "grokBotApp runtime is not enabled") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadConfigRejectsUnknownPerAgentRouter(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("agents:\n  agentRouters:\n    trader: notARouter\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected unsupported router error")
+	}
+	if !strings.Contains(err.Error(), "agents.agentRouters.trader") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadConfigRejectsInvalidGrokBotAppURLScheme(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("agents:\n  grokBotApp:\n    enabled: false\n    urlScheme: https://example.com\n    defaultAgent: main\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected urlScheme error")
+	}
+	if !strings.Contains(err.Error(), "agents.grokBotApp.urlScheme") {
+		t.Fatalf("expected urlScheme error, got %v", err)
 	}
 }
 
@@ -740,6 +884,13 @@ func TestValidateHeartbeatSupportsEveryRuntime(t *testing.T) {
 			runtime: "claudeDesktop",
 			setup: func(agents *AgentsConfig) {
 				agents.ClaudeDesktop = &ClaudeDesktopConfig{Enabled: true, InboxPath: "/tmp/claude-inbox", DefaultAgent: "main", AllowedAgents: []string{"main"}}
+			},
+		},
+		{
+			name:    "grokBotApp",
+			runtime: "grokBotApp",
+			setup: func(agents *AgentsConfig) {
+				agents.GrokBotApp = &GrokBotAppConfig{Enabled: true, InboxPath: "/tmp/grok-bot-inbox", DefaultAgent: "main", AllowedAgents: []string{"main"}}
 			},
 		},
 	}

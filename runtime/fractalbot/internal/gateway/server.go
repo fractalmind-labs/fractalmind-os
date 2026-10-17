@@ -563,10 +563,12 @@ type agentStatus struct {
 	WorkspaceConfigured bool                 `json:"workspace_configured"`
 	MaxConcurrent       int                  `json:"max_concurrent,omitempty"`
 	Router              string               `json:"router,omitempty"`
+	AgentRouters        map[string]string    `json:"agent_routers,omitempty"`
 	LastRouting         *agentRoutingStatus  `json:"last_routing,omitempty"`
 	OhMyCode            *ohMyCodeStatus      `json:"oh_my_code,omitempty"`
 	CodexAppCDP         *codexAppCDPStatus   `json:"codex_app_cdp,omitempty"`
 	ClaudeDesktop       *claudeDesktopStatus `json:"claude_desktop,omitempty"`
+	GrokBotApp          *grokBotAppStatus    `json:"grok_bot_app,omitempty"`
 }
 
 type agentRoutingStatus struct {
@@ -611,6 +613,21 @@ type codexAppCDPStatus struct {
 	DefaultAgent         string                     `json:"default_agent,omitempty"`
 	AllowedAgents        []string                   `json:"allowed_agents,omitempty"`
 	LastRouting          *agentRoutingStatus        `json:"last_routing,omitempty"`
+}
+
+type grokBotAppStatus struct {
+	Enabled          bool                `json:"enabled"`
+	CDPEndpoint      string              `json:"cdp_endpoint,omitempty"`
+	TargetSelector   string              `json:"target_selector,omitempty"`
+	URLScheme        string              `json:"url_scheme,omitempty"`
+	InboxConfigured  bool                `json:"inbox_configured"`
+	InboxPath        string              `json:"inbox_path,omitempty"`
+	FallbackToInbox  bool                `json:"fallback_to_inbox"`
+	DefaultAgent     string              `json:"default_agent,omitempty"`
+	AllowedAgents    []string            `json:"allowed_agents,omitempty"`
+	DeliveryTimeoutS int                 `json:"delivery_timeout_seconds,omitempty"`
+	LastRouting      *agentRoutingStatus `json:"last_routing,omitempty"`
+	LastError        string              `json:"last_error,omitempty"`
 }
 
 type claudeDesktopStatus struct {
@@ -810,6 +827,7 @@ func (s *Server) agentStatus() *agentStatus {
 		WorkspaceConfigured: strings.TrimSpace(s.config.Agents.Workspace) != "",
 		MaxConcurrent:       s.config.Agents.MaxConcurrent,
 		Router:              activeAgentRouterName(s.config.Agents),
+		AgentRouters:        s.config.Agents.CopyAgentRouters(),
 	}
 	if s.agentManager != nil {
 		if routing := s.agentManager.LastRoutingOutcome(); routing != nil {
@@ -909,6 +927,28 @@ func (s *Server) agentStatus() *agentStatus {
 		}
 	}
 
+	if s.config.Agents.GrokBotApp != nil {
+		grok := s.config.Agents.GrokBotApp
+		status.GrokBotApp = &grokBotAppStatus{
+			Enabled:          grok.Enabled,
+			CDPEndpoint:      strings.TrimSpace(grok.CDPEndpoint),
+			TargetSelector:   strings.TrimSpace(grok.TargetSelector),
+			URLScheme:        strings.TrimSpace(grok.URLScheme),
+			InboxConfigured:  strings.TrimSpace(grok.InboxPath) != "",
+			InboxPath:        strings.TrimSpace(grok.InboxPath),
+			FallbackToInbox:  grok.FallbackToInbox,
+			DefaultAgent:     strings.TrimSpace(grok.DefaultAgent),
+			DeliveryTimeoutS: grok.DeliveryTimeoutSeconds,
+		}
+		if len(grok.AllowedAgents) > 0 {
+			status.GrokBotApp.AllowedAgents = append([]string{}, grok.AllowedAgents...)
+		}
+		if status.LastRouting != nil && status.LastRouting.Backend == "grokBotApp" {
+			status.GrokBotApp.LastRouting = status.LastRouting
+			status.GrokBotApp.LastError = status.LastRouting.Error
+		}
+	}
+
 	return status
 }
 
@@ -927,6 +967,9 @@ func activeAgentRouterName(cfg *config.AgentsConfig) string {
 	}
 	if cfg.ClaudeDesktop != nil && cfg.ClaudeDesktop.Enabled {
 		return "claudeDesktop"
+	}
+	if cfg.GrokBotApp != nil && cfg.GrokBotApp.Enabled {
+		return "grokBotApp"
 	}
 	return ""
 }

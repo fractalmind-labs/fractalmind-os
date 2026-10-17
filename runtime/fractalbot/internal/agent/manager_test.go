@@ -1385,6 +1385,441 @@ func TestIsClaudeDesktopChatTarget(t *testing.T) {
 	}
 }
 
+func TestHandleIncomingGrokBotAppDeliversViaInjectedCDP(t *testing.T) {
+	var calls int32
+	manager := NewManager(&config.AgentsConfig{
+		Router: "grokBotApp",
+		GrokBotApp: &config.GrokBotAppConfig{
+			Enabled:         true,
+			CDPEndpoint:     "http://127.0.0.1:9222",
+			InboxPath:       filepath.Join(t.TempDir(), "inbox"),
+			FallbackToInbox: true,
+			DefaultAgent:    "main",
+		},
+	})
+	manager.grokBotAppClient = grokBotAppClientFunc(func(ctx context.Context, cfg *config.GrokBotAppConfig, envelope GrokBotAppEnvelope, prompt string) error {
+		atomic.AddInt32(&calls, 1)
+		if !strings.Contains(prompt, "hello via CDP") {
+			t.Fatalf("prompt=%q", prompt)
+		}
+		return nil
+	})
+	reply, err := manager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
+		"channel": "slack",
+		"text":    "hello via CDP",
+		"chat_id": "D0ACSGK4JE8",
+	}})
+	if err != nil {
+		t.Fatalf("HandleIncoming failed: %v", err)
+	}
+	if reply != grokBotAppAssignAckMessage {
+		t.Fatalf("reply=%q", reply)
+	}
+	if atomic.LoadInt32(&calls) != 1 {
+		t.Fatalf("CDP client calls=%d", calls)
+	}
+	telemetry := manager.LastRoutingOutcome()
+	if telemetry == nil || telemetry.Backend != "grokBotApp" || telemetry.Status != "delivered" {
+		t.Fatalf("unexpected telemetry: %#v", telemetry)
+	}
+}
+
+type grokBotAppClientFunc func(context.Context, *config.GrokBotAppConfig, GrokBotAppEnvelope, string) error
+
+func (f grokBotAppClientFunc) Deliver(ctx context.Context, cfg *config.GrokBotAppConfig, envelope GrokBotAppEnvelope, prompt string) error {
+	return f(ctx, cfg, envelope, prompt)
+}
+
+func TestHandleIncomingGrokBotAppWritesInboxEnvelope(t *testing.T) {
+	inbox := filepath.Join(t.TempDir(), "inbox")
+	manager := NewManager(&config.AgentsConfig{
+		Router: "grokBotApp",
+		GrokBotApp: &config.GrokBotAppConfig{
+			Enabled:         true,
+			InboxPath:       inbox,
+			FallbackToInbox: true,
+			DefaultAgent:    "main",
+		},
+	})
+
+	reply, err := manager.HandleIncoming(context.Background(), &protocol.Message{
+		Data: map[string]interface{}{
+			"channel":   "slack",
+			"text":      "hello Grok Bot",
+			"agent":     "main",
+			"chat_id":   "D0ACSGK4JE8",
+			"user_id":   "U08C93FU222",
+			"timestamp": "1786888575.210119",
+		},
+	})
+	if err != nil {
+		t.Fatalf("HandleIncoming failed: %v", err)
+	}
+	if reply != grokBotAppAssignAckMessage {
+		t.Fatalf("reply=%q", reply)
+	}
+	entries, err := os.ReadDir(inbox)
+	if err != nil {
+		t.Fatalf("read inbox: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected one inbox envelope, got %d", len(entries))
+	}
+	data, err := os.ReadFile(filepath.Join(inbox, entries[0].Name()))
+	if err != nil {
+		t.Fatalf("read inbox: %v", err)
+	}
+	var queued grokBotAppInboxEnvelope
+	if err := json.Unmarshal(data, &queued); err != nil {
+		t.Fatalf("decode inbox envelope: %v", err)
+	}
+	if queued.Envelope.Channel != "slack" || queued.Envelope.ChatID != "D0ACSGK4JE8" || queued.Envelope.UserID != "U08C93FU222" || queued.Envelope.SelectedAgent != "main" || queued.Envelope.Text != "hello Grok Bot" {
+		t.Fatalf("unexpected envelope: %#v", queued.Envelope)
+	}
+	if !strings.Contains(queued.Prompt, "delivered by FractalBot into Grok Bot App") {
+		t.Fatalf("expected Grok Bot prompt, got %q", queued.Prompt)
+	}
+	telemetry := manager.LastRoutingOutcome()
+	if telemetry == nil || telemetry.Backend != "grokBotApp" || telemetry.Status != "queued" || telemetry.EnvelopeID == "" || telemetry.InboxPath == "" {
+		t.Fatalf("unexpected telemetry: %#v", telemetry)
+	}
+}
+
+func TestHandleIncomingGrokBotAppInboxIsIdempotent(t *testing.T) {
+	inbox := filepath.Join(t.TempDir(), "inbox")
+	manager := NewManager(&config.AgentsConfig{
+		Router: "grokBotApp",
+		GrokBotApp: &config.GrokBotAppConfig{
+			Enabled:         true,
+			InboxPath:       inbox,
+			FallbackToInbox: true,
+			DefaultAgent:    "main",
+		},
+	})
+	msg := &protocol.Message{Data: map[string]interface{}{
+		"channel":   "slack",
+		"text":      "duplicate",
+		"chat_id":   "D0ACSGK4JE8",
+		"timestamp": "1786888575.210119",
+	}}
+	if _, err := manager.HandleIncoming(context.Background(), msg); err != nil {
+		t.Fatalf("first HandleIncoming failed: %v", err)
+	}
+	if _, err := manager.HandleIncoming(context.Background(), msg); err != nil {
+		t.Fatalf("second HandleIncoming failed: %v", err)
+	}
+	entries, err := os.ReadDir(inbox)
+	if err != nil {
+		t.Fatalf("read inbox: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected one idempotent inbox envelope, got %d", len(entries))
+	}
+}
+
+func TestHandleIncomingGrokBotAppDoesNotStealOhMyCode(t *testing.T) {
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:      true,
+			Workspace:    t.TempDir(),
+			DefaultAgent: "main",
+		},
+		GrokBotApp: &config.GrokBotAppConfig{
+			Enabled:      true,
+			InboxPath:    filepath.Join(t.TempDir(), "inbox"),
+			DefaultAgent: "main",
+		},
+	})
+	if got := manager.activeRouter(); got != "ohMyCode" {
+		t.Fatalf("activeRouter=%q, want ohMyCode", got)
+	}
+}
+
+func TestHandleIncomingAgentRoutersSendsTraderToGrokBotApp(t *testing.T) {
+	inbox := filepath.Join(t.TempDir(), "inbox")
+	workspace := t.TempDir()
+	scriptPath := filepath.Join(workspace, "should-not-run.py")
+	if err := os.WriteFile(scriptPath, []byte("import sys\nsys.exit(1)\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	manager := NewManager(&config.AgentsConfig{
+		Router:       "ohMyCode",
+		AgentRouters: map[string]string{"trader": "grokBotApp"},
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:            true,
+			Workspace:          workspace,
+			AgentManagerScript: scriptPath,
+			DefaultAgent:       "main",
+			AllowedAgents:      []string{"main"},
+		},
+		GrokBotApp: &config.GrokBotAppConfig{
+			Enabled:         true,
+			TargetSelector:  "Trader Bot",
+			InboxPath:       inbox,
+			FallbackToInbox: true,
+			DefaultAgent:    "trader",
+			AllowedAgents:   []string{"trader"},
+		},
+	})
+	reply, err := manager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
+		"channel": "slack",
+		"text":    "route trader",
+		"agent":   "trader",
+		"chat_id": "D0ACSGK4JE8",
+	}})
+	if err != nil {
+		t.Fatalf("HandleIncoming failed: %v", err)
+	}
+	if reply != grokBotAppAssignAckMessage {
+		t.Fatalf("reply=%q", reply)
+	}
+	entries, err := os.ReadDir(inbox)
+	if err != nil {
+		t.Fatalf("read inbox: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected one inbox envelope, got %d", len(entries))
+	}
+	data, err := os.ReadFile(filepath.Join(inbox, entries[0].Name()))
+	if err != nil {
+		t.Fatalf("read inbox: %v", err)
+	}
+	var queued grokBotAppInboxEnvelope
+	if err := json.Unmarshal(data, &queued); err != nil {
+		t.Fatalf("decode inbox envelope: %v", err)
+	}
+	if queued.Envelope.SelectedAgent != "trader" || queued.Envelope.Text != "route trader" {
+		t.Fatalf("unexpected envelope: %#v", queued.Envelope)
+	}
+	telemetry := manager.LastRoutingOutcome()
+	if telemetry == nil || telemetry.Backend != "grokBotApp" || telemetry.SelectedAgent != "trader" {
+		t.Fatalf("unexpected telemetry: %#v", telemetry)
+	}
+}
+
+func TestHandleIncomingAgentRoutersKeepsDefaultOnOhMyCode(t *testing.T) {
+	inbox := filepath.Join(t.TempDir(), "inbox")
+	workspace := t.TempDir()
+	scriptPath := filepath.Join(workspace, "agent_manager_prompt_capture.py")
+	argsPath := filepath.Join(workspace, "args.log")
+	script := `import pathlib, sys
+base = pathlib.Path(sys.argv[0]).parent
+(base / "args.log").write_text(" ".join(sys.argv[1:]), encoding="utf-8")
+print("assign ok")
+`
+	if err := os.WriteFile(scriptPath, []byte(script), 0644); err != nil {
+		t.Fatal(err)
+	}
+	manager := NewManager(&config.AgentsConfig{
+		Router:       "ohMyCode",
+		AgentRouters: map[string]string{"trader": "grokBotApp"},
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:            true,
+			Workspace:          workspace,
+			AgentManagerScript: scriptPath,
+			DefaultAgent:       "main",
+			AllowedAgents:      []string{"main"},
+		},
+		GrokBotApp: &config.GrokBotAppConfig{
+			Enabled:         true,
+			InboxPath:       inbox,
+			FallbackToInbox: true,
+			DefaultAgent:    "trader",
+			AllowedAgents:   []string{"trader"},
+		},
+	})
+	for _, agent := range []string{"", "main"} {
+		if _, err := os.ReadDir(inbox); err == nil {
+			_ = os.RemoveAll(inbox)
+		}
+		reply, err := manager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
+			"channel": "slack",
+			"text":    "stay on ohMyCode",
+			"agent":   agent,
+			"chat_id": "D0ACSGK4JE8",
+		}})
+		if err != nil {
+			t.Fatalf("agent=%q HandleIncoming failed: %v", agent, err)
+		}
+		if reply != ohMyCodeAssignAckMessage {
+			t.Fatalf("agent=%q reply=%q", agent, reply)
+		}
+		argsRaw, err := os.ReadFile(argsPath)
+		if err != nil {
+			t.Fatalf("read args: %v", err)
+		}
+		if string(argsRaw) != "assign main" {
+			t.Fatalf("agent=%q args=%q", agent, argsRaw)
+		}
+		if entries, err := os.ReadDir(inbox); err == nil && len(entries) != 0 {
+			t.Fatalf("agent=%q grok inbox should stay empty, got %d", agent, len(entries))
+		}
+	}
+}
+
+func TestHandleIncomingAgentRoutersFailsClosedWhenRuntimeDisabled(t *testing.T) {
+	inbox := filepath.Join(t.TempDir(), "inbox")
+	workspace := t.TempDir()
+	scriptPath := filepath.Join(workspace, "should-not-run.py")
+	if err := os.WriteFile(scriptPath, []byte("import sys\nsys.exit(1)\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	manager := NewManager(&config.AgentsConfig{
+		Router:       "ohMyCode",
+		AgentRouters: map[string]string{"trader": "grokBotApp"},
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:            true,
+			Workspace:          workspace,
+			AgentManagerScript: scriptPath,
+			DefaultAgent:       "main",
+			AllowedAgents:      []string{"main"},
+		},
+		GrokBotApp: &config.GrokBotAppConfig{
+			Enabled:       false,
+			InboxPath:     inbox,
+			DefaultAgent:  "trader",
+			AllowedAgents: []string{"trader"},
+		},
+	})
+	reply, err := manager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
+		"channel": "slack",
+		"text":    "should not steal ohMyCode",
+		"agent":   "trader",
+	}})
+	if err != nil {
+		t.Fatalf("HandleIncoming failed: %v", err)
+	}
+	if !strings.Contains(reply, "agents.agentRouters[trader]") || !strings.Contains(reply, "grokBotApp") {
+		t.Fatalf("expected fail-closed router error, got %q", reply)
+	}
+	if entries, err := os.ReadDir(inbox); err == nil && len(entries) != 0 {
+		t.Fatalf("inbox should stay empty, got %d", len(entries))
+	}
+}
+
+func TestHandleIncomingGrokBotAppURLSchemeStillQueuesInbox(t *testing.T) {
+	inbox := filepath.Join(t.TempDir(), "inbox")
+	var opened string
+	manager := NewManager(&config.AgentsConfig{
+		Router: "grokBotApp",
+		GrokBotApp: &config.GrokBotAppConfig{
+			Enabled:         true,
+			URLScheme:       "grokbot:",
+			InboxPath:       inbox,
+			FallbackToInbox: true,
+			DefaultAgent:    "main",
+		},
+	})
+	manager.grokBotAppOpener = func(ctx context.Context, scheme string) error {
+		opened = scheme
+		return nil
+	}
+	if _, err := manager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
+		"channel": "slack",
+		"text":    "open then queue",
+		"chat_id": "D0ACSGK4JE8",
+	}}); err != nil {
+		t.Fatalf("HandleIncoming failed: %v", err)
+	}
+	if opened != "grokbot:" {
+		t.Fatalf("opened=%q", opened)
+	}
+	entries, err := os.ReadDir(inbox)
+	if err != nil {
+		t.Fatalf("read inbox: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected inbox fallback after URL scheme, got %d", len(entries))
+	}
+	telemetry := manager.LastRoutingOutcome()
+	if telemetry == nil || telemetry.Status != "queued" {
+		t.Fatalf("unexpected telemetry: %#v", telemetry)
+	}
+}
+
+func TestHandleIncomingGrokBotAppCDPFailureFallsBackToInbox(t *testing.T) {
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	mux.HandleFunc("/json/list", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode([]cdpTarget{{
+			Type:                 "page",
+			Title:                "Sign in",
+			URL:                  "https://example.com/login",
+			WebSocketDebuggerURL: "ws://127.0.0.1:9222/devtools/page/login",
+		}})
+	})
+	inbox := filepath.Join(t.TempDir(), "inbox")
+	manager := NewManager(&config.AgentsConfig{
+		Router: "grokBotApp",
+		GrokBotApp: &config.GrokBotAppConfig{
+			Enabled:         true,
+			CDPEndpoint:     server.URL,
+			InboxPath:       inbox,
+			FallbackToInbox: true,
+			DefaultAgent:    "main",
+		},
+	})
+	if _, err := manager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
+		"channel": "slack",
+		"text":    "queue when CDP misses",
+		"chat_id": "D0ACSGK4JE8",
+	}}); err != nil {
+		t.Fatalf("HandleIncoming failed: %v", err)
+	}
+	entries, err := os.ReadDir(inbox)
+	if err != nil {
+		t.Fatalf("read inbox: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected one inbox envelope, got %d", len(entries))
+	}
+	telemetry := manager.LastRoutingOutcome()
+	if telemetry == nil || telemetry.Status != "queued" || !strings.Contains(telemetry.Error, "authenticated chat target") {
+		t.Fatalf("unexpected telemetry: %#v", telemetry)
+	}
+}
+
+func TestIsGrokBotAppChatTarget(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		target cdpTarget
+		want   bool
+	}{
+		{
+			name:   "grokbot scheme",
+			target: cdpTarget{Type: "page", Title: "Grok Bot", URL: "grokbot://chat", WebSocketDebuggerURL: "ws://127.0.0.1/page/1"},
+			want:   true,
+		},
+		{
+			name:   "sand scheme",
+			target: cdpTarget{Type: "page", Title: "Grok Bot", URL: "sand://renderer", WebSocketDebuggerURL: "ws://127.0.0.1/page/1"},
+			want:   true,
+		},
+		{
+			name:   "local app file",
+			target: cdpTarget{Type: "page", Title: "Grok Bot", URL: "file:///Applications/Grok%20Bot.app/index.html", WebSocketDebuggerURL: "ws://127.0.0.1/page/1"},
+			want:   true,
+		},
+		{
+			name:   "login page",
+			target: cdpTarget{Type: "page", Title: "Sign in", URL: "grokbot://login", WebSocketDebuggerURL: "ws://127.0.0.1/page/1"},
+			want:   false,
+		},
+		{
+			name:   "unrelated https page",
+			target: cdpTarget{Type: "page", Title: "Claude", URL: "https://claude.ai/new", WebSocketDebuggerURL: "ws://127.0.0.1/page/1"},
+			want:   false,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := isGrokBotAppChatTarget(test.target); got != test.want {
+				t.Fatalf("isGrokBotAppChatTarget(%#v)=%t, want %t", test.target, got, test.want)
+			}
+		})
+	}
+}
+
 func TestHandleIncomingCodexAppCDPDeliversViaCDP(t *testing.T) {
 	var evaluated string
 	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}

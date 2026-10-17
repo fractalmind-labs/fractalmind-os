@@ -401,6 +401,39 @@ type ClaudeDesktopConfig struct {
 	DeliveryTimeoutSeconds int `yaml:"deliveryTimeoutSeconds,omitempty"`
 }
 
+// GrokBotAppConfig contains routing settings for Grok Bot.app delivery.
+// FractalBot does not launch, patch, or scrape Grok Bot. InboxPath is the
+// durable store; CDP and URL-scheme delivery are optional push adapters.
+type GrokBotAppConfig struct {
+	Enabled bool `yaml:"enabled,omitempty"`
+
+	// CDPEndpoint is an optional Chromium DevTools endpoint exposed by Grok Bot.
+	// Example: "http://127.0.0.1:9222".
+	CDPEndpoint string `yaml:"cdpEndpoint,omitempty"`
+
+	// TargetSelector optionally matches a Grok Bot page title or URL.
+	TargetSelector string `yaml:"targetSelector,omitempty"`
+
+	// URLScheme is an optional best-effort deep link such as "grokbot:" or "sand:".
+	// Opening the scheme is not proof that the prompt was injected.
+	URLScheme string `yaml:"urlScheme,omitempty"`
+
+	// InboxPath is the durable queue. Required when enabled.
+	InboxPath string `yaml:"inboxPath,omitempty"`
+
+	// FallbackToInbox queues to InboxPath when CDP or URL-scheme delivery fails.
+	FallbackToInbox bool `yaml:"fallbackToInbox,omitempty"`
+
+	// DefaultAgent is used when the inbound message omits /agent.
+	DefaultAgent string `yaml:"defaultAgent,omitempty"`
+
+	// AllowedAgents restricts which agents can be targeted by channel messages.
+	AllowedAgents []string `yaml:"allowedAgents,omitempty"`
+
+	// DeliveryTimeoutSeconds limits CDP and URL-scheme delivery. Defaults to 20 seconds.
+	DeliveryTimeoutSeconds int `yaml:"deliveryTimeoutSeconds,omitempty"`
+}
+
 // HeartbeatConfig schedules runtime-neutral agent wakeups.
 type HeartbeatConfig struct {
 	Enabled       bool                 `yaml:"enabled,omitempty"`
@@ -423,12 +456,16 @@ type HeartbeatJobConfig struct {
 
 // AgentsConfig contains gateway-side agent routing settings.
 type AgentsConfig struct {
-	Workspace     string               `yaml:"workspace"`
-	MaxConcurrent int                  `yaml:"maxConcurrent"`
-	Router        string               `yaml:"router,omitempty"`
+	Workspace     string `yaml:"workspace"`
+	MaxConcurrent int    `yaml:"maxConcurrent"`
+	Router        string `yaml:"router,omitempty"`
+	// AgentRouters maps an inbound agent name onto a runtime without changing
+	// the default agents.router. Example: trader: grokBotApp.
+	AgentRouters  map[string]string    `yaml:"agentRouters,omitempty"`
 	OhMyCode      *OhMyCodeConfig      `yaml:"ohMyCode,omitempty"`
 	CodexAppCDP   *CodexAppCDPConfig   `yaml:"codexAppCDP,omitempty"`
 	ClaudeDesktop *ClaudeDesktopConfig `yaml:"claudeDesktop,omitempty"`
+	GrokBotApp    *GrokBotAppConfig    `yaml:"grokBotApp,omitempty"`
 	Heartbeat     *HeartbeatConfig     `yaml:"heartbeat,omitempty"`
 }
 
@@ -515,6 +552,9 @@ func validateConfig(cfg *Config) error {
 	if err := validateRouterConfig(cfg); err != nil {
 		return err
 	}
+	if err := validateAgentRoutersConfig(cfg); err != nil {
+		return err
+	}
 	if err := validateOhMyCodeConfig(cfg); err != nil {
 		return err
 	}
@@ -522,6 +562,9 @@ func validateConfig(cfg *Config) error {
 		return err
 	}
 	if err := validateClaudeDesktopConfig(cfg); err != nil {
+		return err
+	}
+	if err := validateGrokBotAppConfig(cfg); err != nil {
 		return err
 	}
 	if err := validateHeartbeatConfig(cfg); err != nil {
@@ -602,10 +645,142 @@ func validateRouterConfig(cfg *Config) error {
 		return nil
 	}
 	router := strings.TrimSpace(cfg.Agents.Router)
-	if router == "" || router == "ohMyCode" || router == "codexAppCDP" || router == "claudeDesktop" {
+	if isSupportedRouter(router) {
 		return nil
 	}
 	return fmt.Errorf("agents.router: unsupported router %q", router)
+}
+
+func isSupportedRouter(router string) bool {
+	router = strings.TrimSpace(router)
+	if router == "" {
+		return true
+	}
+	return isNamedRouter(router)
+}
+
+func isNamedRouter(router string) bool {
+	switch strings.TrimSpace(router) {
+	case "ohMyCode", "codexAppCDP", "claudeDesktop", "grokBotApp":
+		return true
+	default:
+		return false
+	}
+}
+
+// AgentRouterFor returns a per-agent runtime override. Empty means use agents.router.
+func (cfg *AgentsConfig) AgentRouterFor(agentName string) string {
+	if cfg == nil || len(cfg.AgentRouters) == 0 {
+		return ""
+	}
+	name := strings.TrimSpace(agentName)
+	if name == "" {
+		return ""
+	}
+	if router, ok := cfg.AgentRouters[name]; ok {
+		return strings.TrimSpace(router)
+	}
+	for raw, router := range cfg.AgentRouters {
+		if strings.TrimSpace(raw) == name {
+			return strings.TrimSpace(router)
+		}
+	}
+	return ""
+}
+
+// AgentRouterNames returns sorted inbound agent names that have a runtime override.
+func (cfg *AgentsConfig) AgentRouterNames() []string {
+	if cfg == nil || len(cfg.AgentRouters) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(cfg.AgentRouters))
+	seen := make(map[string]struct{}, len(cfg.AgentRouters))
+	for raw := range cfg.AgentRouters {
+		name := strings.TrimSpace(raw)
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// CopyAgentRouters returns a trimmed copy of per-agent runtime overrides.
+func (cfg *AgentsConfig) CopyAgentRouters() map[string]string {
+	if cfg == nil || len(cfg.AgentRouters) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(cfg.AgentRouters))
+	for rawName, rawRouter := range cfg.AgentRouters {
+		name := strings.TrimSpace(rawName)
+		router := strings.TrimSpace(rawRouter)
+		if name == "" || router == "" {
+			continue
+		}
+		out[name] = router
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func validateAgentRoutersConfig(cfg *Config) error {
+	if cfg == nil || cfg.Agents == nil || len(cfg.Agents.AgentRouters) == 0 {
+		return nil
+	}
+	for rawName, rawRouter := range cfg.Agents.AgentRouters {
+		name := strings.TrimSpace(rawName)
+		router := strings.TrimSpace(rawRouter)
+		if name == "" {
+			return fmt.Errorf("agents.agentRouters: agent name is required")
+		}
+		if err := validateAgentName(name); err != nil {
+			return fmt.Errorf("agents.agentRouters[%s]: %w", name, err)
+		}
+		if router == "" {
+			return fmt.Errorf("agents.agentRouters.%s: router is required", name)
+		}
+		if !isNamedRouter(router) {
+			return fmt.Errorf("agents.agentRouters.%s: unsupported router %q", name, router)
+		}
+		switch router {
+		case "ohMyCode":
+			if cfg.Agents.OhMyCode == nil || !cfg.Agents.OhMyCode.Enabled {
+				return fmt.Errorf("agents.agentRouters.%s: ohMyCode runtime is not enabled", name)
+			}
+			if err := validateHeartbeatAgentAllowed("agents.ohMyCode", name, cfg.Agents.OhMyCode.DefaultAgent, cfg.Agents.OhMyCode.AllowedAgents); err != nil {
+				return fmt.Errorf("agents.agentRouters.%s: %w", name, err)
+			}
+		case "codexAppCDP":
+			if cfg.Agents.CodexAppCDP == nil || !cfg.Agents.CodexAppCDP.Enabled {
+				return fmt.Errorf("agents.agentRouters.%s: codexAppCDP runtime is not enabled", name)
+			}
+			if err := validateHeartbeatAgentAllowed("agents.codexAppCDP", name, cfg.Agents.CodexAppCDP.DefaultAgent, cfg.Agents.CodexAppCDP.AllowedAgents); err != nil {
+				return fmt.Errorf("agents.agentRouters.%s: %w", name, err)
+			}
+		case "claudeDesktop":
+			if cfg.Agents.ClaudeDesktop == nil || !cfg.Agents.ClaudeDesktop.Enabled {
+				return fmt.Errorf("agents.agentRouters.%s: claudeDesktop runtime is not enabled", name)
+			}
+			if err := validateHeartbeatAgentAllowed("agents.claudeDesktop", name, cfg.Agents.ClaudeDesktop.DefaultAgent, cfg.Agents.ClaudeDesktop.AllowedAgents); err != nil {
+				return fmt.Errorf("agents.agentRouters.%s: %w", name, err)
+			}
+		case "grokBotApp":
+			if cfg.Agents.GrokBotApp == nil || !cfg.Agents.GrokBotApp.Enabled {
+				return fmt.Errorf("agents.agentRouters.%s: grokBotApp runtime is not enabled", name)
+			}
+			if err := validateHeartbeatAgentAllowed("agents.grokBotApp", name, cfg.Agents.GrokBotApp.DefaultAgent, cfg.Agents.GrokBotApp.AllowedAgents); err != nil {
+				return fmt.Errorf("agents.agentRouters.%s: %w", name, err)
+			}
+		}
+	}
+	return nil
 }
 
 func validateClaudeDesktopConfig(cfg *Config) error {
@@ -624,6 +799,32 @@ func validateClaudeDesktopConfig(cfg *Config) error {
 	}
 	if claude.DeliveryTimeoutSeconds < 0 {
 		return fmt.Errorf("agents.claudeDesktop.deliveryTimeoutSeconds: must be >= 0")
+	}
+	return nil
+}
+
+func validateGrokBotAppConfig(cfg *Config) error {
+	if cfg == nil || cfg.Agents == nil || cfg.Agents.GrokBotApp == nil {
+		return nil
+	}
+	grok := cfg.Agents.GrokBotApp
+	if err := validateRoutingAgents("agents.grokBotApp", grok.DefaultAgent, grok.AllowedAgents); err != nil {
+		return err
+	}
+	if scheme := strings.TrimSpace(grok.URLScheme); scheme != "" {
+		normalized := strings.ToLower(scheme)
+		if !strings.HasPrefix(normalized, "grokbot:") && !strings.HasPrefix(normalized, "sand:") {
+			return fmt.Errorf("agents.grokBotApp.urlScheme: must start with grokbot: or sand:")
+		}
+	}
+	if !grok.Enabled {
+		return nil
+	}
+	if strings.TrimSpace(grok.InboxPath) == "" {
+		return fmt.Errorf("agents.grokBotApp.inboxPath: required when agents.grokBotApp.enabled is true")
+	}
+	if grok.DeliveryTimeoutSeconds < 0 {
+		return fmt.Errorf("agents.grokBotApp.deliveryTimeoutSeconds: must be >= 0")
 	}
 	return nil
 }
@@ -737,6 +938,11 @@ func validateHeartbeatRuntimeTarget(agents *AgentsConfig, runtimeName, agentName
 			return fmt.Errorf("claudeDesktop runtime is not enabled")
 		}
 		return validateHeartbeatAgentAllowed("agents.claudeDesktop", agentName, agents.ClaudeDesktop.DefaultAgent, agents.ClaudeDesktop.AllowedAgents)
+	case "grokBotApp":
+		if agents.GrokBotApp == nil || !agents.GrokBotApp.Enabled {
+			return fmt.Errorf("grokBotApp runtime is not enabled")
+		}
+		return validateHeartbeatAgentAllowed("agents.grokBotApp", agentName, agents.GrokBotApp.DefaultAgent, agents.GrokBotApp.AllowedAgents)
 	default:
 		return fmt.Errorf("unsupported runtime %q", runtimeName)
 	}
