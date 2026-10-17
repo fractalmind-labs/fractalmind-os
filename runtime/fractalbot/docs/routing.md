@@ -196,6 +196,36 @@ curl -fsS http://127.0.0.1:19334/json/version
 curl -fsS http://127.0.0.1:19334/json/list
 ```
 
+To move one bot to Claude Desktop while the others keep the agent-manager, leave `router: "ohMyCode"`, enable `claudeDesktop`, and give that bot's receiver target `runtime: claudeDesktop` (no workspace needed):
+
+```yaml
+agents:
+  router: "ohMyCode"
+  ohMyCode:
+    enabled: true
+    targets:
+      xiaoyi:
+        receivers:
+          - channel: feishu
+            receiverId: "cli_xxx"
+        defaultAgent: main
+        runtime: claudeDesktop
+      burry:
+        receivers:
+          - channel: feishu
+            receiverId: "cli_yyy"
+        workspace: "/path/to/burry"
+        defaultAgent: main
+  claudeDesktop:
+    enabled: true
+    cdpEndpoint: "http://127.0.0.1:19334"
+    inboxPath: "/Users/you/.fractalbot/claude-desktop-inbox"
+    fallbackToInbox: true
+    defaultAgent: main
+```
+
+The delivered prompt includes the inbound `receiver_id`, so replies can be sent as the receiving bot.
+
 FractalBot does not launch Claude Desktop, patch the application, bypass its CDP authentication guard, scrape chat history, or inject input through AppleScript. If the target is unavailable, logged out, lacks a compose box, or rejects submission, a configured fallback inbox receives the normalized envelope and delivery prompt with private file permissions.
 
 ## Observability
