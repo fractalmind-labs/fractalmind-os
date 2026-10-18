@@ -8,7 +8,7 @@ FractalMind uses a canonical **three-plane architecture** for remote agent contr
 
 ```text
 Applications
-Agent Console | envd-desktop | channel and automation clients
+FractalMind App | envd-desktop | fractalbot and automation clients
                          |
                          | signed intent + capability reference
                          v
@@ -53,7 +53,7 @@ Authority is decided by the capability and signed intent, not by a relay, coordi
 
 ### Application Plane
 
-Agent Console, envd-desktop, and other clients present user workflows. For privileged actions they create or relay signed intents; they do not become the authority source themselves.
+The FractalMind App (which replaces the retired Agent Console), envd-desktop, and other clients present user workflows. For privileged actions they create or relay signed intents; they do not become the authority source themselves.
 
 `fractalbot` is a channel adapter. It preserves routing context between Slack, Telegram, Discord, Feishu, iMessage, and agents, but target envd still decides whether a privileged command is authorized.
 
