@@ -82,4 +82,4 @@ Only authority-critical and low-frequency audit state belongs on-chain. High-vol
 - skills are distribution packages that expose bounded tools and workflows.
 - explorer and documentation surfaces visualize verifiable state; they do not decide authority.
 
-See [Data Flow](/architecture/data-flow) for the privileged-command lifecycle.
+See [Data Flow](/architecture/data-flow) for the privileged-command lifecycle. See [Deployment](/architecture/deployment) for what runs on each host and how conversations and privileged commands reach agents.

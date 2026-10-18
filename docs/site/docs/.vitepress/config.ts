@@ -58,6 +58,7 @@ export default defineConfig({
             { text: 'Three-Plane Overview', link: '/architecture/overview' },
             { text: 'Fractal Model', link: '/architecture/fractal-model' },
             { text: 'Data Flow', link: '/architecture/data-flow' },
+            { text: 'Deployment', link: '/architecture/deployment' },
             { text: 'Design Decisions', link: '/architecture/design-decisions' },
           ],
         },
