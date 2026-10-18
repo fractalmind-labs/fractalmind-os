@@ -48,16 +48,48 @@ Dependency direction: **applications → envd registration interface** (optional
 
 ## Application registration and dispatch
 
-An application registers with the local envd over a local, owner-restricted channel (for example a Unix socket with file permissions limited to the host owner). Registration declares:
+Which applications a host may run, and which intent types each may handle, is decided on chain. Local configuration only says where an application is installed.
 
-| Declares | Meaning |
+### On-chain application authorization
+
+Each host's membership carries an **application authorization table**. Each entry records:
+
+| Field | Meaning |
 | --- | --- |
-| Intent types | Which verified intents this application handles, for example conversations or agent tasks |
-| Capabilities | Whether it supports cancel and whether it keeps durable results |
+| Application ID | For example `fractalbot`, `agent-manager` |
+| Intent types | Which verified intents it may handle |
+| Required capabilities | For example "must support cancel" |
+| Publisher key (optional) | If set, envd also verifies the application's code signature against it |
 
-envd dispatches each verified intent to the application registered for its type. One check stays in envd because it is part of authorization: **an intent that must be revocable is dispatched only to an application that declares cancel**, and on revocation envd tells that application to stop. If no suitable application is registered, envd rejects the intent and records why.
+- The organization admin (`OrgAdminCap`) adds, changes and removes entries; each change emits an event that envd follows. A host invitation can carry an initial list (for example agent-manager) so a new host needs no extra transaction.
+- Two keys: an entry takes effect only after the host owner has installed the application locally. Local configuration maps the application ID to its executable path; it is an install detail, not authority.
+- Publisher verification is optional per entry. Binary hashes are not used by default, because every upgrade would need a transaction.
 
-Trust: once an intent is verified, the application that receives it is on the trusted path, so it must accept intents only from envd. envd's receipt covers what was authorized, which application received it and whether it was revoked; the execution result is reported by the application. This is the same trust envd places in agent-manager today.
+envd checks the table when an application registers and again on every dispatch, as part of its existing check of current Sui authority. When the admin revokes an entry, envd stops dispatching to that application, disconnects it and cancels its in-flight intents. If envd cannot read current chain authority, it fails closed: no new registrations and no new dispatches.
+
+The chain answers "may this host run this application"; envd still verifies locally that the connecting process is that application: same OS user, executable path matching local configuration, and code signature when a publisher key is set.
+
+### Local protocol
+
+Applications talk to envd only over local channels, using JSON-RPC 2.0 messages, one per line. Two connection modes share the same messages:
+
+| Mode | For | Transport |
+| --- | --- | --- |
+| Long-running | fractalbot (`fractalmind` channel plugin), remote desktop | The application connects to envd's local endpoint and keeps one bidirectional connection: a Unix domain socket (0600, owned by the host user) on macOS and Linux, a named pipe restricted to the same user on Windows |
+| Spawned | agent-manager, file tasks | envd starts the application as a child process and exchanges messages over stdin/stdout, as `internal/runtimeadapter` does today; cancel terminates the process group |
+
+| Message | Direction | Content |
+| --- | --- | --- |
+| `register` | app → envd | Application ID, protocol version, intent types, capabilities. Must match the on-chain entry; a different major version is rejected |
+| `dispatch` | envd → app | A verified intent: ID (the envd reservation ID, used by the application for deduplication), type, typed payload, deadline |
+| `accepted` / `progress` / `result` | app → envd | Execution status; `result` carries bounded evidence and envd writes the receipt |
+| `cancel` / `cancelled` | envd → app / app → envd | Revocation and its acknowledgement |
+| `reply` | app → envd | A reply to a dispatch the application received, routed back by envd (for example fractalbot answering an App conversation). Applications cannot send unsolicited messages through envd |
+| `ping` | both | Keepalive |
+
+If the connection drops, dispatched intents without a result become "unknown" and are not re-sent. When the application reconnects, it reports their status by ID and envd completes the receipts. JSON-RPC keeps the protocol easy to implement in Go (fractalbot) and Python (agent-manager) and continues the existing `runtimeadapter` envelopes; the message model would survive a later move to another transport.
+
+Trust: once an intent is verified, the application that receives it is on the trusted path. envd's receipt covers what was authorized, which application received it and whether it was revoked; the execution result is reported by the application. This is the same trust envd places in agent-manager today.
 
 ## Local runtime adapter layer
 
@@ -104,5 +136,5 @@ Hosts can run macOS, Windows or Linux. iMessage is available only on macOS.
 - This is the target deployment; some repositories still contain compatibility paths.
 - envd's existing `internal/runtimeadapter` already invokes agent-manager as a local process only after `NodeCommand` authorization, with fixed versioned request and result envelopes (see `runtime/fractalmind-envd/docs/local-runtime-adapter.md`). That is the first instance of dispatch to an application; the target generalizes it into registration by intent type, so envd stops naming agent-manager.
 - The local runtime adapter layer does not exist yet as a library. It will be extracted from fractalbot's runtime support during the fractalbot V2 work.
-- The `fractalmind` channel plugin is not implemented.
+- The `fractalmind` channel plugin, the local protocol's long-running mode and the on-chain application authorization table are not implemented.
 - Agent Console is still in the repository; its retirement and the move of its functions into the App are tracked in the [App PRD](https://github.com/fractalmind-labs/fractalmind-os/blob/main/docs/product/fractalmind-app-prd.md).
