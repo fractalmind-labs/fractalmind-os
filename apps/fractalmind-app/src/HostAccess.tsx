@@ -36,6 +36,11 @@ import {
   type HostInvite,
 } from "./host-admission";
 import type { ConnectionProfile } from "./domain";
+import {
+  encodeHostJoinAccess,
+  hostJoinFingerprint,
+  quickInviteWithinLimits,
+} from "./host-join-access";
 type Attempt = HostAttempt;
 const transport: NativeInvoke = (command, args) => invoke(command, args);
 const kinds = ["binding", "invite", "revoke-invite", "revoke-member"];
@@ -75,6 +80,10 @@ export default function HostAccess({
       null,
     ),
     [invite, setInvite] = useState<HostInvite | null>(null);
+  const [access, setAccess] = useState<string | null>(null),
+    [fingerprint, setFingerprint] = useState<string | null>(null),
+    [advanced, setAdvanced] = useState(false),
+    [copied, setCopied] = useState(false);
   const [code, setCode] = useState<string | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
@@ -119,6 +128,28 @@ export default function HostAccess({
   useEffect(() => {
     if (code && directory && !inviteUsable) setCode(null);
   }, [!!inviteUsable, code, directory]);
+  // The access string bundles the public configuration with the one-use code;
+  // it lives only as long as the code is usable in this window.
+  useEffect(() => {
+    setCopied(false);
+    const chainIdentifier =
+      directory?.chainIdentifier ?? profile.chainIdentifier;
+    if (!code || !invite || !chainIdentifier) {
+      setAccess(null);
+      setFingerprint(null);
+      return;
+    }
+    setAccess(
+      encodeHostJoinAccess(profile, organizationId, chainIdentifier, code),
+    );
+    let live = true;
+    void hostJoinFingerprint(organizationId, invite.coordinator_binding).then(
+      (value) => live && setFingerprint(value),
+    );
+    return () => {
+      live = false;
+    };
+  }, [code, invite?.id, directory?.chainIdentifier]);
   function issue(e: unknown) {
     setError(
       e instanceof HostAdmissionError ||
@@ -185,6 +216,7 @@ export default function HostAccess({
         setDeviceProfile(stored.deviceProfile);
         setOperation(stored.kind);
       } else if (kind) edit(kind, target);
+      setAdvanced(!!kind && kind !== "invite");
     } catch {
       setError("journal_unavailable");
     }
@@ -210,7 +242,7 @@ export default function HostAccess({
     );
     return session.current;
   }
-  async function newAttempt() {
+  async function newAttempt(kind: HostOperation["kind"] = operation) {
     if (!isTauri()) throw new NativeDeviceError("native_unavailable");
     const device = await NativeDeviceSigner.load(transport, deviceProfile),
       chain = new ChainReadSession(profile);
@@ -232,7 +264,7 @@ export default function HostAccess({
       id: crypto.randomUUID(),
       deviceProfile,
       grantId: usable[0].id,
-      kind: operation,
+      kind,
     };
     // Only technical correlation and public identifiers. Never the invite code,
     // entropy, public-key private counterpart or transaction payload.
@@ -281,14 +313,34 @@ export default function HostAccess({
     await refresh();
     onChanged();
   }
-  async function prepare() {
-    const value = attempt ?? (await newAttempt()),
+  async function prepare(quick?: HostOperation) {
+    const op = quick ?? input();
+    const value = attempt ?? (await newAttempt(op.kind)),
       controller = await load(value);
-    if (value.kind !== operation) throw new HostAdmissionError("invalid_input");
-    const result = await controller.prepare(input(), value.id, confirmed);
+    if (value.kind !== op.kind) throw new HostAdmissionError("invalid_input");
+    // The one-click invitation's button is its confirmation.
+    const result = await controller.prepare(
+      op,
+      value.id,
+      quick ? true : confirmed,
+    );
     if (!mounted.current) return;
     if ("status" in result) await receive(result, controller, value.kind);
+    else if (quick && quickInviteWithinLimits(result))
+      await receive(await controller.submit(result), controller, value.kind);
     else setQuote(result);
+  }
+  /** Defaults for a remote Host: 1-hour code, 90-day membership with matching
+   * observation, and join Gas placed on the invitation key. */
+  function quickInvite(): HostOperation {
+    return {
+      kind: "invite",
+      bindingId,
+      ttlMinutes: 60,
+      membershipDays: 90,
+      observationHours: 90 * 24,
+      fundInvite: true,
+    };
   }
   async function query() {
     if (!attempt) return;
@@ -508,9 +560,9 @@ export default function HostAccess({
             </button>
           </header>
           <ol className="creation-steps">
-            <li>{t("组织入口", "Organization entry")}</li>
-            <li>{t("单次邀请", "One-use invite")}</li>
-            <li>{t("Host 确认并入组", "Host confirms & joins")}</li>
+            <li>{t("生成接入串", "Create an access string")}</li>
+            <li>{t("在新主机粘贴", "Paste it on the new Host")}</li>
+            <li>{t("核对指纹并入组", "Compare fingerprint & join")}</li>
           </ol>
           <p>
             {t("当前组织", "Organization")}:{" "}
@@ -530,248 +582,359 @@ export default function HostAccess({
               "Sui validates entry bindings and membership. The Coordinator routes; envd holds independent Host keys and executes. Membership does not prove connectivity.",
             )}
           </p>
-          {directory && (
-            <section className="panel">
-              <h3>{t("组织入口", "Organization entries")}</h3>
-              {directory.bindings.length === 0 && (
-                <p>
+          {ready && directory && !attempt && !quote && !outcome && (
+            <section className="panel" aria-labelledby="host-quick-title">
+              <h3 id="host-quick-title">
+                {t("接入新主机", "Connect a new Host")}
+              </h3>
+              <p>
+                {t(
+                  "生成一个接入串，在新主机上运行 fractalmind-envd join 并粘贴即可。接入串 1 小时内有效，只能用一次。",
+                  "Create an access string, then run fractalmind-envd join on the new Host and paste it. It works once, within 1 hour.",
+                )}
+              </p>
+              <p className="muted">
+                {t(
+                  "本设备支付 0.05 SUI 给新主机作入组 Gas，外加少量链上手续费；手续费超过 0.01 SUI 时会先让你确认。新主机获得成员资格和有限观察权限，不含执行权限。",
+                  "This device pays 0.05 SUI of join Gas for the new Host plus a small network fee; fees above 0.01 SUI ask you first. The Host gets membership and limited observation, not execution.",
+                )}
+              </p>
+              {bindingId ? (
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    edit("invite");
+                    void run(() => prepare(quickInvite()));
+                  }}
+                >
+                  {t("生成接入串", "Create access string")}
+                </button>
+              ) : (
+                <p className="warn">
                   {t(
-                    "尚无入口，请先登记 Coordinator 公钥与 HTTPS 地址。",
-                    "No entry exists. Register the Coordinator public key and HTTPS origin first.",
+                    "组织还没有可用入口，请先在“高级”里登记 Coordinator。",
+                    "The organization has no usable entry yet. Register a Coordinator under Advanced first.",
                   )}
                 </p>
               )}
-              {directory.bindings.map((b) => (
-                <p key={b.id}>
-                  <strong>{b.endpoint}</strong> ·{" "}
-                  {b.revoked
-                    ? t("已撤销", "Revoked")
-                    : t(
-                        "链上绑定有效，在线未知",
-                        "Bound on chain; connectivity unknown",
-                      )}
-                  <br />
-                  <code className="long-id">{b.coordinator_address}</code>
-                </p>
-              ))}
-              <div className="host-actions">
-                <button disabled={locked} onClick={() => edit("binding")}>
-                  {t("登记入口", "Register entry")}
-                </button>
-                <button
-                  disabled={
-                    locked || !directory.bindings.some((b) => !b.revoked)
-                  }
-                  onClick={() => edit("invite")}
-                >
-                  {t("创建单次邀请", "Create one-use invite")}
-                </button>
-                <button disabled={busy} onClick={() => void run(refresh)}>
-                  {t("刷新链上状态", "Refresh chain state")}
-                </button>
-              </div>
             </section>
           )}
-          {!outcome && (
-            <fieldset
-              disabled={
-                busy || !!quote || (!!attempt && error !== "not_submitted")
-              }
-            >
-              <h3>
-                {operation === "binding"
-                  ? t("登记组织入口", "Register organization entry")
-                  : operation === "invite"
-                    ? t("创建一次性邀请码", "Create a one-use invitation")
-                    : operation === "revoke-invite"
-                      ? t("撤销未消费邀请码", "Revoke unused invitation")
-                      : t("撤销主机成员资格", "Revoke Host membership")}
+          {access && inviteUsable && (
+            <section className="panel" aria-labelledby="host-access-string">
+              <h3 id="host-access-string">
+                {t("接入串（只显示这一次）", "Access string (shown once)")}
               </h3>
-              {operation === "binding" ? (
-                <>
-                  <label>
-                    {t("Coordinator HTTPS 地址", "Coordinator HTTPS origin")}
-                    <input
-                      value={endpoint}
-                      onChange={(e) => {
-                        setEndpoint(e.target.value);
-                        setConfirmed(false);
-                      }}
-                      placeholder="https://coordinator.example.com"
-                    />
-                  </label>
-                  <label>
-                    {t(
-                      "Coordinator Ed25519 公钥（64 位小写十六进制）",
-                      "Coordinator Ed25519 public key (64 lowercase hex digits)",
-                    )}
-                    <input
-                      value={publicKey}
-                      onChange={(e) => {
-                        setPublicKey(e.target.value);
-                        setConfirmed(false);
-                      }}
-                      maxLength={64}
-                    />
-                  </label>
-                  {coordinatorAddress && (
-                    <p>
-                      {t("由公钥确定的地址", "Address derived from public key")}
-                      : <code className="long-id">{coordinatorAddress}</code>
-                    </p>
+              <textarea
+                readOnly
+                value={access}
+                spellCheck={false}
+                autoComplete="off"
+                aria-label={t("Host 接入串", "Host access string")}
+              />
+              <div className="host-actions">
+                <button
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(access)
+                      .then(() => setCopied(true))
+                  }
+                >
+                  {copied ? t("已复制", "Copied") : t("复制", "Copy")}
+                </button>
+              </div>
+              <p>
+                {t("指纹", "Fingerprint")}:{" "}
+                <strong className="host-fingerprint">
+                  {fingerprint ?? "…"}
+                </strong>
+              </p>
+              <ol>
+                <li>
+                  {t("在新主机上运行", "On the new Host, run")}{" "}
+                  <code>fractalmind-envd join</code>
+                  {t(
+                    "，粘贴接入串（输入不显示）。",
+                    " and paste the access string (input is hidden).",
                   )}
-                </>
-              ) : operation === "invite" ? (
-                <>
-                  <label>
-                    {t("组织入口", "Organization entry")}
-                    <select
-                      value={bindingId}
-                      onChange={(e) => {
-                        setBindingId(e.target.value);
-                        setConfirmed(false);
-                      }}
-                    >
-                      <option value="">
-                        {t("选择已登记入口", "Choose a registered entry")}
-                      </option>
-                      {directory?.bindings
-                        .filter((b) => !b.revoked)
-                        .map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.endpoint} · {b.id.slice(0, 10)}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <div className="okr-form-grid">
+                </li>
+                <li>
+                  {t(
+                    "主机显示的指纹与上面一致时输入 y 确认入组。",
+                    "When the fingerprint the Host shows matches the one above, type y to join.",
+                  )}
+                </li>
+                <li>
+                  {t(
+                    "macOS 请在该机的“终端”里运行：钥匙串在 SSH 会话中无法打开。",
+                    "On macOS, run it in Terminal on that Mac: the Keychain cannot be opened over SSH.",
+                  )}
+                </li>
+              </ol>
+              <p className="muted">
+                {t(
+                  "接入串含一次性邀请，关闭窗口后无法找回；遗失时撤销未使用的邀请再重新生成。",
+                  "The access string contains a one-use invitation and cannot be recovered after closing. If lost, revoke the unused invitation and create a new one.",
+                )}
+              </p>
+            </section>
+          )}
+          <details
+            className="panel"
+            open={advanced}
+            onToggle={(e) => setAdvanced(e.currentTarget.open)}
+          >
+            <summary>
+              {t(
+                "高级：登记入口、自定义邀请、撤销",
+                "Advanced: entries, custom invitations, revocation",
+              )}
+            </summary>
+            {directory && (
+              <section className="panel">
+                <h3>{t("组织入口", "Organization entries")}</h3>
+                {directory.bindings.length === 0 && (
+                  <p>
+                    {t(
+                      "尚无入口，请先登记 Coordinator 公钥与 HTTPS 地址。",
+                      "No entry exists. Register the Coordinator public key and HTTPS origin first.",
+                    )}
+                  </p>
+                )}
+                {directory.bindings.map((b) => (
+                  <p key={b.id}>
+                    <strong>{b.endpoint}</strong> ·{" "}
+                    {b.revoked
+                      ? t("已撤销", "Revoked")
+                      : t(
+                          "链上绑定有效，在线未知",
+                          "Bound on chain; connectivity unknown",
+                        )}
+                    <br />
+                    <code className="long-id">{b.coordinator_address}</code>
+                  </p>
+                ))}
+                <div className="host-actions">
+                  <button disabled={locked} onClick={() => edit("binding")}>
+                    {t("登记入口", "Register entry")}
+                  </button>
+                  <button
+                    disabled={
+                      locked || !directory.bindings.some((b) => !b.revoked)
+                    }
+                    onClick={() => edit("invite")}
+                  >
+                    {t("创建单次邀请", "Create one-use invite")}
+                  </button>
+                  <button disabled={busy} onClick={() => void run(refresh)}>
+                    {t("刷新链上状态", "Refresh chain state")}
+                  </button>
+                </div>
+              </section>
+            )}
+            {!outcome && (
+              <fieldset
+                disabled={
+                  busy || !!quote || (!!attempt && error !== "not_submitted")
+                }
+              >
+                <h3>
+                  {operation === "binding"
+                    ? t("登记组织入口", "Register organization entry")
+                    : operation === "invite"
+                      ? t("创建一次性邀请码", "Create a one-use invitation")
+                      : operation === "revoke-invite"
+                        ? t("撤销未消费邀请码", "Revoke unused invitation")
+                        : t("撤销主机成员资格", "Revoke Host membership")}
+                </h3>
+                {operation === "binding" ? (
+                  <>
                     <label>
-                      {t("邀请码有效期", "Invite validity")}
-                      <select
-                        value={ttlMinutes}
+                      {t("Coordinator HTTPS 地址", "Coordinator HTTPS origin")}
+                      <input
+                        value={endpoint}
                         onChange={(e) => {
-                          setTtlMinutes(
-                            Number(e.target.value) as 15 | 60 | 1440,
-                          );
+                          setEndpoint(e.target.value);
+                          setConfirmed(false);
+                        }}
+                        placeholder="https://coordinator.example.com"
+                      />
+                    </label>
+                    <label>
+                      {t(
+                        "Coordinator Ed25519 公钥（64 位小写十六进制）",
+                        "Coordinator Ed25519 public key (64 lowercase hex digits)",
+                      )}
+                      <input
+                        value={publicKey}
+                        onChange={(e) => {
+                          setPublicKey(e.target.value);
+                          setConfirmed(false);
+                        }}
+                        maxLength={64}
+                      />
+                    </label>
+                    {coordinatorAddress && (
+                      <p>
+                        {t(
+                          "由公钥确定的地址",
+                          "Address derived from public key",
+                        )}
+                        : <code className="long-id">{coordinatorAddress}</code>
+                      </p>
+                    )}
+                  </>
+                ) : operation === "invite" ? (
+                  <>
+                    <label>
+                      {t("组织入口", "Organization entry")}
+                      <select
+                        value={bindingId}
+                        onChange={(e) => {
+                          setBindingId(e.target.value);
                           setConfirmed(false);
                         }}
                       >
-                        {[15, 60, 1440].map((n) => (
-                          <option key={n} value={n}>
-                            {n === 15
-                              ? t("15 分钟", "15 minutes")
-                              : n === 60
-                                ? t("1 小时", "1 hour")
-                                : t("24 小时", "24 hours")}
-                          </option>
-                        ))}
+                        <option value="">
+                          {t("选择已登记入口", "Choose a registered entry")}
+                        </option>
+                        {directory?.bindings
+                          .filter((b) => !b.revoked)
+                          .map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.endpoint} · {b.id.slice(0, 10)}
+                            </option>
+                          ))}
                       </select>
                     </label>
-                    <label>
+                    <div className="okr-form-grid">
+                      <label>
+                        {t("邀请码有效期", "Invite validity")}
+                        <select
+                          value={ttlMinutes}
+                          onChange={(e) => {
+                            setTtlMinutes(
+                              Number(e.target.value) as 15 | 60 | 1440,
+                            );
+                            setConfirmed(false);
+                          }}
+                        >
+                          {[15, 60, 1440].map((n) => (
+                            <option key={n} value={n}>
+                              {n === 15
+                                ? t("15 分钟", "15 minutes")
+                                : n === 60
+                                  ? t("1 小时", "1 hour")
+                                  : t("24 小时", "24 hours")}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        {t(
+                          "入组后成员期限（天，1–90）",
+                          "Membership after joining (days, 1–90)",
+                        )}
+                        <input
+                          type="number"
+                          min={1}
+                          max={90}
+                          value={membershipDays}
+                          onChange={(e) => {
+                            setMembershipDays(Number(e.target.value));
+                            setConfirmed(false);
+                          }}
+                        />
+                      </label>
+                      <label>
+                        {t(
+                          "观察能力期限（小时）",
+                          "Observation authority (hours)",
+                        )}
+                        <input
+                          type="number"
+                          min={1}
+                          max={membershipDays * 24}
+                          value={observationHours}
+                          onChange={(e) => {
+                            setObservationHours(Number(e.target.value));
+                            setConfirmed(false);
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <p className="muted">
                       {t(
-                        "入组后成员期限（天，1–90）",
-                        "Membership after joining (days, 1–90)",
+                        "当前邀请授予成员资格和最多 10000 次有限观察调用。执行 OKR、文件写入及桌面控制需要单独的具体授权。",
+                        "This invitation grants membership and up to 10,000 bounded observation calls. OKR execution, file writes and desktop control require separate scoped authority.",
                       )}
-                      <input
-                        type="number"
-                        min={1}
-                        max={90}
-                        value={membershipDays}
-                        onChange={(e) => {
-                          setMembershipDays(Number(e.target.value));
-                          setConfirmed(false);
-                        }}
-                      />
-                    </label>
-                    <label>
-                      {t(
-                        "观察能力期限（小时）",
-                        "Observation authority (hours)",
-                      )}
-                      <input
-                        type="number"
-                        min={1}
-                        max={membershipDays * 24}
-                        value={observationHours}
-                        onChange={(e) => {
-                          setObservationHours(Number(e.target.value));
-                          setConfirmed(false);
-                        }}
-                      />
-                    </label>
-                  </div>
-                  <p className="muted">
-                    {t(
-                      "当前邀请授予成员资格和最多 10000 次有限观察调用。执行 OKR、文件写入及桌面控制需要单独的具体授权。",
-                      "This invitation grants membership and up to 10,000 bounded observation calls. OKR execution, file writes and desktop control require separate scoped authority.",
-                    )}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <code className="long-id">{targetId}</code>
-                  <p className="warn">
-                    {operation === "revoke-member"
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <code className="long-id">{targetId}</code>
+                    <p className="warn">
+                      {operation === "revoke-member"
+                        ? t(
+                            "撤销后拒绝新的受保护请求；已有成员记录保留在链上。在途操作需单独介入。",
+                            "Revocation rejects new protected requests. Historical membership remains on chain. In-flight work needs a separate intervention.",
+                          )
+                        : t(
+                            "撤销后此邀请码不能再兑换。已入组的 Host 须撤销成员资格。",
+                            "This invitation cannot be redeemed after revocation. An admitted Host requires membership revocation.",
+                          )}
+                    </p>
+                  </>
+                )}
+                <label>
+                  {t("已授权本机设备配置名", "Authorized local device profile")}
+                  <input
+                    value={deviceProfile}
+                    maxLength={64}
+                    disabled={!!attempt}
+                    onChange={(e) => {
+                      setDeviceProfile(e.target.value);
+                      setConfirmed(false);
+                    }}
+                  />
+                </label>
+                <label className="host-confirm">
+                  <input
+                    type="checkbox"
+                    checked={confirmed}
+                    onChange={(e) => setConfirmed(e.target.checked)}
+                  />
+                  {operation === "binding"
+                    ? t(
+                        "我已核对 Coordinator 公钥与地址。",
+                        "I verified the Coordinator public key and address.",
+                      )
+                    : operation === "invite"
                       ? t(
-                          "撤销后拒绝新的受保护请求；已有成员记录保留在链上。在途操作需单独介入。",
-                          "Revocation rejects new protected requests. Historical membership remains on chain. In-flight work needs a separate intervention.",
+                          "我确认上述权限，并只向待接入的 Host 提供邀请码。",
+                          "I confirm the authority above and will share the invitation only with the joining Host.",
                         )
                       : t(
-                          "撤销后此邀请码不能再兑换。已入组的 Host 须撤销成员资格。",
-                          "This invitation cannot be redeemed after revocation. An admitted Host requires membership revocation.",
+                          "我确认撤销所选链上记录。",
+                          "I confirm revocation of the selected chain record.",
                         )}
-                  </p>
-                </>
-              )}
-              <label>
-                {t("已授权本机设备配置名", "Authorized local device profile")}
-                <input
-                  value={deviceProfile}
-                  maxLength={64}
-                  disabled={!!attempt}
-                  onChange={(e) => {
-                    setDeviceProfile(e.target.value);
-                    setConfirmed(false);
-                  }}
-                />
-              </label>
-              <label className="host-confirm">
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(e) => setConfirmed(e.target.checked)}
-                />
-                {operation === "binding"
-                  ? t(
-                      "我已核对 Coordinator 公钥与地址。",
-                      "I verified the Coordinator public key and address.",
-                    )
-                  : operation === "invite"
-                    ? t(
-                        "我确认上述权限，并只向待接入的 Host 提供邀请码。",
-                        "I confirm the authority above and will share the invitation only with the joining Host.",
-                      )
-                    : t(
-                        "我确认撤销所选链上记录。",
-                        "I confirm revocation of the selected chain record.",
-                      )}
-              </label>
-            </fieldset>
-          )}
-          {!outcome && (
-            <button
-              disabled={
-                !ready ||
-                busy ||
-                !confirmed ||
-                !!quote ||
-                (operation === "invite" && !bindingId)
-              }
-              onClick={() => void run(prepare)}
-            >
-              {t("核验管理权限并报价", "Verify management authority & quote")}
-            </button>
-          )}
+                </label>
+              </fieldset>
+            )}
+            {!outcome && (
+              <button
+                disabled={
+                  !ready ||
+                  busy ||
+                  !confirmed ||
+                  !!quote ||
+                  (operation === "invite" && !bindingId)
+                }
+                onClick={() => void run(prepare)}
+              >
+                {t("核验管理权限并报价", "Verify management authority & quote")}
+              </button>
+            )}
+          </details>
           {quote && (
             <section
               className="panel"
@@ -976,8 +1139,13 @@ export default function HostAccess({
             </section>
           )}
           {directory && (
-            <section className="panel">
-              <h3>{t("Host 接入指导", "Host admission guide")}</h3>
+            <details className="panel">
+              <summary>
+                {t(
+                  "手动接入指导（不使用接入串时）",
+                  "Manual admission guide (without an access string)",
+                )}
+              </summary>
               <ol>
                 <li>
                   {t(
@@ -1018,7 +1186,7 @@ export default function HostAccess({
                   </pre>
                 </li>
               </ol>
-            </section>
+            </details>
           )}
           {directory && (
             <>
