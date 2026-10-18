@@ -51,6 +51,13 @@ type runtimeCommandExecutor interface {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "join" {
+		if err := runJoinCommand(os.Args[2:], os.Stdin, os.Stdout, os.Stderr); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	configPath := flag.String("config", "sentinel.yaml", "path to config file")
 	showVersion := flag.Bool("version", false, "show version")
 	initHost := flag.Bool("init-host", false, "initialize Host signing/encryption keys in the system credential store")

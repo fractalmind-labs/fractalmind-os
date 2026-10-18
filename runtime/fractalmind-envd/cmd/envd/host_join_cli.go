@@ -77,6 +77,10 @@ func hostJoinInteraction(input *os.File, output, diagnostic io.Writer) hostjoin.
 			return bytes.Equal(answer, []byte("JOIN "+plan.OrganizationID)), nil
 		},
 		Prepared: preparedOutput(output),
+		GasClaimed: func(claim sui.InviteGasClaim) error {
+			_, err := fmt.Fprintf(diagnostic, "Moved %s MIST of invitation Gas to this Host (transaction %s).\n", claim.Amount, claim.Digest)
+			return err
+		},
 	}
 }
 func preparedOutput(output io.Writer) func(hostjoin.Record) error {
@@ -131,20 +135,38 @@ func appHostJoinInteraction(input io.Reader, output io.Writer, cfg *config.Confi
 	}
 }
 func runHostJoinCLI(ctx context.Context, cfg *config.Config, statusOnly, newAttempt bool, address string, ui hostjoin.Interaction, output io.Writer) error {
-	client, err := sui.NewGRPCClient(cfg.SUI.RPC, cfg.SUI.GraphQLURL)
+	result, err := hostJoinRun(ctx, cfg, statusOnly, newAttempt, address, ui)
+	if result.State != "" {
+		if writeErr := json.NewEncoder(output).Encode(result); writeErr != nil {
+			return writeErr
+		}
+	}
 	if err != nil {
 		return err
+	}
+	if result.State == "failed" {
+		return fmt.Errorf("original Host admission failed; fee preserved, no automatic retry")
+	}
+	return nil
+}
+
+// hostJoinRun opens the chain client and this Host's keys for one admission
+// run. Invitation Gas, when the App funded it, moves to this Host first.
+func hostJoinRun(ctx context.Context, cfg *config.Config, statusOnly, newAttempt bool, address string, ui hostjoin.Interaction) (hostjoin.Result, error) {
+	client, err := sui.NewGRPCClient(cfg.SUI.RPC, cfg.SUI.GraphQLURL)
+	if err != nil {
+		return hostjoin.Result{}, err
 	}
 	defer client.Close()
 	var keys *hostidentity.Keys
 	if !statusOnly {
 		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
 		if err != nil {
-			return err
+			return hostjoin.Result{}, err
 		}
 		keys, err = hostidentity.Load(store, cfg.Identity.KeyProfile)
 		if err != nil {
-			return err
+			return hostjoin.Result{}, err
 		}
 		defer keys.Close()
 	}
@@ -158,17 +180,5 @@ func runHostJoinCLI(ctx context.Context, cfg *config.Config, statusOnly, newAtte
 	factory := func(original string) (hostjoin.Authority, error) {
 		return nodecommand.NewChainAuthorityResolverForPackage(client, cfg.SUI.ProtocolPackageID, original)
 	}
-	result, err := hostjoin.Run(ctx, client, factory, keys, hostjoin.Options{Network: cfg.SUI.Network, Chain: cfg.SUI.ChainIdentifier, PackageID: cfg.SUI.ProtocolPackageID, TypesPackageID: typesPackage, RegistryID: cfg.SUI.ProtocolRegistryID, ExpectedOrganization: cfg.SUI.OrgID, Profile: cfg.Identity.KeyProfile, Name: cfg.Identity.Hostname, PublicAddress: address, GasBudget: cfg.SUI.HostJoinGasBudget, StatusOnly: statusOnly, NewAttempt: newAttempt}, ui)
-	if result.State != "" {
-		if writeErr := json.NewEncoder(output).Encode(result); writeErr != nil {
-			return writeErr
-		}
-	}
-	if err != nil {
-		return err
-	}
-	if result.State == "failed" {
-		return fmt.Errorf("original Host admission failed; fee preserved, no automatic retry")
-	}
-	return nil
+	return hostjoin.Run(ctx, client, factory, keys, hostjoin.Options{Network: cfg.SUI.Network, Chain: cfg.SUI.ChainIdentifier, PackageID: cfg.SUI.ProtocolPackageID, TypesPackageID: typesPackage, RegistryID: cfg.SUI.ProtocolRegistryID, ExpectedOrganization: cfg.SUI.OrgID, Profile: cfg.Identity.KeyProfile, Name: cfg.Identity.Hostname, PublicAddress: address, GasBudget: cfg.SUI.HostJoinGasBudget, StatusOnly: statusOnly, NewAttempt: newAttempt}, ui)
 }

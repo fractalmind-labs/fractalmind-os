@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -64,6 +65,29 @@ func (i *HostInvitation) PublicKey() []byte {
 		return nil
 	}
 	return append([]byte(nil), i.private[32:]...)
+}
+
+// Address is the Sui address of the invitation key. The App may fund it in the
+// invitation's own transaction so the joining Host needs no prior Gas.
+func (i *HostInvitation) Address() string {
+	public := i.PublicKey()
+	if public == nil {
+		return ""
+	}
+	sum := blake2b.Sum256(append([]byte{0}, public...))
+	return "0x" + hex.EncodeToString(sum[:])
+}
+
+// SignSuiTransaction returns the serialized Ed25519 Sui signature over the
+// transaction intent. Callers sign only bytes they built and checked.
+func (i *HostInvitation) SignSuiTransaction(raw []byte) (string, error) {
+	if len(i.private) != ed25519.PrivateKeySize || len(raw) == 0 {
+		return "", fmt.Errorf("invalid Host invitation signing input")
+	}
+	hash := blake2b.Sum256(append([]byte{0, 0, 0}, raw...))
+	signature := append([]byte{0}, ed25519.Sign(i.private, hash[:])...)
+	signature = append(signature, i.private[32:]...)
+	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
 type HostJoinInput struct {
