@@ -300,6 +300,8 @@ func buildRuntimePrompt(request agentruntime.DispatchRequest) string {
 	builder.WriteString("Instruction:\n")
 	builder.WriteString(strings.TrimSpace(request.Text))
 	builder.WriteString("\n")
+	builder.WriteString("\nWhen this run is finished, report its outcome (noop: nothing needed doing; acted: did work; notified: sent a person a message; failed: could not complete):\n")
+	builder.WriteString(fmt.Sprintf("fractalbot heartbeat outcome --job %s --run %s --result <noop|acted|notified|failed> --summary \"<one line>\"\n", strings.TrimSpace(request.JobID), strings.TrimSpace(request.RunID)))
 	if len(profiles) > 0 {
 		builder.WriteString("\nIf and only if there is no actionable work, you may reduce this heartbeat frequency with:\n")
 		builder.WriteString(fmt.Sprintf("fractalbot heartbeat cron set --job %s --profile <profile> --reason \"no actionable tasks\"\n", strings.TrimSpace(request.JobID)))

@@ -120,6 +120,29 @@ When `resetCronOnInbound` is true, a normal user message successfully routed to 
 - `startIfMissing: true` on an `ohMyCode` job starts a missing tmux session before dispatch. Default remains no extra start.
 - `ohMyCode` jobs using `dispatchMode: heartbeatRun` hold the in-flight lease through agent-manager's terminal result and do not retry terminal heartbeat failures.
 
+## Outcomes
+
+Delivery only says the runtime accepted a heartbeat, not whether it was worth running. Every heartbeat prompt therefore ends with the command the Agent uses to report what the run came to:
+
+```bash
+fractalbot heartbeat outcome \
+  --job cloudbank-main \
+  --run <run_id from the wakeup> \
+  --result noop \
+  --summary "nothing actionable"
+```
+
+`--result` is one of `noop` (nothing needed doing), `acted` (did work), `notified` (sent a person a message) or `failed` (could not complete). `--summary` is optional, one line, and kept to 500 characters. Only the job's latest run can report; reporting the same run again replaces its outcome rather than counting twice. The loopback-only API is:
+
+```http
+POST /api/v1/heartbeat/jobs/cloudbank-main/outcome
+Content-Type: application/json
+
+{"run_id":"<run_id>","result":"noop","summary":"nothing actionable"}
+```
+
+`/status` shows, per job, `delivered_runs`, `outcome_counts`, `unreported_runs` (delivered runs that never reported), and the last outcome with its time and summary. They are kept in `statePath`, so a week of them answers which heartbeats do work, which are mostly `noop` and should be slowed down or removed, and which Agents don't report at all.
+
 ## Status
 
 `GET /status` includes a redacted `heartbeat` section with configured and effective cron, timezone, dispatch mode and timeout, next run, in-flight state, last dispatch result, and schedule-change audit fields.

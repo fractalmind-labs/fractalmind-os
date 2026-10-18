@@ -364,6 +364,7 @@ func TestBuildRuntimePromptOnlyOffersConfiguredProfiles(t *testing.T) {
 		"fractalbot heartbeat cron set --job job-1 --profile <profile>",
 		"Allowed profiles: deep-idle, idle",
 		"If and only if there is no actionable work",
+		"fractalbot heartbeat outcome --job job-1 --run run-1 --result <noop|acted|notified|failed>",
 	} {
 		if !strings.Contains(prompt, expected) {
 			t.Fatalf("prompt missing %q: %s", expected, prompt)

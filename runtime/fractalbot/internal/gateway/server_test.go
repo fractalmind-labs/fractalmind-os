@@ -1148,6 +1148,45 @@ func TestHeartbeatCronAPIRejectsInvalidAndRemoteRequests(t *testing.T) {
 	})
 }
 
+func TestHeartbeatOutcomeAPIRejectsStaleInvalidAndRemoteRequests(t *testing.T) {
+	server, err := NewServer(heartbeatGatewayConfig(t, filepath.Join(t.TempDir(), "inbox")))
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	send := func(method, path, body, remote string) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(method, path, strings.NewReader(body))
+		request.RemoteAddr = remote
+		response := httptest.NewRecorder()
+		server.handleHeartbeatJob(response, request)
+		return response
+	}
+	const path = "/api/v1/heartbeat/jobs/cloudbank-main/outcome"
+
+	// No run has been dispatched, so no run ID is the latest one.
+	if response := send(http.MethodPost, path, `{"run_id":"run-1","result":"noop"}`, "127.0.0.1:1"); response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), "not the latest run") {
+		t.Fatalf("stale run: status=%d body=%s", response.Code, response.Body.String())
+	}
+	if response := send(http.MethodPost, path, `{"run_id":"run-1","result":"done"}`, "127.0.0.1:1"); response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "not one of") {
+		t.Fatalf("invalid result: status=%d body=%s", response.Code, response.Body.String())
+	}
+	if response := send(http.MethodPost, "/api/v1/heartbeat/jobs/missing/outcome", `{"run_id":"run-1","result":"noop"}`, "127.0.0.1:1"); response.Code != http.StatusNotFound {
+		t.Fatalf("missing job: status=%d body=%s", response.Code, response.Body.String())
+	}
+	if response := send(http.MethodPost, path, `{"run_id":"run-1","result":"noop","extra":1}`, "127.0.0.1:1"); response.Code != http.StatusBadRequest {
+		t.Fatalf("unknown field: status=%d body=%s", response.Code, response.Body.String())
+	}
+	if response := send(http.MethodPut, path, `{}`, "127.0.0.1:1"); response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("wrong method: status=%d", response.Code)
+	}
+	if response := send(http.MethodPost, path, `{"run_id":"run-1","result":"noop"}`, "203.0.113.20:4567"); response.Code != http.StatusForbidden {
+		t.Fatalf("remote client: status=%d", response.Code)
+	}
+	// The cron endpoint still routes through the same handler.
+	if response := send(http.MethodPut, "/api/v1/heartbeat/jobs/cloudbank-main/cron", `{"profile":"idle","reason":"idle"}`, "127.0.0.1:1"); response.Code != http.StatusOK {
+		t.Fatalf("cron via job handler: status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
 func TestHeartbeatProfileResetsAfterMatchingInboundRoute(t *testing.T) {
 	server, err := NewServer(heartbeatGatewayConfig(t, filepath.Join(t.TempDir(), "inbox")))
 	if err != nil {
