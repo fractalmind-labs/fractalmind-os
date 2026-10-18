@@ -178,6 +178,13 @@ Hosts reuse their native signing identity if mesh registration is configured.
 
 ### Host invitation admission
 
+The simplest path is the App's access string: run `fractalmind-envd join` on
+the new Host and paste it. envd writes an observation-only configuration,
+creates the Host keys if needed, moves the join Gas the App placed on the
+invitation to this Host, and joins after you compare the fingerprint with the
+App. See [Host invitation redemption](../../docs/product/v020-envd-host-join.md).
+The manual steps below remain available.
+
 Copy the App's public connection fields into `sentinel.yaml`: `sui.network`,
 `chain_identifier`, `protocol_package_id`, `protocol_original_package_id`,
 `protocol_registry_id`, `org_id` and `host_join_gas_budget`. The protocol registry

@@ -2,7 +2,10 @@ package hostjoin
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -186,6 +189,98 @@ func TestHostJoinOriginalQueryPrecedesNewCodeAndAuthority(t *testing.T) {
 				}
 			} else if err == nil || result.State != "unknown" {
 				t.Fatalf("uncertain original lost %+v %v", result, err)
+			}
+		})
+	}
+}
+
+type claimClient struct {
+	originalClient
+	claim    sui.InviteGasClaim
+	claimErr error
+	calls    []string
+	claimFor string
+}
+
+func (c *claimClient) ClaimInviteGas(_ context.Context, _ string, invite *nodecommand.HostInvitation, recipient string) (sui.InviteGasClaim, error) {
+	c.calls = append(c.calls, "claim")
+	if invite == nil || invite.Address() == "" {
+		return sui.InviteGasClaim{}, errors.New("missing invitation key")
+	}
+	c.claimFor = recipient
+	return c.claim, c.claimErr
+}
+func (c *claimClient) PrepareHostJoin(context.Context, sui.HostJoinRequest) (sui.HostJoinQuote, error) {
+	c.calls = append(c.calls, "prepare")
+	return sui.HostJoinQuote{}, errors.New("stop before signing")
+}
+
+type planAuthority struct{ inspected *int }
+
+func (a planAuthority) InspectHostJoin(_ context.Context, in nodecommand.HostJoinInput) (nodecommand.HostJoinPlan, error) {
+	*a.inspected++
+	return nodecommand.HostJoinPlan{OrganizationID: "0x" + strings.Repeat("ab", 32), InviteID: in.InviteID, ProofExpiresAtMS: 1}, nil
+}
+func (planAuthority) ReadHostAdmission(context.Context, string, string, []byte, []byte) (nodecommand.HostAdmissionState, error) {
+	return nodecommand.HostAdmissionState{}, errors.New("unused")
+}
+
+func fixtureInvitation() []byte {
+	prefix := "FHI1:testnet:0x" + strings.Repeat("cd", 32) + ":" + strings.Repeat("5a", 32)
+	sum := sha256.Sum256([]byte(prefix))
+	return []byte(prefix + ":" + hex.EncodeToString(sum[:4]))
+}
+
+func TestInvitationGasMovesAfterInspectionAndBeforePreview(t *testing.T) {
+	id := "0x" + strings.Repeat("12", 32)
+	for _, mode := range []string{"funded", "empty", "claim fails"} {
+		t.Run(mode, func(t *testing.T) {
+			keys, err := hostidentity.Load(fixtureKeyStore{}, "fixture")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer keys.Close()
+			public, _ := keys.Public("fixture")
+			client := &claimClient{claim: sui.InviteGasClaim{Status: "none"}}
+			switch mode {
+			case "funded":
+				client.claim = sui.InviteGasClaim{Status: "confirmed", Digest: "d", Amount: "47000000", Recipient: public.Address}
+			case "claim fails":
+				client.claimErr = errors.New("rpc down")
+			}
+			inspected, reported := 0, 0
+			factory := func(string) (Authority, error) { return planAuthority{&inspected}, nil }
+			ui := Interaction{
+				ReadInvitation: func() ([]byte, error) { return fixtureInvitation(), nil },
+				Confirm: func(nodecommand.HostJoinPlan, sui.HostJoinQuote, hostidentity.Public) (bool, error) {
+					t.Fatal("confirmation reached without a preview")
+					return false, nil
+				},
+				Prepared:   func(Record) error { t.Fatal("prepared without confirmation"); return nil },
+				GasClaimed: func(sui.InviteGasClaim) error { reported++; return nil },
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_, err = Run(ctx, client, factory, keys, Options{Network: "testnet", Chain: recordFixture().Chain, PackageID: id, TypesPackageID: id, RegistryID: id, Profile: "fixture", JournalRoot: t.TempDir(), GasBudget: 1}, ui)
+			if err == nil {
+				t.Fatal("fixture should stop before the admission preview")
+			}
+			if inspected != 1 || client.calls[0] != "claim" {
+				t.Fatalf("claim must follow inspection: inspected=%d calls=%v", inspected, client.calls)
+			}
+			switch mode {
+			case "funded":
+				if reported != 1 || client.claimFor != public.Address || len(client.calls) != 1 {
+					t.Fatalf("funded claim not reported to the Host: %v", client.calls)
+				}
+			case "empty":
+				if reported != 0 || len(client.calls) != 1 {
+					t.Fatalf("empty invitation reported a claim: %v", client.calls)
+				}
+			case "claim fails":
+				if reported != 0 || len(client.calls) != 1 || !strings.Contains(err.Error(), "invitation Gas") {
+					t.Fatalf("a failed claim continued or lost its cause: %v %v", client.calls, err)
+				}
 			}
 		})
 	}

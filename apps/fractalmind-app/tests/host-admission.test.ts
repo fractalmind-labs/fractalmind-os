@@ -1,13 +1,14 @@
 import { fixtureCoreTypes } from "./helpers/type-origins";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { Ed25519Keypair, Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
 import {
   normalizeSuiAddress as id,
   toBase64,
+  fromBase64,
   deriveDynamicFieldID,
 } from "@mysten/sui/utils";
-import { TypeTagSerializer } from "@mysten/sui/bcs";
+import { TypeTagSerializer, bcs } from "@mysten/sui/bcs";
 import { Transaction } from "@mysten/sui/transactions";
 import {
   CoordinatorBindingBcs,
@@ -25,6 +26,7 @@ import {
 import { OrganizationBcs } from "../src/device-identity";
 import { ChainReadSession } from "../src/chain";
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
+import { INVITE_GAS_MIST } from "../src/host-join-access";
 const orgId = id("0x30"),
   packageId = id("0x31"),
   bindingId = id("0x32"),
@@ -108,6 +110,7 @@ async function fixture() {
     mode = "normal",
     prepares = 0,
     submissions = 0;
+  let lastInviteTx: Transaction | undefined, lastSpend: bigint | undefined;
   const core = {
     getObject: async ({ objectId }: { objectId: string }) => {
       const objects = {
@@ -181,7 +184,9 @@ async function fixture() {
         createInvite: (params: {
           proofPublicKey: Uint8Array;
           expiresAtMs: string;
+          tx?: Transaction;
         }) => {
+          lastInviteTx = params.tx;
           invite.proof_public_key = Array.from(params.proofPublicKey);
           invite.expires_at_ms = params.expiresAtMs;
           return new Transaction();
@@ -206,8 +211,9 @@ async function fixture() {
     clockMs,
   });
   controller.manager.query = async () => undefined;
-  controller.manager.prepare = async ({ requestId }) => {
+  controller.manager.prepare = async ({ requestId, maxSuiSpend }) => {
     prepares++;
+    lastSpend = maxSuiSpend === undefined ? undefined : BigInt(maxSuiSpend);
     return Object.freeze({ requestId, expiresAtMs: Date.now() + 60000 }) as any;
   };
   controller.manager.submit = async () => {
@@ -262,6 +268,7 @@ async function fixture() {
       clockMs = v;
     },
     counts: () => ({ prepares, submissions }),
+    lastInvite: () => ({ tx: lastInviteTx, spend: lastSpend }),
   };
 }
 test("Coordinator accepts a public key and safe origin; credentials, paths and insecure remote endpoints are rejected", () => {
@@ -415,5 +422,38 @@ test("Replacing an unsubmitted quote zeroizes its invitation secret and prevents
   assert.ok(oldMaterial.entropy.every((n: number) => n === 0));
   await assert.rejects(f.controller.submit(first), /invalid_quote/);
   assert.equal(f.counts().submissions, 0);
+  f.controller.dispose();
+});
+
+test("A remote-Host invitation carries its join Gas to the invitation key and counts it as spend", async () => {
+  const f = await fixture();
+  await f.controller.prepare(f.operation, attempt, true);
+  assert.equal(f.lastInvite().spend, 0n);
+  const quote = await f.controller.prepare(
+    { ...f.operation, fundInvite: true },
+    attempt,
+    true,
+  );
+  assert.ok(!("status" in quote));
+  const { tx, spend } = f.lastInvite();
+  assert.equal(spend, INVITE_GAS_MIST);
+  const material = (f.controller as any).secrets.get(`host:${attempt}`);
+  const inviteAddress = new Ed25519PublicKey(material.publicKey).toSuiAddress();
+  const data = tx!.getData();
+  const transfer = data.commands.find((c: any) => c.TransferObjects);
+  assert.ok(transfer, "funding transfer missing");
+  const target = data.inputs[(transfer as any).TransferObjects.address.Input];
+  assert.equal(
+    bcs.Address.parse(fromBase64(target.Pure!.bytes)),
+    inviteAddress,
+  );
+  await assert.rejects(
+    f.controller.prepare(
+      { ...f.operation, fundInvite: "yes" as any },
+      attempt,
+      true,
+    ),
+    /invalid_input/,
+  );
   f.controller.dispose();
 });

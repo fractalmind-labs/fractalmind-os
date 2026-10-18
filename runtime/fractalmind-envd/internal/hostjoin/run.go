@@ -19,6 +19,12 @@ type Client interface {
 	ExecuteHostJoin(context.Context, sui.HostJoinQuote, string) (sui.HostJoinReceipt, error)
 	QueryHostJoin(context.Context, sui.HostJoinReceiptRequest) (sui.HostJoinReceipt, error)
 }
+
+// GasClaimer moves Gas the App placed on the invitation key to this Host before
+// the self-paid admission, so a new Host needs no prior funding.
+type GasClaimer interface {
+	ClaimInviteGas(context.Context, string, *nodecommand.HostInvitation, string) (sui.InviteGasClaim, error)
+}
 type Authority interface {
 	InspectHostJoin(context.Context, nodecommand.HostJoinInput) (nodecommand.HostJoinPlan, error)
 	ReadHostAdmission(context.Context, string, string, []byte, []byte) (nodecommand.HostAdmissionState, error)
@@ -32,6 +38,8 @@ type Interaction struct {
 	ReadInvitation func() ([]byte, error)
 	Confirm        func(nodecommand.HostJoinPlan, sui.HostJoinQuote, hostidentity.Public) (bool, error)
 	Prepared       func(Record) error
+	// GasClaimed is optional; it reports invitation Gas moved to this Host.
+	GasClaimed func(sui.InviteGasClaim) error
 }
 type Result struct {
 	State                 string                          `json:"state"`
@@ -131,11 +139,39 @@ func Run(ctx context.Context, client Client, factory func(string) (Authority, er
 	if err != nil {
 		return Result{}, err
 	}
+	// The invitation is for this organization (checked above). Move any Gas it
+	// carries to this Host; the invitation key signs only that transfer.
+	claimed := false
+	if claimer, ok := client.(GasClaimer); ok {
+		claim, err := claimer.ClaimInviteGas(ctx, opts.Chain, invitation, public.Address)
+		if err != nil {
+			return Result{}, fmt.Errorf("move invitation Gas to this Host: %w", err)
+		}
+		if claim.Status == "confirmed" {
+			claimed = true
+			if ui.GasClaimed != nil {
+				if err = ui.GasClaimed(claim); err != nil {
+					return Result{}, err
+				}
+			}
+		}
+	}
 	proof, err := invitation.SignJoin(plan, host, enc)
 	if err != nil {
 		return Result{}, err
 	}
-	quote, err := client.PrepareHostJoin(ctx, sui.HostJoinRequest{PackageID: opts.PackageID, ChainIdentifier: opts.Chain, Sender: public.Address, OrganizationID: plan.OrganizationID, InviteID: plan.InviteID, BindingID: plan.BindingID, IssuerHuman: plan.IssuerHuman, IssuerGrant: plan.IssuerGrant, HostPublicKey: host, EncryptionPublicKey: enc, ProofSignature: proof, Name: opts.Name, ProofExpiresAtMS: plan.ProofExpiresAtMS, GasBudget: opts.GasBudget})
+	request := sui.HostJoinRequest{PackageID: opts.PackageID, ChainIdentifier: opts.Chain, Sender: public.Address, OrganizationID: plan.OrganizationID, InviteID: plan.InviteID, BindingID: plan.BindingID, IssuerHuman: plan.IssuerHuman, IssuerGrant: plan.IssuerGrant, HostPublicKey: host, EncryptionPublicKey: enc, ProofSignature: proof, Name: opts.Name, ProofExpiresAtMS: plan.ProofExpiresAtMS, GasBudget: opts.GasBudget}
+	quote, err := client.PrepareHostJoin(ctx, request)
+	// Freshly received Gas can take a moment to become selectable. Only a
+	// preview is retried; nothing has been signed for the admission yet.
+	for attempt := 0; err != nil && claimed && attempt < 5; attempt++ {
+		select {
+		case <-ctx.Done():
+			return Result{}, ctx.Err()
+		case <-time.After(time.Second):
+		}
+		quote, err = client.PrepareHostJoin(ctx, request)
+	}
 	if err != nil {
 		return Result{}, err
 	}

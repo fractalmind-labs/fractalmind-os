@@ -2,7 +2,26 @@
 
 产品入口依据[原型 v2](fractalmind-app-prototype-v2/js/view-hosts.js)。App 创建单次链上邀请；新 Host 用独立本机钥确认组织、入口和有限权限，再自行支付兑换 Gas。组织成员资格由 Sui 保存与校验，Coordinator 连接的后续 loopback 验收见[连接说明](v020-host-chain-connection.md)；安装后 envd、云运行和 Agent 导入继续独立验收。
 
+## 一步接入（推荐）
+
+App“主机 → 接入主机”里点“生成接入串”，使用默认值（邀请 1 小时有效、成员 90 天、观察期限与成员期限相同），同一笔交易给邀请密钥地址转 0.05 SUI 作入组 Gas。网络费不超过 0.01 SUI 时这一下就是确认，超过时才展开费用明细。App 显示一次性的接入串（`FMJ1:` 开头，含公开连接配置与邀请码）和一个 8 位指纹（由组织 ID 与 Coordinator 入口算出）。
+
+新主机运行：
+
+```sh
+fractalmind-envd join
+```
+
+粘贴接入串（隐藏输入，不接受命令行参数）。envd 在默认位置（macOS/Linux 为 `~/.config/fractalmind-envd/sentinel.yaml`）写入只观察的配置，没有身份就在系统凭据库创建；核对邀请属于该组织后，用邀请密钥签一笔只含 `TransferObjects([GasCoin], 本机地址)` 的交易把邀请上的 Gas 转给本机，再按原流程自付入组。屏幕显示组织、指纹、入口和费用，指纹与 App 一致时输入 `y`。已存在的配置属于其他组织时拒绝，需用 `--config` 指定新路径。
+
+- 主机不需要事先充值，Coordinator 也不需要对非成员开放代付接口。
+- 邀请密钥只签 Gas 转移；入组交易仍由主机钥签名，链上校验与单次使用不变。
+- 用户取消入组时，已转到主机的 Gas 留在主机。未使用的邀请撤销后，其上的 Gas 无法取回（不超过 0.05 SUI）。
+- macOS 的主机钥在登录钥匙串里，SSH 会话打不开；请在该机的“终端”中运行。
+- Gas 领取只识别币对象（App 的转账就是币对象）；只在地址余额里的 SUI 不会被领取。
+
 ## 已实现的命令
+
 
 1. 从 App 接入指导复制公开连接配置。`protocol_registry_id` 是 ProtocolRegistry，与旧 peer discovery 的 `registry_id` 分开；升级后的类型来源用 `protocol_original_package_id`。
 2. `envd --config sentinel.yaml --init-host` 明确初始化 OS 原生存储中的独立签名／加密钥，只输出公钥与地址。普通启动不会替换已有身份。

@@ -19,6 +19,7 @@ import {
 } from "./transaction-visibility";
 import { DeviceIdentityVerifier, OrganizationBcs } from "./device-identity";
 import { NativeDeviceSigner } from "./native-device";
+import { INVITE_GAS_MIST } from "./host-join-access";
 
 export class HostAdmissionError extends Error {
   constructor(
@@ -47,6 +48,9 @@ export type HostOperation =
       observationHours: number;
       /** Local setup: send the joining Host its own Gas in the same PTB. */
       fund?: { address: string; mist: string };
+      /** Remote Host: place join Gas on the invitation key; the Host moves it
+       * to itself with `fractalmind-envd join`, so it needs no prior funding. */
+      fundInvite?: boolean;
     }
   | { kind: "revoke-invite"; targetId: string }
   | { kind: "revoke-member"; targetId: string };
@@ -106,6 +110,7 @@ function invitationInput(input: Extract<HostOperation, { kind: "invite" }>) {
     !Number.isInteger(input.observationHours) ||
     input.observationHours < 1 ||
     input.observationHours > input.membershipDays * 24 ||
+    (input.fundInvite !== undefined && typeof input.fundInvite !== "boolean") ||
     (input.fund &&
       (!id.test(input.fund.address) ||
         !/^[1-9][0-9]{0,9}$/.test(input.fund.mist) ||
@@ -390,6 +395,11 @@ export class HostAdmission {
           [coinWithBalance({ balance: BigInt(operation.fund.mist) })],
           operation.fund.address,
         );
+      if (operation.fundInvite)
+        tx.transferObjects(
+          [coinWithBalance({ balance: INVITE_GAS_MIST })],
+          new Ed25519PublicKey(material.publicKey).toSuiAddress(),
+        );
       transaction = api.createInvite({
         ...args,
         tx,
@@ -423,8 +433,9 @@ export class HostAdmission {
         gasBudget: 200000000n,
         // Only the explicit Host funding may move SUI out of this device.
         maxSuiSpend:
-          operation.kind === "invite" && operation.fund
-            ? BigInt(operation.fund.mist)
+          operation.kind === "invite"
+            ? (operation.fund ? BigInt(operation.fund.mist) : 0n) +
+              (operation.fundInvite ? INVITE_GAS_MIST : 0n)
             : 0n,
       });
       this.plans.set(quote, {
