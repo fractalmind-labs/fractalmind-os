@@ -258,7 +258,7 @@ func acquireClaudeDesktopRelayLock(inboxPath, socketPath string) (func(), error)
 		}
 
 		owner, err := readClaudeDesktopRelayLock(lockPath)
-		if err == nil && processIsAlive(owner.PID) && socketIsLive(owner.SocketPath) {
+		if err == nil && owner.live() {
 			return nil, fmt.Errorf("%w (pid %d)", ErrClaudeDesktopRelayAlreadyRunning, owner.PID)
 		}
 		if err := os.RemoveAll(lockPath); err != nil {
@@ -281,6 +281,23 @@ func readClaudeDesktopRelayLock(lockPath string) (claudeDesktopRelayLock, error)
 		return claudeDesktopRelayLock{}, errors.New("invalid Claude Desktop relay lock")
 	}
 	return owner, nil
+}
+
+// live reports whether the lock's relay process still runs and its Claude
+// session's socket still exists.
+func (owner claudeDesktopRelayLock) live() bool {
+	return processIsAlive(owner.PID) && socketIsLive(owner.SocketPath)
+}
+
+// claudeDesktopRelayRunning reports whether a live relay holds this inbox, so
+// queued envelopes reach a Claude session within a poll interval rather than
+// when a session next starts one.
+func claudeDesktopRelayRunning(inboxPath string) bool {
+	if strings.TrimSpace(inboxPath) == "" {
+		return false
+	}
+	owner, err := readClaudeDesktopRelayLock(filepath.Join(inboxPath, ".relay.lock"))
+	return err == nil && owner.live()
 }
 
 func socketIsLive(path string) bool {

@@ -191,6 +191,30 @@ func TestLoadConfigReceiverTargetRuntime(t *testing.T) {
 	}
 }
 
+func TestLoadConfigReceiverTargetClaudeDesktopInbox(t *testing.T) {
+	workspace := t.TempDir()
+	load := func(runtime string) (*Config, error) {
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		content := "agents:\n  router: ohMyCode\n  ohMyCode:\n    enabled: true\n    targets:\n      xiaoyi:\n        receivers: [{channel: feishu, receiverId: cli_xiaoyi}]\n        workspace: \"" + workspace + "\"\n        defaultAgent: main\n        runtime: " + runtime + "\n        claudeDesktopInboxPath: \"" + filepath.Join(workspace, "xiaoyi-inbox") + "\"\n  claudeDesktop:\n    enabled: true\n    inboxPath: \"" + filepath.Join(workspace, "inbox") + "\"\n    defaultAgent: main\n"
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatalf("write config: %v", err)
+		}
+		return LoadConfig(path)
+	}
+
+	cfg, err := load("claudeDesktop")
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if got := cfg.Agents.OhMyCode.Targets["xiaoyi"].ClaudeDesktopInboxPath; got != filepath.Join(workspace, "xiaoyi-inbox") {
+		t.Fatalf("claudeDesktopInboxPath=%q", got)
+	}
+	// An agent-manager target has no Claude Desktop inbox to override.
+	if _, err := load("ohMyCode"); err == nil || !strings.Contains(err.Error(), "claudeDesktopInboxPath: requires runtime claudeDesktop") {
+		t.Fatalf("expected a runtime error, got %v", err)
+	}
+}
+
 func TestLoadConfigRejectsDuplicateReceiverTargets(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	content := []byte("agents:\n  ohMyCode:\n    enabled: true\n    targets:\n      support:\n        receiverIds: [cli_shared]\n        workspace: /workspace/support\n        defaultAgent: main\n      sales:\n        receiverIds: [cli_shared]\n        workspace: /workspace/sales\n        defaultAgent: main\n")

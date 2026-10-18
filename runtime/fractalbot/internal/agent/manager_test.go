@@ -1198,7 +1198,8 @@ func TestHandleIncomingClaudeDesktopWritesInboxEnvelope(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleIncoming failed: %v", err)
 	}
-	if reply != claudeDesktopAssignAckMessage {
+	// No relay holds the inbox, so the sender hears it waits for a session.
+	if reply != claudeDesktopQueuedAckMessage {
 		t.Fatalf("reply=%q", reply)
 	}
 	entries, err := os.ReadDir(inbox)
@@ -1266,7 +1267,8 @@ func TestHandleIncomingReceiverTargetRoutesOneBotToClaudeDesktop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleIncoming failed: %v", err)
 	}
-	if reply != claudeDesktopAssignAckMessage {
+	// No relay holds the inbox, so the sender hears it waits for a session.
+	if reply != claudeDesktopQueuedAckMessage {
 		t.Fatalf("reply=%q", reply)
 	}
 	entries, err := os.ReadDir(inbox)
@@ -1297,6 +1299,114 @@ func TestHandleIncomingReceiverTargetRoutesOneBotToClaudeDesktop(t *testing.T) {
 		if runtime := manager.ohMyCodeTargetRuntime(data); runtime != "" {
 			t.Fatalf("receiver %v routed to %q", data, runtime)
 		}
+	}
+}
+
+func TestHandleIncomingReceiverTargetsUseTheirOwnClaudeDesktopInboxes(t *testing.T) {
+	dir := t.TempDir()
+	shared, xiaoyiInbox := filepath.Join(dir, "inbox"), filepath.Join(dir, "xiaoyi")
+	manager := NewManager(&config.AgentsConfig{
+		Router: "ohMyCode",
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled: true,
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"xiaoyi": {
+					Receivers:              []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "cli_xiaoyi"}},
+					DefaultAgent:           "main",
+					Runtime:                "claudeDesktop",
+					ClaudeDesktopInboxPath: xiaoyiInbox,
+				},
+				"burry": {
+					Receivers:    []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "cli_burry"}},
+					DefaultAgent: "main",
+					Runtime:      "claudeDesktop",
+				},
+			},
+		},
+		ClaudeDesktop: &config.ClaudeDesktopConfig{Enabled: true, InboxPath: shared, DefaultAgent: "main"},
+	})
+
+	for _, receiver := range []string{"cli_xiaoyi", "cli_burry"} {
+		if _, err := manager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
+			"channel": "feishu", "text": "hello " + receiver, "chat_id": "oc_123", "receiver_id": receiver,
+		}}); err != nil {
+			t.Fatalf("HandleIncoming %s: %v", receiver, err)
+		}
+	}
+	queued := func(inbox string) []string {
+		entries, err := os.ReadDir(inbox)
+		if err != nil {
+			t.Fatalf("read %s: %v", inbox, err)
+		}
+		var texts []string
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(inbox, entry.Name()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var envelope claudeDesktopInboxEnvelope
+			if err := json.Unmarshal(data, &envelope); err != nil {
+				t.Fatal(err)
+			}
+			texts = append(texts, envelope.Envelope.Text)
+		}
+		return texts
+	}
+	// xiaoyi has its own inbox; burry, without one, keeps the shared inbox.
+	if got := queued(xiaoyiInbox); len(got) != 1 || got[0] != "hello cli_xiaoyi" {
+		t.Fatalf("xiaoyi inbox: %v", got)
+	}
+	if got := queued(shared); len(got) != 1 || got[0] != "hello cli_burry" {
+		t.Fatalf("shared inbox: %v", got)
+	}
+	if telemetry := manager.LastRoutingOutcome(); telemetry == nil || filepath.Dir(telemetry.InboxPath) != shared {
+		t.Fatalf("unexpected telemetry: %#v", telemetry)
+	}
+}
+
+func TestHandleIncomingClaudeDesktopReplySaysWhetherARelayIsRunning(t *testing.T) {
+	inbox := filepath.Join(t.TempDir(), "inbox")
+	manager := NewManager(&config.AgentsConfig{
+		Router:        "claudeDesktop",
+		ClaudeDesktop: &config.ClaudeDesktopConfig{Enabled: true, InboxPath: inbox, DefaultAgent: "main"},
+	})
+	send := func() string {
+		reply, err := manager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
+			"channel": "feishu", "text": "hello", "agent": "main", "chat_id": "oc_123",
+		}})
+		if err != nil {
+			t.Fatalf("HandleIncoming: %v", err)
+		}
+		return reply
+	}
+	writeLock := func(pid int, socketPath string) {
+		lock := filepath.Join(inbox, ".relay.lock")
+		if err := os.MkdirAll(lock, 0700); err != nil {
+			t.Fatal(err)
+		}
+		data, _ := json.Marshal(claudeDesktopRelayLock{PID: pid, SocketPath: socketPath})
+		if err := os.WriteFile(filepath.Join(lock, "owner.json"), data, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if reply := send(); reply != claudeDesktopQueuedAckMessage {
+		t.Fatalf("without a relay: reply=%q", reply)
+	}
+
+	socketPath, _, closeSocket := newClaudeDesktopRelayTestSocket(t)
+	writeLock(os.Getpid(), socketPath)
+	if reply := send(); reply != claudeDesktopAssignAckMessage {
+		t.Fatalf("with a live relay: reply=%q", reply)
+	}
+
+	// The session ended: its socket is gone, so the lock no longer counts.
+	closeSocket()
+	if reply := send(); reply != claudeDesktopQueuedAckMessage {
+		t.Fatalf("after the session ended: reply=%q", reply)
 	}
 }
 
@@ -1406,7 +1516,8 @@ func TestHandleIncomingClaudeDesktopLoginFallsBackToInbox(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleIncoming failed: %v", err)
 	}
-	if reply != claudeDesktopAssignAckMessage {
+	// No relay holds the inbox, so the sender hears it waits for a session.
+	if reply != claudeDesktopQueuedAckMessage {
 		t.Fatalf("reply=%q", reply)
 	}
 	entries, err := os.ReadDir(inbox)
