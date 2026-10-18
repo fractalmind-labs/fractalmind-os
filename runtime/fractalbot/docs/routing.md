@@ -279,7 +279,7 @@ To relay different bots into different Claude sessions, give each such target it
 fractalbot --config "$HOME/.config/fractalbot/config.yaml" claude-desktop relay --inbox-path "$HOME/.fractalbot/claude-desktop-inbox/xiaoyi"
 ```
 
-`claudeDesktopInboxPath` is only valid with `runtime: claudeDesktop`. Heartbeat jobs that target `claudeDesktop` keep using the shared inbox.
+`claudeDesktopInboxPath` is only valid with `runtime: claudeDesktop`. A `claudeDesktop` heartbeat job reaches the same session when it names the receiver target with `target` (see [heartbeat.md](heartbeat.md)); without one it uses the shared inbox.
 
 FractalBot does not launch Claude Desktop, patch the application, bypass its CDP authentication guard, scrape chat history, or inject input through AppleScript. If the target is unavailable, logged out, lacks a compose box, or rejects submission, a configured fallback inbox receives the normalized envelope and delivery prompt with private file permissions.
 

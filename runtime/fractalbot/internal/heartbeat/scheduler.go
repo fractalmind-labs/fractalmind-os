@@ -388,6 +388,7 @@ func (s *Scheduler) runDue(now time.Time) {
 				request: agentruntime.DispatchRequest{
 					Runtime:        job.config.Runtime,
 					Agent:          job.config.Agent,
+					Target:         job.config.Target,
 					Text:           job.config.Text,
 					Source:         "heartbeat",
 					JobID:          id,

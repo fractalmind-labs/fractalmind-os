@@ -32,6 +32,18 @@ agents:
 
 `text` is the complete inline instruction. Heartbeat prompt files are not supported. Cron expressions use the standard five-field format, and every job requires an IANA timezone.
 
+A `claudeDesktop` job can add `target`, the name of a receiver target under `agents.ohMyCode.targets`. The heartbeat then queues to that target's `claudeDesktopInboxPath`, so it reaches the same Claude session as that bot's messages; without `target` it uses `agents.claudeDesktop.inboxPath`. The target must exist and use `runtime: claudeDesktop`, and other runtimes reject `target`:
+
+```yaml
+      - id: "burry-main"
+        runtime: "claudeDesktop"
+        agent: "main"
+        target: "burry"
+        text: "Read HEARTBEAT.md if it exists. If nothing needs attention, reply HEARTBEAT_OK."
+        cron: "0 * * * *"
+        timezone: "Asia/Shanghai"
+```
+
 `startIfMissing` is off by default. When it is true and the job targets `ohMyCode`, FractalBot checks `agent-manager status` and, if the session is not running, calls `start` before dispatch. Failed starts enter a 90s cooldown. This is not `heartbeat rescue` and does not apply to Codex App or Claude Desktop jobs.
 
 The configured `cron` remains the default. `agentCronProfiles` contains the only alternative schedules an Agent may select; arbitrary Agent-provided cron expressions are rejected.

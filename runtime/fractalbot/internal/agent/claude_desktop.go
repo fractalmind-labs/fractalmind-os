@@ -91,8 +91,34 @@ func (m *Manager) claudeDesktopConfigFor(inboundData map[string]interface{}) *co
 		return cfg
 	}
 	_, target, matched := config.FindOhMyCodeTarget(m.config.OhMyCode, promptContextValue(inboundData, "channel"), promptContextValue(inboundData, "receiver_id"))
+	if !matched {
+		return cfg
+	}
+	return claudeDesktopConfigWithTarget(cfg, target)
+}
+
+// claudeDesktopConfigForTarget returns the Claude Desktop settings for a
+// receiver target named by a runtime dispatch (a heartbeat job): its own inbox
+// if it has one. An empty name uses the shared settings.
+func (m *Manager) claudeDesktopConfigForTarget(name string) (*config.ClaudeDesktopConfig, error) {
+	cfg := m.config.ClaudeDesktop
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return cfg, nil
+	}
+	if m.config.OhMyCode == nil {
+		return nil, fmt.Errorf("receiver target %q is not configured", name)
+	}
+	target, ok := m.config.OhMyCode.Targets[name]
+	if !ok {
+		return nil, fmt.Errorf("receiver target %q is not configured", name)
+	}
+	return claudeDesktopConfigWithTarget(cfg, target), nil
+}
+
+func claudeDesktopConfigWithTarget(cfg *config.ClaudeDesktopConfig, target config.OhMyCodeTargetConfig) *config.ClaudeDesktopConfig {
 	inbox := strings.TrimSpace(target.ClaudeDesktopInboxPath)
-	if !matched || strings.TrimSpace(target.Runtime) != "claudeDesktop" || inbox == "" {
+	if strings.TrimSpace(target.Runtime) != "claudeDesktop" || inbox == "" {
 		return cfg
 	}
 	local := *cfg

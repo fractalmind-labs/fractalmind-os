@@ -20,8 +20,10 @@ const (
 // DispatchRequest is an internal agent wakeup that is not associated with a
 // messaging channel.
 type DispatchRequest struct {
-	Runtime        string
-	Agent          string
+	Runtime string
+	Agent   string
+	// Target is the receiver target whose Claude Desktop inbox to use.
+	Target         string
 	Text           string
 	Source         string
 	JobID          string
