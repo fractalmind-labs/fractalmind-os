@@ -20,6 +20,9 @@ import (
 const (
 	defaultClaudeDesktopDeliveryTimeout = 20 * time.Second
 	claudeDesktopAssignAckMessage       = "处理中…"
+	// Sent instead when the message is queued and no relay is running for its
+	// inbox: it waits until a Claude session starts one.
+	claudeDesktopQueuedAckMessage = "已排队，Claude 会话上线后处理。"
 )
 
 // ClaudeDesktopEnvelope is the normalized inbound payload delivered to Claude
@@ -54,7 +57,7 @@ func (m *Manager) assignClaudeDesktop(ctx context.Context, userText, agentOverri
 		m.recordRoutingOutcomeForBackend("claudeDesktop", inboundData, "", "error", "", "", err)
 		return "", err
 	}
-	cfg := m.config.ClaudeDesktop
+	cfg := m.claudeDesktopConfigFor(inboundData)
 	agentName := strings.TrimSpace(agentOverride)
 	if agentName == "" {
 		agentName = strings.TrimSpace(cfg.DefaultAgent)
@@ -73,7 +76,28 @@ func (m *Manager) assignClaudeDesktop(ctx context.Context, userText, agentOverri
 		return "", result.Error
 	}
 	m.recordRoutingOutcomeForBackend("claudeDesktop", inboundData, validatedName, result.Status, result.EnvelopeID, result.InboxPath, result.Error)
+	if result.Status == "queued" && !claudeDesktopRelayRunning(cfg.InboxPath) {
+		return claudeDesktopQueuedAckMessage, nil
+	}
 	return claudeDesktopAssignAckMessage, nil
+}
+
+// claudeDesktopConfigFor returns the Claude Desktop settings for one message:
+// a receiver target with its own inbox queues there instead of the shared one,
+// so each bot can be relayed into a different Claude session.
+func (m *Manager) claudeDesktopConfigFor(inboundData map[string]interface{}) *config.ClaudeDesktopConfig {
+	cfg := m.config.ClaudeDesktop
+	if m.config.OhMyCode == nil {
+		return cfg
+	}
+	_, target, matched := config.FindOhMyCodeTarget(m.config.OhMyCode, promptContextValue(inboundData, "channel"), promptContextValue(inboundData, "receiver_id"))
+	inbox := strings.TrimSpace(target.ClaudeDesktopInboxPath)
+	if !matched || strings.TrimSpace(target.Runtime) != "claudeDesktop" || inbox == "" {
+		return cfg
+	}
+	local := *cfg
+	local.InboxPath = inbox
+	return &local
 }
 
 func (m *Manager) validateClaudeDesktopAgent(agentName string) (string, error) {

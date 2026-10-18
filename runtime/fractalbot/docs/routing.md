@@ -231,6 +231,8 @@ fractalbot --config "$HOME/.config/fractalbot/config.yaml" claude-desktop relay 
 
 Do not copy the messaging token into a config file or command-line flag. One inbox should have one intended Claude Desktop session relay.
 
+When a message is queued, FractalBot checks that inbox's relay lock: if a relay process holds it and its Claude session socket still exists, the sender gets `处理中…`; otherwise `已排队，Claude 会话上线后处理。`, and the message waits for the next session that starts a relay. Whether the agent has actually picked a message up is the agent's own reply to send (for example from a workspace rule), not FractalBot's.
+
 To move one bot to Claude Desktop while the others keep the agent-manager, leave `router: "ohMyCode"`, enable `claudeDesktop`, and give that bot's receiver target `runtime: claudeDesktop` (no workspace needed):
 
 ```yaml
@@ -260,6 +262,24 @@ agents:
 ```
 
 The delivered prompt includes the inbound `receiver_id`, so replies can be sent as the receiving bot.
+
+To relay different bots into different Claude sessions, give each such target its own inbox with `claudeDesktopInboxPath`, and start each session's relay on its inbox with `--inbox-path`. Targets without one keep `agents.claudeDesktop.inboxPath`:
+
+```yaml
+      xiaoyi:
+        receivers:
+          - channel: feishu
+            receiverId: "cli_xxx"
+        defaultAgent: main
+        runtime: claudeDesktop
+        claudeDesktopInboxPath: "/Users/you/.fractalbot/claude-desktop-inbox/xiaoyi"
+```
+
+```bash
+fractalbot --config "$HOME/.config/fractalbot/config.yaml" claude-desktop relay --inbox-path "$HOME/.fractalbot/claude-desktop-inbox/xiaoyi"
+```
+
+`claudeDesktopInboxPath` is only valid with `runtime: claudeDesktop`. Heartbeat jobs that target `claudeDesktop` keep using the shared inbox.
 
 FractalBot does not launch Claude Desktop, patch the application, bypass its CDP authentication guard, scrape chat history, or inject input through AppleScript. If the target is unavailable, logged out, lacks a compose box, or rejects submission, a configured fallback inbox receives the normalized envelope and delivery prompt with private file permissions.
 

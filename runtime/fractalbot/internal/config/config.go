@@ -291,6 +291,11 @@ type OhMyCodeTargetConfig struct {
 	// "claudeDesktop", which must be enabled under agents.claudeDesktop. Other
 	// targets keep the agent-manager, so one bot can move without the others.
 	Runtime string `yaml:"runtime,omitempty"`
+
+	// ClaudeDesktopInboxPath gives this target its own Claude Desktop inbox, so
+	// each bot can be relayed into a different Claude session. Only valid with
+	// runtime "claudeDesktop"; empty uses agents.claudeDesktop.inboxPath.
+	ClaudeDesktopInboxPath string `yaml:"claudeDesktopInboxPath,omitempty"`
 }
 
 // ReceiverTargetConfig binds one normalized channel + receiver identity pair
@@ -874,6 +879,9 @@ func validateOhMyCodeConfig(cfg *Config) error {
 		}
 		switch strings.TrimSpace(target.Runtime) {
 		case "", "ohMyCode":
+			if strings.TrimSpace(target.ClaudeDesktopInboxPath) != "" {
+				return fmt.Errorf("%s.claudeDesktopInboxPath: requires runtime claudeDesktop", prefix)
+			}
 			if err := validateOhMyCodeWorkspaceAndScript(prefix, target.Workspace, target.AgentManagerScript); err != nil {
 				return err
 			}
