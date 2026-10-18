@@ -58,7 +58,26 @@ type JobStatus struct {
 	LastScheduleReason    string `json:"last_schedule_reason,omitempty"`
 	LastScheduleUpdatedBy string `json:"last_schedule_updated_by,omitempty"`
 	LastScheduleUpdatedAt string `json:"last_schedule_updated_at,omitempty"`
+	LastRunID             string `json:"last_run_id,omitempty"`
+	// Outcomes are what the Agent reported after a run; UnreportedRuns are
+	// delivered runs that never reported one.
+	DeliveredRuns      int            `json:"delivered_runs,omitempty"`
+	OutcomeCounts      map[string]int `json:"outcome_counts,omitempty"`
+	UnreportedRuns     int            `json:"unreported_runs,omitempty"`
+	LastOutcome        string         `json:"last_outcome,omitempty"`
+	LastOutcomeAt      string         `json:"last_outcome_at,omitempty"`
+	LastOutcomeSummary string         `json:"last_outcome_summary,omitempty"`
 }
+
+// Outcomes an Agent can report for a heartbeat run.
+const (
+	OutcomeNoop     = "noop"     // nothing needed doing
+	OutcomeActed    = "acted"    // did work, nothing sent to a person
+	OutcomeNotified = "notified" // sent a person a message
+	OutcomeFailed   = "failed"   // could not complete the run
+)
+
+const maxOutcomeSummaryRunes = 500
 
 type compiledJob struct {
 	config           config.HeartbeatJobConfig
@@ -379,6 +398,7 @@ func (s *Scheduler) runDue(now time.Time) {
 			job.inFlight = true
 			job.state.InFlight = true
 			runID := newRunID()
+			job.state.LastRunID = runID
 			profiles := make([]string, 0, len(job.profileSchedules))
 			for profile := range job.profileSchedules {
 				profiles = append(profiles, profile)
@@ -460,9 +480,68 @@ func (s *Scheduler) dispatch(ctx context.Context, jobID string, request agentrun
 	job.state.LastDispatchError = strings.TrimSpace(result.Error)
 	job.state.LastEnvelopeID = strings.TrimSpace(result.EnvelopeID)
 	job.state.LastInboxPath = strings.TrimSpace(result.InboxPath)
+	if job.state.LastDispatchStatus != "error" {
+		job.state.DeliveredRuns++
+	}
 	if err := s.saveStateLocked(); err != nil {
 		log.Printf("heartbeat: persist dispatch result: %v", err)
 	}
+}
+
+// RecordOutcome stores what the Agent reports about its latest run: whether it
+// had nothing to do, did work, notified a person, or failed. Reporting the same
+// run again replaces its earlier outcome rather than counting twice.
+func (s *Scheduler) RecordOutcome(jobID, runID, outcome, summary string) (JobStatus, error) {
+	if s == nil || s.config == nil || !s.config.Enabled {
+		return JobStatus{}, errors.New("heartbeat scheduler is disabled")
+	}
+	jobID = strings.TrimSpace(jobID)
+	runID = strings.TrimSpace(runID)
+	outcome = strings.TrimSpace(outcome)
+	switch outcome {
+	case OutcomeNoop, OutcomeActed, OutcomeNotified, OutcomeFailed:
+	default:
+		return JobStatus{}, fmt.Errorf("heartbeat outcome %q is not one of noop, acted, notified, failed", outcome)
+	}
+	if runID == "" {
+		return JobStatus{}, errors.New("heartbeat run ID is required")
+	}
+	summary = strings.Join(strings.Fields(summary), " ")
+	if runes := []rune(summary); len(runes) > maxOutcomeSummaryRunes {
+		summary = string(runes[:maxOutcomeSummaryRunes])
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[jobID]
+	if !ok {
+		return JobStatus{}, fmt.Errorf("heartbeat job %q not found", jobID)
+	}
+	if runID != job.state.LastRunID {
+		return JobStatus{}, fmt.Errorf("heartbeat run %q is not the latest run of job %q", runID, jobID)
+	}
+	previous := job.state
+	counts := make(map[string]int, len(previous.OutcomeCounts)+1)
+	for name, count := range previous.OutcomeCounts {
+		counts[name] = count
+	}
+	if previous.LastOutcomeRunID == runID && previous.LastOutcome != "" {
+		counts[previous.LastOutcome]--
+		if counts[previous.LastOutcome] <= 0 {
+			delete(counts, previous.LastOutcome)
+		}
+	}
+	counts[outcome]++
+	job.state.OutcomeCounts = counts
+	job.state.LastOutcome = outcome
+	job.state.LastOutcomeRunID = runID
+	job.state.LastOutcomeAt = s.now()
+	job.state.LastOutcomeSummary = summary
+	if err := s.saveStateLocked(); err != nil {
+		job.state = previous
+		return JobStatus{}, err
+	}
+	return s.jobStatusLocked(job), nil
 }
 
 func dispatchRetryDelay(attempt int) time.Duration {
@@ -509,7 +588,37 @@ func (s *Scheduler) jobStatusLocked(job *compiledJob) JobStatus {
 		LastScheduleReason:    job.state.ScheduleReason,
 		LastScheduleUpdatedBy: job.state.ScheduleUpdatedBy,
 		LastScheduleUpdatedAt: formatTime(job.state.ScheduleUpdatedAt),
+		LastRunID:             job.state.LastRunID,
+		DeliveredRuns:         job.state.DeliveredRuns,
+		OutcomeCounts:         copyCounts(job.state.OutcomeCounts),
+		UnreportedRuns:        unreportedRuns(job.state),
+		LastOutcome:           job.state.LastOutcome,
+		LastOutcomeAt:         formatTime(job.state.LastOutcomeAt),
+		LastOutcomeSummary:    job.state.LastOutcomeSummary,
 	}
+}
+
+func copyCounts(counts map[string]int) map[string]int {
+	if len(counts) == 0 {
+		return nil
+	}
+	out := make(map[string]int, len(counts))
+	for name, count := range counts {
+		out[name] = count
+	}
+	return out
+}
+
+// unreportedRuns is how many delivered runs never reported an outcome.
+func unreportedRuns(state persistedJobState) int {
+	reported := 0
+	for _, count := range state.OutcomeCounts {
+		reported += count
+	}
+	if missing := state.DeliveredRuns - reported; missing > 0 {
+		return missing
+	}
+	return 0
 }
 
 func parseSchedule(expression, timezone string) (cron.Schedule, error) {

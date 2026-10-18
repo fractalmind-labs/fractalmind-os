@@ -30,6 +30,7 @@ var messageSendWithReceiverFn = sendMessageWithReceiverViaGatewayAPI
 var fileDownloadFn = downloadFileViaHTTP
 var heartbeatCronSetFn = setHeartbeatCronViaGatewayAPI
 var heartbeatCronResetFn = resetHeartbeatCronViaGatewayAPI
+var heartbeatOutcomeFn = reportHeartbeatOutcomeViaGatewayAPI
 var claudeDesktopRelayFn = agent.RunClaudeDesktopRelay
 
 // stringSliceFlag implements flag.Value so a flag can be specified multiple
@@ -241,8 +242,11 @@ func runClaudeDesktopCommand(ctx context.Context, cfg *config.Config, args []str
 }
 
 func runHeartbeatCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
+	if len(args) >= 1 && strings.ToLower(strings.TrimSpace(args[0])) == "outcome" {
+		return runHeartbeatOutcomeCommand(ctx, cfg, args[1:], out, logger)
+	}
 	if len(args) < 2 || strings.ToLower(strings.TrimSpace(args[0])) != "cron" {
-		logger.Printf("heartbeat command requires a cron subcommand (set or reset)")
+		logger.Printf("heartbeat command requires a cron subcommand (set or reset) or outcome")
 		return 1
 	}
 
@@ -301,6 +305,30 @@ func runHeartbeatCommand(ctx context.Context, cfg *config.Config, args []string,
 		logger.Printf("unknown heartbeat cron subcommand: %s", args[1])
 		return 1
 	}
+}
+
+// runHeartbeatOutcomeCommand reports what the Agent did with a heartbeat run.
+func runHeartbeatOutcomeCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
+	outcomeFS := flag.NewFlagSet("heartbeat outcome", flag.ContinueOnError)
+	outcomeFS.SetOutput(out)
+	job := outcomeFS.String("job", "", "heartbeat job ID")
+	run := outcomeFS.String("run", "", "heartbeat run ID from the wakeup")
+	result := outcomeFS.String("result", "", "noop, acted, notified or failed")
+	summary := outcomeFS.String("summary", "", "one line on what happened")
+	if err := outcomeFS.Parse(args); err != nil {
+		return 1
+	}
+	jobID, runID, resultName := strings.TrimSpace(*job), strings.TrimSpace(*run), strings.TrimSpace(*result)
+	if jobID == "" || runID == "" || resultName == "" {
+		logger.Printf("--job, --run and --result are required")
+		return 1
+	}
+	if err := heartbeatOutcomeFn(ctx, cfg, jobID, runID, resultName, strings.TrimSpace(*summary)); err != nil {
+		logger.Printf("failed to report heartbeat outcome: %v", err)
+		return 1
+	}
+	fmt.Fprintf(out, "Heartbeat job %s run %s: %s\n", jobID, runID, resultName)
+	return 0
 }
 
 func runMessageCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
@@ -516,13 +544,31 @@ func resetHeartbeatCronViaGatewayAPI(ctx context.Context, cfg *config.Config, jo
 	return callHeartbeatCronAPI(ctx, cfg, http.MethodDelete, jobID, nil)
 }
 
+func reportHeartbeatOutcomeViaGatewayAPI(ctx context.Context, cfg *config.Config, jobID, runID, result, summary string) error {
+	payload, err := json.Marshal(heartbeatOutcomeRequest{RunID: runID, Result: result, Summary: summary})
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+	return callHeartbeatJobAPI(ctx, cfg, http.MethodPost, jobID, "outcome", bytes.NewReader(payload))
+}
+
+type heartbeatOutcomeRequest struct {
+	RunID   string `json:"run_id"`
+	Result  string `json:"result"`
+	Summary string `json:"summary,omitempty"`
+}
+
 type heartbeatCronRequest struct {
 	Profile string `json:"profile"`
 	Reason  string `json:"reason"`
 }
 
 func callHeartbeatCronAPI(ctx context.Context, cfg *config.Config, method, jobID string, body io.Reader) error {
-	path := "/api/v1/heartbeat/jobs/" + url.PathEscape(strings.TrimSpace(jobID)) + "/cron"
+	return callHeartbeatJobAPI(ctx, cfg, method, jobID, "cron", body)
+}
+
+func callHeartbeatJobAPI(ctx context.Context, cfg *config.Config, method, jobID, endpointName string, body io.Reader) error {
+	path := "/api/v1/heartbeat/jobs/" + url.PathEscape(strings.TrimSpace(jobID)) + "/" + endpointName
 	endpoint := gatewayAPIEndpoint(cfg, path)
 	request, err := http.NewRequestWithContext(ctx, method, endpoint, body)
 	if err != nil {

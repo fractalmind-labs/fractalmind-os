@@ -128,6 +128,71 @@ func TestSchedulerCalculatesTimezoneAndDispatchesRuntimeEnvelope(t *testing.T) {
 	}
 }
 
+func TestSchedulerRecordsAgentReportedOutcomes(t *testing.T) {
+	base := time.Date(2026, 7, 26, 1, 55, 0, 0, time.UTC)
+	clock := &testClock{now: base}
+	dispatcher := &recordingDispatcher{result: agentruntime.DispatchResult{Status: "queued"}}
+	stateDir := t.TempDir()
+	cfg := heartbeatTestConfig("")
+	scheduler, err := newScheduler(cfg, stateDir, dispatcher, clock.Now, time.Hour)
+	if err != nil {
+		t.Fatalf("newScheduler: %v", err)
+	}
+	run := func(at time.Time) string {
+		clock.Set(at)
+		scheduler.runDue(at)
+		waitForScheduler(t, scheduler, func(job JobStatus) bool { return !job.InFlight && job.DeliveredRuns > 0 })
+		requests := dispatcher.Requests()
+		return requests[len(requests)-1].RunID
+	}
+
+	first := run(time.Date(2026, 7, 26, 2, 0, 0, 0, time.UTC))
+	status, err := scheduler.RecordOutcome("cloudbank-main", first, OutcomeActed, "  merged   the fix\n")
+	if err != nil {
+		t.Fatalf("RecordOutcome: %v", err)
+	}
+	if status.LastOutcome != OutcomeActed || status.LastOutcomeSummary != "merged the fix" || status.OutcomeCounts[OutcomeActed] != 1 || status.UnreportedRuns != 0 {
+		t.Fatalf("unexpected status after first outcome: %#v", status)
+	}
+	// Reporting the same run again replaces its outcome instead of counting twice.
+	status, err = scheduler.RecordOutcome("cloudbank-main", first, OutcomeNotified, "told Owen")
+	if err != nil {
+		t.Fatalf("RecordOutcome again: %v", err)
+	}
+	if status.OutcomeCounts[OutcomeActed] != 0 || status.OutcomeCounts[OutcomeNotified] != 1 {
+		t.Fatalf("re-report counted twice: %#v", status.OutcomeCounts)
+	}
+
+	second := run(time.Date(2026, 7, 26, 2, 10, 0, 0, time.UTC))
+	// Only the latest run can report; an unknown result is rejected.
+	if _, err := scheduler.RecordOutcome("cloudbank-main", first, OutcomeNoop, ""); err == nil || !strings.Contains(err.Error(), "not the latest run") {
+		t.Fatalf("expected a stale-run error, got %v", err)
+	}
+	if _, err := scheduler.RecordOutcome("cloudbank-main", second, "done", ""); err == nil || !strings.Contains(err.Error(), "not one of") {
+		t.Fatalf("expected an invalid-outcome error, got %v", err)
+	}
+	if _, err := scheduler.RecordOutcome("missing", second, OutcomeNoop, ""); err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected a missing-job error, got %v", err)
+	}
+	status = scheduler.Status().Jobs[0]
+	if status.DeliveredRuns != 2 || status.UnreportedRuns != 1 {
+		t.Fatalf("expected one unreported run of two: %#v", status)
+	}
+	if _, err := scheduler.RecordOutcome("cloudbank-main", second, OutcomeNoop, strings.Repeat("x", 600)); err != nil {
+		t.Fatalf("RecordOutcome second: %v", err)
+	}
+
+	// The record survives a restart.
+	restarted, err := newScheduler(cfg, stateDir, dispatcher, clock.Now, time.Hour)
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+	status = restarted.Status().Jobs[0]
+	if status.DeliveredRuns != 2 || status.UnreportedRuns != 0 || status.OutcomeCounts[OutcomeNoop] != 1 || status.OutcomeCounts[OutcomeNotified] != 1 || len([]rune(status.LastOutcomeSummary)) != maxOutcomeSummaryRunes {
+		t.Fatalf("outcomes not restored: %#v", status)
+	}
+}
+
 func TestSchedulerPassesStartIfMissingToDispatchRequest(t *testing.T) {
 	base := time.Date(2026, 7, 26, 1, 55, 0, 0, time.UTC)
 	clock := &testClock{now: base}

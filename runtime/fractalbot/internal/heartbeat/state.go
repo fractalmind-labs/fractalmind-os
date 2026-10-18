@@ -29,6 +29,16 @@ type persistedJobState struct {
 	ScheduleReason     string    `json:"schedule_reason,omitempty"`
 	ScheduleUpdatedBy  string    `json:"schedule_updated_by,omitempty"`
 	ScheduleUpdatedAt  time.Time `json:"schedule_updated_at,omitempty"`
+	// LastRunID is the run most recently handed to the runtime; only it can
+	// report an outcome.
+	LastRunID string `json:"last_run_id,omitempty"`
+	// DeliveredRuns counts runs the runtime accepted (any status but error).
+	DeliveredRuns      int            `json:"delivered_runs,omitempty"`
+	OutcomeCounts      map[string]int `json:"outcome_counts,omitempty"`
+	LastOutcome        string         `json:"last_outcome,omitempty"`
+	LastOutcomeRunID   string         `json:"last_outcome_run_id,omitempty"`
+	LastOutcomeAt      time.Time      `json:"last_outcome_at,omitempty"`
+	LastOutcomeSummary string         `json:"last_outcome_summary,omitempty"`
 }
 
 func decodePersistedState(data []byte) (persistedState, error) {

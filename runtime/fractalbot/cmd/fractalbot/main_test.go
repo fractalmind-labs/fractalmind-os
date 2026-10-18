@@ -672,6 +672,72 @@ func TestHeartbeatCronGatewayAPIRequests(t *testing.T) {
 	}
 }
 
+func TestRunHeartbeatOutcomeCommand(t *testing.T) {
+	configPath := writeMinimalConfig(t)
+	original := heartbeatOutcomeFn
+	t.Cleanup(func() { heartbeatOutcomeFn = original })
+
+	called := false
+	heartbeatOutcomeFn = func(ctx context.Context, cfg *config.Config, jobID, runID, result, summary string) error {
+		called = true
+		if jobID != "xiaoyi-heartbeat" || runID != "run-1" || result != "noop" || summary != "nothing changed" {
+			t.Fatalf("unexpected arguments: %q %q %q %q", jobID, runID, result, summary)
+		}
+		return nil
+	}
+	var output bytes.Buffer
+	code := runWithContext(context.Background(), []string{
+		"--config", configPath,
+		"heartbeat", "outcome",
+		"--job", "xiaoyi-heartbeat",
+		"--run", "run-1",
+		"--result", "noop",
+		"--summary", "nothing changed",
+	}, &output)
+	if code != 0 || !called || !strings.Contains(output.String(), "run run-1: noop") {
+		t.Fatalf("code=%d called=%t output=%q", code, called, output.String())
+	}
+
+	called = false
+	code = runWithContext(context.Background(), []string{"--config", configPath, "heartbeat", "outcome", "--job", "xiaoyi-heartbeat", "--result", "noop"}, &output)
+	if code == 0 || called {
+		t.Fatalf("missing --run should fail without calling the gateway: code=%d", code)
+	}
+}
+
+func TestHeartbeatOutcomeGatewayAPIRequest(t *testing.T) {
+	type observed struct {
+		method, path string
+		payload      heartbeatOutcomeRequest
+	}
+	requests := make(chan observed, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload heartbeatOutcomeRequest
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		requests <- observed{method: r.Method, path: r.URL.Path, payload: payload}
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer server.Close()
+	host, portText, err := net.SplitHostPort(server.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	port, err := strconv.Atoi(portText)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{Gateway: &config.GatewayConfig{Bind: host, Port: port}}
+	if err := reportHeartbeatOutcomeViaGatewayAPI(context.Background(), cfg, "xiaoyi-heartbeat", "run-1", "notified", "sent the report"); err != nil {
+		t.Fatalf("reportHeartbeatOutcomeViaGatewayAPI: %v", err)
+	}
+	got := <-requests
+	if got.method != http.MethodPost || got.path != "/api/v1/heartbeat/jobs/xiaoyi-heartbeat/outcome" || got.payload != (heartbeatOutcomeRequest{RunID: "run-1", Result: "notified", Summary: "sent the report"}) {
+		t.Fatalf("unexpected request: %#v", got)
+	}
+}
+
 func TestDownloadFileViaHTTPSlackAuth(t *testing.T) {
 	var gotAuth string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

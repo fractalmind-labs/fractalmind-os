@@ -103,7 +103,7 @@ func (s *Server) Start(ctx context.Context) error {
 	// Status endpoint
 	mux.HandleFunc("/status", s.handleStatus)
 	mux.HandleFunc("/api/v1/message/send", s.handleMessageSend)
-	mux.HandleFunc("/api/v1/heartbeat/jobs/", s.handleHeartbeatCron)
+	mux.HandleFunc("/api/v1/heartbeat/jobs/", s.handleHeartbeatJob)
 
 	if s.startTime.IsZero() {
 		s.startTime = time.Now()
@@ -453,6 +453,64 @@ type heartbeatCronResponse struct {
 	Error  string               `json:"error,omitempty"`
 }
 
+// handleHeartbeatJob routes a job's /cron and /outcome endpoints.
+func (s *Server) handleHeartbeatJob(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/outcome") {
+		s.handleHeartbeatOutcome(w, r)
+		return
+	}
+	s.handleHeartbeatCron(w, r)
+}
+
+type heartbeatOutcomeRequest struct {
+	RunID   string `json:"run_id"`
+	Result  string `json:"result"`
+	Summary string `json:"summary,omitempty"`
+}
+
+// handleHeartbeatOutcome records what an Agent reports about its latest run.
+func (s *Server) handleHeartbeatOutcome(w http.ResponseWriter, r *http.Request) {
+	if !isLoopbackRequest(r) {
+		writeJSON(w, http.StatusForbidden, heartbeatCronResponse{Status: "error", Error: "heartbeat outcome API is restricted to loopback clients"})
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		writeJSON(w, http.StatusMethodNotAllowed, heartbeatCronResponse{Status: "error", Error: "method not allowed"})
+		return
+	}
+	jobID, ok := heartbeatJobIDFromPathWithSuffix(r.URL.Path, "/outcome")
+	if !ok {
+		writeJSON(w, http.StatusNotFound, heartbeatCronResponse{Status: "error", Error: "heartbeat outcome endpoint not found"})
+		return
+	}
+	heartbeatStatus := s.heartbeat.Status()
+	if heartbeatStatus == nil || !heartbeatStatus.Enabled {
+		writeJSON(w, http.StatusServiceUnavailable, heartbeatCronResponse{Status: "error", Error: "heartbeat scheduler is disabled"})
+		return
+	}
+	var request heartbeatOutcomeRequest
+	decoder := json.NewDecoder(io.LimitReader(r.Body, 64*1024))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil {
+		writeJSON(w, http.StatusBadRequest, heartbeatCronResponse{Status: "error", Error: "invalid JSON payload"})
+		return
+	}
+	status, err := s.heartbeat.RecordOutcome(jobID, request.RunID, request.Result, request.Summary)
+	if err != nil {
+		statusCode := http.StatusBadRequest
+		switch {
+		case strings.Contains(err.Error(), "not found"):
+			statusCode = http.StatusNotFound
+		case strings.Contains(err.Error(), "not the latest run"):
+			statusCode = http.StatusConflict
+		}
+		writeJSON(w, statusCode, heartbeatCronResponse{Status: "error", Error: err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, heartbeatCronResponse{Status: "ok", Job: &status})
+}
+
 func (s *Server) handleHeartbeatCron(w http.ResponseWriter, r *http.Request) {
 	if !isLoopbackRequest(r) {
 		writeJSON(w, http.StatusForbidden, heartbeatCronResponse{Status: "error", Error: "heartbeat schedule API is restricted to loopback clients"})
@@ -503,8 +561,11 @@ func (s *Server) handleHeartbeatCron(w http.ResponseWriter, r *http.Request) {
 }
 
 func heartbeatJobIDFromPath(path string) (string, bool) {
+	return heartbeatJobIDFromPathWithSuffix(path, "/cron")
+}
+
+func heartbeatJobIDFromPathWithSuffix(path, suffix string) (string, bool) {
 	const prefix = "/api/v1/heartbeat/jobs/"
-	const suffix = "/cron"
 	if !strings.HasPrefix(path, prefix) || !strings.HasSuffix(path, suffix) {
 		return "", false
 	}
