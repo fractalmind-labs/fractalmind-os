@@ -143,11 +143,21 @@ Claude Desktop and Codex App agents must also accept tasks, so each binding decl
 | Turn interrupt | The current turn is asked to stop | Codex app-server `turn/interrupt`, or the Stop control driven over CDP in either app; best effort |
 | None | Only new work stops | envd stops dispatching; delivery stops |
 
-Research status (2026-10-18):
+Research status (2026-10-18, Codex CLI 0.155.1):
 
-- Codex: the installed app-server protocol has `turn/start`, `turn/steer` and `turn/interrupt`, and hooks (including `PreToolUse`) are a stable feature. Codex App runs its own app-server over private stdio, so whether an external application can reach the App's threads, or should run tasks in a separate managed app-server daemon, is open.
-- Claude Desktop: fractalbot delivers through an in-session relay (only `auth` and `user` frames) or CDP. No public interrupt API was found; hooks in the workspace's Claude settings already run there (the relay uses a `SessionStart` hook).
-- Experiments to run: a `PreToolUse` cancel hook in a Claude Desktop session and in a Codex App thread (does it apply, and how fast); CDP Stop in both apps; `turn/interrupt` against the App's threads versus a managed daemon. The likely default is tool boundary plus best-effort turn interrupt, with process level when a task runs in a headless run the application owns.
+| Experiment | Result |
+| --- | --- |
+| Codex `PreToolUse` cancel hook (project `.codex/hooks.json`), cancel between steps | Works: the next tool call is denied about 1 s after the marker appears, no later step runs, and the agent stops and reports the cancellation |
+| Same, cancel while a command runs (`sleep 6`) | The running command finishes; the next call is denied. Tool boundary, as expected |
+| Codex app-server `turn/interrupt` while a command runs (`sleep 20`) | The turn is marked interrupted at once and no later step runs, but the running command is **not** killed and completes. Also tool-boundary in effect |
+| Kill the process group of an app-server the application started itself | The running command dies at once, writes nothing, leaves no process: process level |
+| Claude Desktop `PreToolUse` cancel hook | Pending: needs a Desktop session in a test workspace (`claude -p` is not signed in on this host) |
+
+Findings:
+
+- Codex: delivering a task through an app-server the task application starts (`thread/start`, `turn/start`) gives process-level stop by killing its process group. In Codex App threads, the hook gives tool-boundary stop; project hooks need to be trusted once. The App's own app-server is private stdio, so `turn/interrupt` there is reachable only through the UI; it would not stop a running command anyway.
+- Claude Desktop: no public interrupt API; the relay has only `auth` and `user` frames. The workspace's Claude hooks already run in Desktop sessions (the relay starts from a `SessionStart` hook), so tool boundary is expected and is being verified.
+- Default for both apps: tool boundary for tasks delivered into the user's session; process level when a task runs in a headless run the application owns.
 
 ## Local runtime adapter layer
 
