@@ -172,14 +172,15 @@ When both direct bridge delivery and the guarded composer fallback fail, and `fa
 
 ## Claude Desktop
 
-The `claudeDesktop` router submits to an already authenticated Claude chat page exposed by CDP.
+The `claudeDesktop` router either submits to an authenticated Claude chat page exposed by CDP or queues to a private inbox consumed by a relay running inside the target Claude session.
 
 ```yaml
 agents:
   router: "claudeDesktop"
   claudeDesktop:
     enabled: true
-    cdpEndpoint: "http://127.0.0.1:19334"
+    # Leave empty when the signed Claude Desktop build blocks remote debugging.
+    cdpEndpoint: ""
     targetSelector: ""
     inboxPath: "/Users/you/.fractalbot/claude-desktop-inbox"
     fallbackToInbox: true
@@ -189,12 +190,46 @@ agents:
     deliveryTimeoutSeconds: 20
 ```
 
-The selected CDP target must be a signed-in Claude chat, not a login page:
+When CDP is enabled, the selected target must be a signed-in Claude chat, not a login page:
 
 ```bash
 curl -fsS http://127.0.0.1:19334/json/version
 curl -fsS http://127.0.0.1:19334/json/list
 ```
+
+### Authenticated inbox relay
+
+Current signed Claude Desktop builds may reject `--remote-debugging-port`. In that case, omit `cdpEndpoint` so FractalBot queues immediately, and start the relay from the target Claude session. The relay reads `CLAUDE_CODE_MESSAGING_SOCKET` and `CLAUDE_CODE_MESSAGING_TOKEN` only from that session's environment, validates that the socket is owned by the current user with private permissions, sends the required auth frame, and archives delivered envelopes under `inboxPath/done/`.
+
+Add a workspace-local Claude setting so only the intended project starts the relay:
+
+```json
+{
+  "crossSessionInbound": "accept",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "umask 077; mkdir -p \"$HOME/.fractalbot/claude-desktop-inbox\"; nohup fractalbot --config \"$HOME/.config/fractalbot/config.yaml\" claude-desktop relay >>\"$HOME/.fractalbot/claude-desktop-inbox/.relay.log\" 2>&1 &",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The command runs until the Claude session's socket closes. A private inbox lock makes repeated `SessionStart` hooks idempotent. Run it in the foreground for diagnostics, or process the current queue once:
+
+```bash
+fractalbot --config "$HOME/.config/fractalbot/config.yaml" claude-desktop relay
+fractalbot --config "$HOME/.config/fractalbot/config.yaml" claude-desktop relay --once
+```
+
+Do not copy the messaging token into a config file or command-line flag. One inbox should have one intended Claude Desktop session relay.
 
 To move one bot to Claude Desktop while the others keep the agent-manager, leave `router: "ohMyCode"`, enable `claudeDesktop`, and give that bot's receiver target `runtime: claudeDesktop` (no workspace needed):
 
@@ -218,7 +253,7 @@ agents:
         defaultAgent: main
   claudeDesktop:
     enabled: true
-    cdpEndpoint: "http://127.0.0.1:19334"
+    cdpEndpoint: ""
     inboxPath: "/Users/you/.fractalbot/claude-desktop-inbox"
     fallbackToInbox: true
     defaultAgent: main

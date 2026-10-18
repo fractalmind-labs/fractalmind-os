@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agent"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 )
 
@@ -50,6 +51,61 @@ func TestRunMinimalConfigExitsOnCancel(t *testing.T) {
 	code := runWithContext(ctx, []string{"--config", configPath}, &buf)
 	if code != 0 {
 		t.Fatalf("expected exit code 0, got %d output=%q", code, buf.String())
+	}
+}
+
+func TestRunClaudeDesktopRelay(t *testing.T) {
+	configPath := writeMinimalConfig(t)
+	original := claudeDesktopRelayFn
+	t.Cleanup(func() { claudeDesktopRelayFn = original })
+	t.Setenv("CLAUDE_CODE_MESSAGING_SOCKET", "/tmp/cc-socks/test.sock")
+	t.Setenv("CLAUDE_CODE_MESSAGING_TOKEN", "session-secret")
+
+	called := false
+	claudeDesktopRelayFn = func(ctx context.Context, opts agent.ClaudeDesktopRelayOptions) error {
+		_ = ctx
+		called = true
+		if opts.InboxPath != "/tmp/claude-inbox" || opts.SocketPath != "/tmp/cc-socks/test.sock" || opts.Token != "session-secret" {
+			t.Fatalf("unexpected relay options: %#v", opts)
+		}
+		if opts.PollInterval != 250*time.Millisecond || !opts.Once {
+			t.Fatalf("unexpected relay timing: %#v", opts)
+		}
+		return nil
+	}
+
+	var buf bytes.Buffer
+	code := runWithContext(context.Background(), []string{
+		"--config", configPath,
+		"claude-desktop", "relay",
+		"--inbox-path", "/tmp/claude-inbox",
+		"--poll-interval", "250ms",
+		"--once",
+	}, &buf)
+	if code != 0 || !called {
+		t.Fatalf("code=%d called=%t output=%q", code, called, buf.String())
+	}
+	if strings.Contains(buf.String(), "session-secret") {
+		t.Fatal("CLI output exposed the session token")
+	}
+}
+
+func TestRunClaudeDesktopRelayAlreadyRunningIsSuccess(t *testing.T) {
+	configPath := writeMinimalConfig(t)
+	original := claudeDesktopRelayFn
+	t.Cleanup(func() { claudeDesktopRelayFn = original })
+	claudeDesktopRelayFn = func(context.Context, agent.ClaudeDesktopRelayOptions) error {
+		return fmt.Errorf("%w (pid 123)", agent.ErrClaudeDesktopRelayAlreadyRunning)
+	}
+
+	var buf bytes.Buffer
+	code := runWithContext(context.Background(), []string{
+		"--config", configPath,
+		"claude-desktop", "relay",
+		"--inbox-path", "/tmp/claude-inbox",
+	}, &buf)
+	if code != 0 || !strings.Contains(buf.String(), "already running") {
+		t.Fatalf("code=%d output=%q", code, buf.String())
 	}
 }
 

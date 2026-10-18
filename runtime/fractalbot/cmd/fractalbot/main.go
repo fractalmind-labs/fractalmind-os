@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agent"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/gateway"
 )
@@ -28,6 +30,7 @@ var messageSendWithReceiverFn = sendMessageWithReceiverViaGatewayAPI
 var fileDownloadFn = downloadFileViaHTTP
 var heartbeatCronSetFn = setHeartbeatCronViaGatewayAPI
 var heartbeatCronResetFn = resetHeartbeatCronViaGatewayAPI
+var claudeDesktopRelayFn = agent.RunClaudeDesktopRelay
 
 // stringSliceFlag implements flag.Value so a flag can be specified multiple
 // times (e.g. --image a.png --image b.png) and accumulate into a slice.
@@ -182,10 +185,59 @@ func runCommand(ctx context.Context, cfg *config.Config, args []string, out io.W
 		return runFileCommand(ctx, cfg, args[1:], out, logger)
 	case "heartbeat":
 		return runHeartbeatCommand(ctx, cfg, args[1:], out, logger)
+	case "claude-desktop":
+		return runClaudeDesktopCommand(ctx, cfg, args[1:], out, logger)
 	default:
 		logger.Printf("unknown command: %s", args[0])
 		return 1
 	}
+}
+
+func runClaudeDesktopCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
+	if len(args) == 0 || strings.ToLower(strings.TrimSpace(args[0])) != "relay" {
+		logger.Printf("claude-desktop command requires the relay subcommand")
+		return 1
+	}
+
+	relayFS := flag.NewFlagSet("claude-desktop relay", flag.ContinueOnError)
+	relayFS.SetOutput(out)
+	inboxPath := relayFS.String("inbox-path", "", "Claude Desktop inbox path (defaults to agents.claudeDesktop.inboxPath)")
+	pollInterval := relayFS.Duration("poll-interval", 500*time.Millisecond, "inbox polling interval")
+	once := relayFS.Bool("once", false, "process queued envelopes once and exit")
+	if err := relayFS.Parse(args[1:]); err != nil {
+		return 1
+	}
+
+	path := strings.TrimSpace(*inboxPath)
+	if path == "" && cfg != nil && cfg.Agents != nil && cfg.Agents.ClaudeDesktop != nil {
+		path = strings.TrimSpace(cfg.Agents.ClaudeDesktop.InboxPath)
+	}
+	if path == "" {
+		logger.Printf("--inbox-path or agents.claudeDesktop.inboxPath is required")
+		return 1
+	}
+	if *pollInterval <= 0 {
+		logger.Printf("--poll-interval must be greater than zero")
+		return 1
+	}
+
+	opts := agent.ClaudeDesktopRelayOptions{
+		InboxPath:    path,
+		SocketPath:   os.Getenv("CLAUDE_CODE_MESSAGING_SOCKET"),
+		Token:        os.Getenv("CLAUDE_CODE_MESSAGING_TOKEN"),
+		PollInterval: *pollInterval,
+		Once:         *once,
+		Logf:         logger.Printf,
+	}
+	if err := claudeDesktopRelayFn(ctx, opts); err != nil {
+		if errors.Is(err, agent.ErrClaudeDesktopRelayAlreadyRunning) {
+			fmt.Fprintln(out, err)
+			return 0
+		}
+		logger.Printf("Claude Desktop relay failed: %v", err)
+		return 1
+	}
+	return 0
 }
 
 func runHeartbeatCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
