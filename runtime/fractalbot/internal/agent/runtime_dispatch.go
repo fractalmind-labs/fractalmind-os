@@ -238,8 +238,12 @@ func (m *Manager) dispatchClaudeDesktopRuntime(ctx context.Context, request agen
 		return runtimeDispatchError(result, err)
 	}
 	result.Agent = name
+	cfg, err := m.claudeDesktopConfigForTarget(request.Target)
+	if err != nil {
+		return runtimeDispatchError(result, err)
+	}
 	envelope := buildRuntimeAppEnvelope(request, name)
-	delivery := m.deliverClaudeDesktopEnvelope(ctx, m.config.ClaudeDesktop, envelope, buildRuntimePrompt(request))
+	delivery := m.deliverClaudeDesktopEnvelope(ctx, cfg, envelope, buildRuntimePrompt(request))
 	result.Status = delivery.Status
 	result.EnvelopeID = delivery.EnvelopeID
 	result.InboxPath = delivery.InboxPath

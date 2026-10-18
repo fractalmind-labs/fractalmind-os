@@ -425,9 +425,14 @@ type HeartbeatConfig struct {
 
 // HeartbeatJobConfig targets one Agent Runtime and agent on a cron schedule.
 type HeartbeatJobConfig struct {
-	ID                 string            `yaml:"id"`
-	Runtime            string            `yaml:"runtime"`
-	Agent              string            `yaml:"agent"`
+	ID      string `yaml:"id"`
+	Runtime string `yaml:"runtime"`
+	Agent   string `yaml:"agent"`
+	// Target names a receiver target under agents.ohMyCode.targets whose Claude
+	// Desktop inbox this job uses, so a heartbeat reaches the same Claude
+	// session as that bot's messages. claudeDesktop jobs only; empty uses
+	// agents.claudeDesktop.inboxPath.
+	Target             string            `yaml:"target,omitempty"`
 	Text               string            `yaml:"text"`
 	DispatchMode       string            `yaml:"dispatchMode,omitempty"`
 	TimeoutSeconds     int               `yaml:"timeoutSeconds,omitempty"`
@@ -670,6 +675,7 @@ func validateHeartbeatConfig(cfg *Config) error {
 		job.ID = strings.TrimSpace(job.ID)
 		job.Runtime = strings.TrimSpace(job.Runtime)
 		job.Agent = strings.TrimSpace(job.Agent)
+		job.Target = strings.TrimSpace(job.Target)
 		job.Text = strings.TrimSpace(job.Text)
 		job.DispatchMode = strings.TrimSpace(job.DispatchMode)
 		job.Cron = strings.TrimSpace(job.Cron)
@@ -722,6 +728,9 @@ func validateHeartbeatConfig(cfg *Config) error {
 		if err := validateHeartbeatRuntimeTarget(cfg.Agents, job.Runtime, job.Agent); err != nil {
 			return fmt.Errorf("%s.runtime: %w", prefix, err)
 		}
+		if err := validateHeartbeatReceiverTarget(cfg.Agents, job.Runtime, job.Target); err != nil {
+			return fmt.Errorf("%s.target: %w", prefix, err)
+		}
 
 		normalizedProfiles := make(map[string]string, len(job.AgentCronProfiles))
 		for rawProfile, rawExpression := range job.AgentCronProfiles {
@@ -773,6 +782,28 @@ func validateHeartbeatRuntimeTarget(agents *AgentsConfig, runtimeName, agentName
 	default:
 		return fmt.Errorf("unsupported runtime %q", runtimeName)
 	}
+}
+
+// validateHeartbeatReceiverTarget checks a job's optional receiver target: it
+// must exist and be a claudeDesktop target, and only claudeDesktop jobs use one.
+func validateHeartbeatReceiverTarget(agents *AgentsConfig, runtimeName, targetName string) error {
+	if targetName == "" {
+		return nil
+	}
+	if runtimeName != "claudeDesktop" {
+		return fmt.Errorf("only claudeDesktop jobs can name a receiver target")
+	}
+	if agents.OhMyCode == nil {
+		return fmt.Errorf("receiver target %q is not configured under agents.ohMyCode.targets", targetName)
+	}
+	target, ok := agents.OhMyCode.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("receiver target %q is not configured under agents.ohMyCode.targets", targetName)
+	}
+	if strings.TrimSpace(target.Runtime) != "claudeDesktop" {
+		return fmt.Errorf("receiver target %q does not use runtime claudeDesktop", targetName)
+	}
+	return nil
 }
 
 func validateHeartbeatAgentAllowed(prefix, agentName, defaultAgent string, allowedAgents []string) error {

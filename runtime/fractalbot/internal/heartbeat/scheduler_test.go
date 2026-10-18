@@ -153,6 +153,26 @@ func TestSchedulerPassesStartIfMissingToDispatchRequest(t *testing.T) {
 	}
 }
 
+func TestSchedulerPassesReceiverTargetToDispatchRequest(t *testing.T) {
+	base := time.Date(2026, 7, 26, 1, 55, 0, 0, time.UTC)
+	clock := &testClock{now: base}
+	dispatcher := &recordingDispatcher{result: agentruntime.DispatchResult{Status: "queued"}}
+	cfg := heartbeatTestConfig("")
+	cfg.Jobs[0].Runtime = agentruntime.ClaudeDesktop
+	cfg.Jobs[0].Target = "burry"
+	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	if err != nil {
+		t.Fatalf("newScheduler: %v", err)
+	}
+	due := time.Date(2026, 7, 26, 2, 0, 0, 0, time.UTC)
+	clock.Set(due)
+	scheduler.runDue(due)
+	waitForScheduler(t, scheduler, func(job JobStatus) bool { return job.LastDispatchStatus == "queued" })
+	if requests := dispatcher.Requests(); len(requests) != 1 || requests[0].Target != "burry" {
+		t.Fatalf("expected the burry target, got %#v", requests)
+	}
+}
+
 func TestSchedulerPassesCompletionAwareDispatchSettings(t *testing.T) {
 	base := time.Date(2026, 7, 26, 1, 55, 0, 0, time.UTC)
 	clock := &testClock{now: base}

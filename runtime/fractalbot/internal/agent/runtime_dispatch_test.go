@@ -374,6 +374,45 @@ func TestBuildRuntimePromptOnlyOffersConfiguredProfiles(t *testing.T) {
 	}
 }
 
+func TestDispatchRuntimeClaudeDesktopHeartbeatUsesItsTargetInbox(t *testing.T) {
+	dir := t.TempDir()
+	shared, burryInbox := filepath.Join(dir, "inbox"), filepath.Join(dir, "burry")
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled: true,
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"burry": {
+					Receivers:              []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "cli_burry"}},
+					DefaultAgent:           "main",
+					Runtime:                "claudeDesktop",
+					ClaudeDesktopInboxPath: burryInbox,
+				},
+			},
+		},
+		ClaudeDesktop: &config.ClaudeDesktopConfig{Enabled: true, InboxPath: shared, DefaultAgent: "main", AllowedAgents: []string{"main"}},
+	})
+
+	request := runtimeTestRequest(agentruntime.ClaudeDesktop, "run-1")
+	request.Target = "burry"
+	result := manager.DispatchRuntime(context.Background(), request)
+	if result.Status != "queued" || filepath.Dir(result.InboxPath) != burryInbox {
+		t.Fatalf("expected a heartbeat in the burry inbox, got %#v", result)
+	}
+
+	// Without a target the heartbeat keeps the shared inbox.
+	result = manager.DispatchRuntime(context.Background(), runtimeTestRequest(agentruntime.ClaudeDesktop, "run-2"))
+	if result.Status != "queued" || filepath.Dir(result.InboxPath) != shared {
+		t.Fatalf("expected a heartbeat in the shared inbox, got %#v", result)
+	}
+
+	// A target that isn't configured is an error, not a silent fallback.
+	request = runtimeTestRequest(agentruntime.ClaudeDesktop, "run-3")
+	request.Target = "missing"
+	if result := manager.DispatchRuntime(context.Background(), request); result.Status != "error" || !strings.Contains(result.Error, "missing") {
+		t.Fatalf("expected an unknown-target error, got %#v", result)
+	}
+}
+
 func runtimeTestRequest(runtimeName, runID string) agentruntime.DispatchRequest {
 	scheduledAt := time.Date(2026, 7, 26, 2, 0, 0, 0, time.UTC)
 	return agentruntime.DispatchRequest{

@@ -641,6 +641,32 @@ func TestLoadConfigRequiresClaudeDesktopEndpointOrInboxWhenEnabled(t *testing.T)
 	}
 }
 
+func TestLoadConfigHeartbeatJobReceiverTarget(t *testing.T) {
+	workspace := t.TempDir()
+	load := func(jobRuntime, target, targetRuntime string) error {
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		content := "agents:\n  router: ohMyCode\n  ohMyCode:\n    enabled: true\n    defaultAgent: main\n    targets:\n      burry:\n        receivers: [{channel: feishu, receiverId: cli_burry}]\n        workspace: \"" + workspace + "\"\n        defaultAgent: main\n        runtime: " + targetRuntime + "\n  claudeDesktop:\n    enabled: true\n    inboxPath: \"" + filepath.Join(workspace, "inbox") + "\"\n    defaultAgent: main\n  heartbeat:\n    enabled: true\n    jobs:\n      - id: burry-main\n        runtime: " + jobRuntime + "\n        agent: main\n        target: \"" + target + "\"\n        text: Read HEARTBEAT.md\n        cron: \"0 * * * *\"\n        timezone: Asia/Shanghai\n"
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatalf("write config: %v", err)
+		}
+		_, err := LoadConfig(path)
+		return err
+	}
+
+	if err := load("claudeDesktop", "burry", "claudeDesktop"); err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	for _, tc := range []struct{ jobRuntime, target, targetRuntime, want string }{
+		{"ohMyCode", "burry", "claudeDesktop", "only claudeDesktop jobs"},
+		{"claudeDesktop", "missing", "claudeDesktop", `receiver target "missing" is not configured`},
+		{"claudeDesktop", "burry", "ohMyCode", `does not use runtime claudeDesktop`},
+	} {
+		if err := load(tc.jobRuntime, tc.target, tc.targetRuntime); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Fatalf("%+v: expected %q, got %v", tc, tc.want, err)
+		}
+	}
+}
+
 func TestLoadConfigAcceptsHeartbeatJobs(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	content := []byte(`agents:
