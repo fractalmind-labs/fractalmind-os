@@ -4,7 +4,7 @@ This page shows what runs where. It applies the [three-plane architecture](/arch
 
 > Status: target deployment, agreed on 2026-10-18. Parts of it are still being migrated; see [Current state](#current-state).
 
-![FractalMind deployment: user devices, the envd network, each host with envd dispatching to registered applications, fractalbot and an agent task handler delivering through the local runtime adapter layer to three runtimes, and Sui](/architecture/deployment.png)
+![FractalMind deployment: user devices, the envd network, each host with envd dispatching to the known applications (fractalbot and its fractalmind plugin, agent-manager, native-file-agent, envd-desktop), the local runtime adapter layer, three runtimes, and Sui](/architecture/deployment.png)
 
 ## Each host
 
@@ -37,6 +37,17 @@ Every host that runs agents has an execution layer and an application layer. env
 | Agent task handler (today: agent-manager) | Application | Registers with the local envd for agent tasks, declaring per agent whether it can hard-stop; parses and executes tasks; applies cancel and pause; reports results | Accepting tasks that did not come through envd |
 | Local runtime adapter layer | Application (library) | Delivering to a runtime, reporting presence, declaring runtime capabilities | Any authorization or interpretation of content |
 | agent-manager, Claude Desktop, Codex App | Runtime | Where agents run | — |
+
+## Known applications
+
+| Application | Handles | Connection | Today |
+| --- | --- | --- | --- |
+| fractalbot, `fractalmind` channel plugin | Messages and pause for the local agents fractalbot serves | Long-running | fractalbot runs on its own; the plugin is not implemented, so it is not connected to envd |
+| agent-manager | Agent tasks for tmux agents, with hard stop | Spawned | envd already spawns it after `NodeCommand` authorization (`internal/runtimeadapter`); observation only, control not yet enabled |
+| native-file-agent | File tasks: 1–3 explicit text-file goals with bounded file tools, optionally model-driven | Spawned | Runs inside the envd process; to be split out so envd no longer embeds a model client |
+| envd-desktop | Remote desktop sessions; media flows directly between the App and the host over WebRTC | Long-running | Separate process started and supervised by envd |
+
+The legacy REST/WebSocket commands (`status`, `restart`, `kill`, `logs`, `shell`) are not an application: they bypass signed authorization. `status`, `logs`, `restart` and `kill` move into agent-manager's agent tasks; arbitrary `shell` is retired or narrowed to bounded operations.
 
 ## Three decisions
 
