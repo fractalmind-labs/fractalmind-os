@@ -3,7 +3,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 状态 | 待评审；单 HTML 原型已覆盖核心交互，生产集成按验收门槛交付 |
-| 文档版本 | 0.12 · 单一 PRD：原型 15、原型 v2 与工程附录；新增 Agent 直接对话、常驻权限、渠道网关与 Agent 寻址规则；0.12 按 [部署架构](../site/docs/architecture/deployment.md) 调整渠道网关、envd 与运行时的分工，Agent Console 下线并入 App |
+| 文档版本 | 0.12 · 单一 PRD：原型 15、原型 v2 与工程附录；新增 Agent 直接对话、常驻权限、渠道网关与 Agent 寻址规则；0.12 按 [部署架构](../site/docs/architecture/deployment.md) 调整渠道网关、envd 与运行时的分工（envd 验证后分发给本机已注册的应用，应用自己解析执行），Agent Console 下线并入 App |
 | 同步基线 | PR #21 合并后的 main `b5c0da9`；原型为交互证据，生产能力另行验收 |
 | 产品 | FractalMind App |
 | 定位 | FractalMind 开放智能网络的统一入口 |
@@ -607,7 +607,7 @@ heartbeat 应主动推进未阻塞的工作，仅在进展、阻塞或需要用�
 
 对话分两类：OKR 对话（本节）绑定 OKR 的执行约定与运行快照；Agent 直接对话（§8.2.3）
 面向某个 Agent 或实例，受该 Agent 的常驻权限约束。两者共用投递链路（App → envd 网络就近
-送达目标 envd → `fractalmind` 渠道插件 → 该机 fractalbot → 本机运行时适配层 → Agent；
+送达目标 envd → 分发给已注册的 `fractalmind` 渠道插件 → 该机 fractalbot → 本机运行时适配层 → Agent；
 外部聊天渠道则由所在主机的 fractalbot 直接投递给本机 Agent）、送达回执与离线草稿规则。
 特权动作不走这条链路，见 §8.4 与[部署架构](../site/docs/architecture/deployment.md)。
 
@@ -688,9 +688,10 @@ Agent 不只为 OKR 工作：用户可以直接提问、查看状态或请它完
 | App | 管理设备安全凭据和解锁；生成邀请/恢复秘密，构造交易；核对身份、费用、授权和数据同步状态 | 用本地列表批准入组；把聊天“同意”当签名授权 |
 | Sui 合约 | 持久对象与加密备份；校验 Human/设备/恢复权力、证明和期限；原子消费邀请或恢复记录并更新授权；保存撤销和决定 | 判断设备当前在线；直接管理操作系统进程 |
 | Coordinator | 可作为 envd 的可选角色运行；从链上恢复目录，双向认证、心跳聚合、路由和转发 | 业务权威数据库；生成具有批准权的接入秘密；代替管理员签名 |
-| envd | 安全持有设备密钥，生成兑换证明并签名交易，自动连接；执行前检查命令身份/目标/链上授权/撤销/重放/预算/本机权限，产生回执；已授权任务经本机运行时适配层按能力选择运行时投递（可撤销任务只选能硬中止的运行时），不直接依赖 agent-manager，也不依赖 fractalbot；作为 envd 网络的本机端点就近接收 App 内对话；P3 起提供按授权过滤的 Agent 目录查询 | 根据连接成功自动扩大执行范围；把本地权限文件当生产最终权威；把本机扫描结果放进协作目录 |
-| 渠道网关（fractalbot） | 应用层组件，每台运行 Agent 的主机可各运行一个；收发本机渠道消息，经本机运行时适配层投递对话与定时唤醒给本机 Agent；可选 `fractalmind` 渠道插件从本机 envd 订阅 App 内对话；订阅事件发送通知 | 授权或执行特权命令；跨主机转发（目标不在本机即回复“找不到”）；Agent 之间的通信；把聊天“同意”当作审批；明文保存渠道凭据；依赖 envd（仅可选插件除外） |
-| 本机运行时适配层 | 从 fractalbot 的运行时接入抽出的独立组件：向 agent-manager（tmux）、Claude Desktop、Codex App 投递，报告在线状态与能力（含能否硬中止、能否持久保存结果）；fractalbot 与 envd 共用 | 授权判断；理解或改写内容；依赖 fractalbot 或 envd |
+| envd | 安全持有设备密钥，生成兑换证明并签名交易，自动连接；执行前检查命令身份/目标/链上授权/撤销/重放/预算/本机权限，产生回执；验证后按意图类型分发给本机已注册的应用（对话 → `fractalmind` 渠道插件，Agent 任务 → Agent 任务应用），可撤销意图只分发给声明“支持中止”的应用，撤销时通知其中止；应用经本机受限通道注册（如仅主机所有者可访问的 unix socket）；作为 envd 网络的本机端点就近接收 App 内对话；P3 起提供按授权过滤的 Agent 目录查询 | 根据连接成功自动扩大执行范围；把本地权限文件当生产最终权威；把本机扫描结果放进协作目录；解析意图内容或感知运行时（tmux、Claude Desktop、Codex）；依赖任何应用 |
+| 渠道网关（fractalbot） | 应用层组件，每台运行 Agent 的主机可各运行一个；收发本机渠道消息，经本机运行时适配层投递对话与定时唤醒给本机 Agent；可选 `fractalmind` 渠道插件在本机 envd 注册“对话”类意图，接收 App 内对话；订阅事件发送通知 | 授权或执行特权命令；跨主机转发（目标不在本机即回复“找不到”）；Agent 之间的通信；把聊天“同意”当作审批；明文保存渠道凭据；依赖 envd（仅可选插件除外） |
+| Agent 任务应用（目前为 agent-manager） | 应用层；在本机 envd 注册“Agent 任务”类意图并声明支持中止；解析并执行已授权任务，经本机运行时适配层投递，上报结果供 envd 生成回执 | 接受未经 envd 转来的任务；授权判断 |
+| 本机运行时适配层 | 应用层共享库（Go 包），从 fractalbot 的运行时接入抽出：向 agent-manager（tmux）、Claude Desktop、Codex App 投递，报告在线状态与能力（含能否硬中止、能否持久保存结果）；fractalbot 与 Agent 任务应用各自内嵌；并发投递靠带版本的磁盘约定协调（收件箱格式、relay 锁、每个 Agent 一把投递锁） | 授权判断；理解或改写内容；依赖 fractalbot 或 envd；被 envd 引用；作为独立服务常驻（仅当文件锁无法解决冲突等条件出现时再评估） |
 
 源码基线与新增需求明确区分：
 
@@ -838,7 +839,7 @@ macOS Intel、Windows ARM 和 Ubuntu ARM 在单独通过验收后加入支持列
 
 | 现有资产 | 用户看到的能力 | 阶段 |
 | --- | --- | --- |
-| FractalMind App（并入已下线的 Agent Console）、envd、本机运行时适配层（含 agent-manager）、Agent OS 文件契约 | 单一入口、设备、Agent 执行和恢复 | P1–P2 |
+| FractalMind App（并入已下线的 Agent Console）、envd、Agent 任务应用（agent-manager）与本机运行时适配层、Agent OS 文件契约 | 单一入口、设备、Agent 执行和恢复 | P1–P2 |
 | oh-my-code、okr-manager、heartbeat/记忆相关工具 | OKR、约束、自主推进、结果可视化与经验积累 | 个人闭环 P1；团队协调 P3 |
 | fractalmind-protocol | 组织身份、远程授权、撤销和治理 | P1 组织创建、Host 资格与链上状态；P2 移动权限与公开浏览；P3 成员委派/提案 |
 | team-manager、team-chat、ROMs | Lead、成员、任务交接、Agent/团队模板 | P3 |
