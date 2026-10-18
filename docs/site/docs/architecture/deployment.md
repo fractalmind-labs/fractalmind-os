@@ -34,7 +34,7 @@ Every host that runs agents has an execution layer and an application layer. env
 | envd | Execution | The local endpoint of the envd network and the authorization boundary for the three kinds of traffic below: authenticate and check messages, fully authorize intents (verify, replay protection, budget, reserve, receipt), apply control signals; dispatch to the registered application for each agent | Parsing payloads; knowing about runtimes or how to reach agents |
 | fractalbot | Application | Human ↔ agent messaging on this host's channels; delivering conversations and scheduled wakeups to local agents | Authorization; forwarding to other hosts; agent-to-agent messaging |
 | `fractalmind` channel plugin (optional) | Application | Registers with the local envd for messages to the local agents fractalbot serves; hands them to fractalbot; sends replies, notifications and chat-originated pause signals back to envd | Authorization |
-| Agent task handler (today: agent-manager) | Application | Registers with the local envd for agent tasks, declaring per agent whether it can hard-stop; parses and executes tasks; applies cancel and pause; reports results | Accepting tasks that did not come through envd |
+| Agent task handler | Application | Registers with the local envd for agent tasks for agents in all three runtimes, declaring per agent how a task can be stopped; parses and executes tasks; applies cancel and pause; reports results. Today agent-manager covers tmux agents | Accepting tasks that did not come through envd |
 | Local runtime adapter layer | Application (library) | Delivering to a runtime, reporting presence, declaring runtime capabilities | Any authorization or interpretation of content |
 | agent-manager, Claude Desktop, Codex App | Runtime | Where agents run | — |
 
@@ -44,6 +44,7 @@ Every host that runs agents has an execution layer and an application layer. env
 | --- | --- | --- | --- |
 | fractalbot, `fractalmind` channel plugin | Messages and pause for the local agents fractalbot serves | Long-running | fractalbot runs on its own; the plugin is not implemented, so it is not connected to envd |
 | agent-manager | Agent tasks for tmux agents, with hard stop | Spawned | envd already spawns it after `NodeCommand` authorization (`internal/runtimeadapter`); observation only, control not yet enabled |
+| Agent tasks for Claude Desktop and Codex App agents | Agent tasks for agents in those two runtimes; stopping is under research (see below) | Spawned | Not implemented; fractalbot already delivers conversations to both runtimes |
 | native-file-agent | File tasks: 1–3 explicit text-file goals with bounded file tools, optionally model-driven | Spawned | Runs inside the envd process; to be split out so envd no longer embeds a model client |
 | envd-desktop | Remote desktop sessions; media flows directly between the App and the host over WebRTC | Long-running | Separate process started and supervised by envd |
 
@@ -85,7 +86,7 @@ Each host's membership carries an **application authorization table**. Each entr
 | --- | --- |
 | Application ID | For example `fractalbot`, `agent-manager` |
 | Traffic kinds | Which messages, intent types and control signals it may handle |
-| Required capabilities | For example "revocable intents require hard stop" |
+| Required capabilities | For example "revocable intents require a stop level of at least tool boundary" |
 | Publisher key (optional) | Optional hardening: if set, envd also verifies the application's code signature |
 
 - The organization admin (`OrgAdminCap`) adds, changes and removes entries; each change emits an event that envd follows. A host invitation can carry an initial list (for example agent-manager) so a new host needs no extra transaction.
@@ -102,9 +103,9 @@ Capabilities belong to the agent an application serves, not to the application a
 | --- | --- |
 | Chain instance ID | The agent instance as the App and the directory address it |
 | Local name | The name the application uses locally (for fractalbot, its configured agent) |
-| Capabilities | Hard stop, durable results, durable inbox |
+| Capabilities | Stop level (see below), durable results, durable inbox |
 
-envd accepts a binding only for an instance that belongs to this host on chain, dispatches each item to the application bound to the target instance, and sends a revocable intent only when that binding declares hard stop. An instance with no binding gets "not found", the same answer fractalbot gives for an agent that is not local.
+envd accepts a binding only for an instance that belongs to this host on chain, dispatches each item to the application bound to the target instance, and sends a revocable intent only when that binding's stop level meets what the application authorization entry requires. An instance with no binding gets "not found", the same answer fractalbot gives for an agent that is not local.
 
 ### Local protocol
 
@@ -124,11 +125,29 @@ Applications talk to envd only over local channels, using JSON-RPC 2.0 messages,
 | `control` | both | Pause for a target instance: envd → app to apply it; app → envd when a chat channel originated it |
 | `reply` | app → envd | A reply to a message the application received, routed back by envd |
 | `notify` | app → envd | A proactive message from an agent to Humans who have a conversation or subscription with it: summary and deep link only, rate-limited |
+| `mirror` | app → envd | A copy of a chat-channel exchange (the Human's message and the agent's reply) for the App, sent only when the channel identity is bound to a Human by `ChannelGrant` |
 | `ping` | both | Keepalive |
 
 If the connection drops, dispatched intents without a result become "unknown" and are not re-sent. When the application reconnects, it reports their status by ID and envd completes the receipts. JSON-RPC keeps the protocol easy to implement in Go (fractalbot) and Python (agent-manager) and continues the existing `runtimeadapter` envelopes; the message model would survive a later move to another transport.
 
 Trust: once an intent is verified, the application that receives it is on the trusted path. envd's receipt covers what was authorized, which application received it and whether it was revoked; the execution result is reported by the application. This is the same trust envd places in agent-manager today.
+
+## Stopping tasks in each runtime
+
+Claude Desktop and Codex App agents must also accept tasks, so each binding declares a **stop level** instead of a yes/no hard stop:
+
+| Stop level | Meaning | How |
+| --- | --- | --- |
+| Process | The work is killed | The application owns the process (tmux under agent-manager, or a headless run it started) and terminates its process group |
+| Tool boundary | No further side effects after the signal | A `PreToolUse` hook in the agent's harness denies every tool call for a cancelled or paused task. Claude Code and Codex both support such hooks; the harness enforces them, not the model. A tool call already running continues until it returns |
+| Turn interrupt | The current turn is asked to stop | Codex app-server `turn/interrupt`, or the Stop control driven over CDP in either app; best effort |
+| None | Only new work stops | envd stops dispatching; delivery stops |
+
+Research status (2026-10-18):
+
+- Codex: the installed app-server protocol has `turn/start`, `turn/steer` and `turn/interrupt`, and hooks (including `PreToolUse`) are a stable feature. Codex App runs its own app-server over private stdio, so whether an external application can reach the App's threads, or should run tasks in a separate managed app-server daemon, is open.
+- Claude Desktop: fractalbot delivers through an in-session relay (only `auth` and `user` frames) or CDP. No public interrupt API was found; hooks in the workspace's Claude settings already run there (the relay uses a `SessionStart` hook).
+- Experiments to run: a `PreToolUse` cancel hook in a Claude Desktop session and in a Codex App thread (does it apply, and how fast); CDP Stop in both apps; `turn/interrupt` against the App's threads versus a managed daemon. The likely default is tool boundary plus best-effort turn interrupt, with process level when a task runs in a headless run the application owns.
 
 ## Local runtime adapter layer
 
@@ -138,7 +157,7 @@ A Go library in the application layer that knows how to reach agents in each run
 | --- | --- |
 | Deliver | Hand a message or task to an agent in a runtime; returns delivered, queued or failed |
 | Presence | Whether the agent can receive right now |
-| Capabilities | Direct delivery into a session, durable inbox, waking an idle session, hard stop, durable results |
+| Capabilities | Direct delivery into a session, durable inbox, waking an idle session, stop level, durable results |
 
 It is a library rather than a service so that fractalbot keeps running on its own and no extra process can inject into every local session. Processes that embed it coordinate through versioned on-disk conventions: the inbox format, relay locks and a per-agent delivery lock so concurrent deliveries to one agent do not interleave. It becomes a local service only if a runtime allows a single connection holder, file locks cannot resolve delivery conflicts, or one place must report every local agent's status.
 
@@ -151,6 +170,7 @@ Messages (conversations and wakeups)
     → fractalmind channel plugin → fractalbot
     → pick the local agent (or reply "not found")
     → runtime adapter layer, best effort → agent replies or notifies through fractalbot
+  chat exchanges with a ChannelGrant-bound Human → fractalmind plugin mirror → envd → that Human's App
 
 Intents (authorized tasks)
   capability (Sui) → signed intent → envd network → target host envd verifies
@@ -180,5 +200,5 @@ Hosts can run macOS, Windows or Linux. iMessage is available only on macOS.
 - This is the target deployment; some repositories still contain compatibility paths.
 - envd's existing `internal/runtimeadapter` already invokes agent-manager as a local process only after `NodeCommand` authorization, with fixed versioned request and result envelopes (see `runtime/fractalmind-envd/docs/local-runtime-adapter.md`). That is the first instance of dispatch to an application; the target generalizes it into registration by intent type, so envd stops naming agent-manager.
 - The local runtime adapter layer does not exist yet as a library. It will be extracted from fractalbot's runtime support during the fractalbot V2 work.
-- The `fractalmind` channel plugin, the local protocol's long-running mode, per-agent bindings, the pause control signal and the on-chain application authorization table are not implemented.
+- The `fractalmind` channel plugin, the local protocol's long-running mode, per-agent bindings, the pause control signal, channel mirroring, task execution and stopping for Claude Desktop and Codex App agents, and the on-chain application authorization table are not implemented.
 - Agent Console is still in the repository; its retirement and the move of its functions into the App are tracked in the [App PRD](https://github.com/fractalmind-labs/fractalmind-os/blob/main/docs/product/fractalmind-app-prd.md).
