@@ -50,6 +50,12 @@ runtime:
   enabled: false       # enabling requires sui.enabled, rpc, org_id and protocol_package_id
   adapter_kind: observation # observation | native-file-agent (1–3 text-file goals)
   workspaces: {}       # native-file-agent: configured binding name -> existing absolute directory
+  # Fixed read-only checks a signed node-wide "health" observation runs.
+  # health_probes:
+  #   - name: ornith-verify
+  #     argv: ["/usr/bin/python3", "install-watchdog-guards.py", "verify"]
+  #     dir: /Users/me/ornith-release-backups/tools
+  #     timeout_seconds: 60
   # workspaces:
   #   files: /absolute/path/to/workspace
   # Native instance IDs are derived from this envd process lifetime and binding
