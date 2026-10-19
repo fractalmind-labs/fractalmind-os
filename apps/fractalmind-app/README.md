@@ -236,6 +236,23 @@ codesign --verify --deep --strict src-tauri/target/debug/bundle/macos/FractalMin
 FM_NATIVE_ACCEPTANCE=isolated ./src-tauri/target/debug/bundle/macos/FractalMind.app/Contents/MacOS/fractalmind-app
 ```
 
+For a local macOS release build, sign only the outer bundle and leave the
+bundled `fractalmind-envd` with the linker signature Go gives it:
+
+```sh
+./node_modules/.bin/tauri build --bundles app --config '{"bundle":{"active":true}}'
+codesign --force --sign - src-tauri/target/release/bundle/macos/FractalMind.app
+codesign --verify --deep --strict src-tauri/target/release/bundle/macos/FractalMind.app
+```
+
+Do not use `--deep` here. macOS ties a Keychain item created by an explicitly
+signed program (ad hoc or a self-signed certificate without an Apple Team ID)
+to that exact build, so every envd upgrade asks again for access to the Host
+keys, which an unattended Host cannot answer. Keys created by a linker-signed
+envd stay readable by later envd builds without a prompt. Hosts admitted with
+an explicitly signed envd keep that behaviour until they rejoin with a new
+identity.
+
 The debug-only acceptance flag selects the `org.fractalmind.app.device.test`
 vault and a separate persistent WebView store; test profiles must start with
 `test-`. Local ad hoc signing seals the generated bundle for testing and does
