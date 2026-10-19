@@ -160,7 +160,7 @@ func hostJoinRun(ctx context.Context, cfg *config.Config, statusOnly, newAttempt
 	defer client.Close()
 	var keys *hostidentity.Keys
 	if !statusOnly {
-		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+		store, err := hostidentity.OpenConfiguredStore(cfg.Identity.KeyStore, cfg.Identity.SecretServiceCollection, cfg.Identity.KeyDir)
 		if err != nil {
 			return hostjoin.Result{}, err
 		}

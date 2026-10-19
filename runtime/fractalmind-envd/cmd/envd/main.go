@@ -124,7 +124,7 @@ func main() {
 		return
 	}
 	if *removeHostKeys {
-		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+		store, err := hostidentity.OpenConfiguredStore(cfg.Identity.KeyStore, cfg.Identity.SecretServiceCollection, cfg.Identity.KeyDir)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -134,7 +134,7 @@ func main() {
 		return
 	}
 	if *initHost || *hostPublic {
-		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+		store, err := hostidentity.OpenConfiguredStore(cfg.Identity.KeyStore, cfg.Identity.SecretServiceCollection, cfg.Identity.KeyDir)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -247,7 +247,7 @@ func main() {
 		}
 		connectionKeys = chainRuntime.keys
 	} else if cfg.SUI.HostConnectionEnabled {
-		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+		store, err := hostidentity.OpenConfiguredStore(cfg.Identity.KeyStore, cfg.Identity.SecretServiceCollection, cfg.Identity.KeyDir)
 		if err != nil {
 			log.Fatal("[auth] native Host store unavailable")
 		}
