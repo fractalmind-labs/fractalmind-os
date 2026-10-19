@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/chaingrace"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
@@ -50,6 +51,9 @@ type DesktopSignalResult struct {
 
 // Client manages the WebSocket connection to Gateway.
 type Client struct {
+	// grace lets ordinary traffic skip a frame, instead of closing the
+	// connection, while the chain authority is briefly unreadable.
+	grace           chaingrace.Grace
 	url             string
 	reconnectWait   time.Duration
 	conn            *websocket.Conn
@@ -96,7 +100,11 @@ func (c *Client) validate() error {
 	}
 	ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
 	defer cancel()
-	return c.validateConnection(ctx)
+	if err := c.validateConnection(ctx); err != nil {
+		return err
+	}
+	c.grace.Succeeded()
+	return nil
 }
 
 // NewClient creates a WebSocket client.
@@ -168,6 +176,7 @@ func (c *Client) Connect() {
 				continue
 			}
 			c.url, c.expectedCoordAddr = url, address
+			c.grace.Succeeded()
 		}
 
 		log.Printf("[ws] connecting to %s ...", c.url)
@@ -308,8 +317,9 @@ func (c *Client) Send(msgType string, payload interface{}) error {
 		// A concurrent product-record transaction can change the organization
 		// version during a heartbeat read without revoking this Host. Drop this
 		// unverified frame and recheck on the next send; keep the socket so an
-		// unrelated in-flight command is not lost. All other failures close it.
-		if errors.Is(err, nodecommand.ErrChainSnapshotChanged) {
+		// unrelated in-flight command is not lost. A brief RPC outage soon after
+		// a successful read does the same. All other failures close it.
+		if errors.Is(err, nodecommand.ErrChainSnapshotChanged) || c.grace.Tolerate(err) {
 			return err
 		}
 		c.mu.Lock()
@@ -391,7 +401,16 @@ func (c *Client) readLoop(conn *websocket.Conn) {
 			// Re-read authority for this already received message once if a chain
 			// write raced with the snapshot. This is not another delivery and it
 			// never refreshes the command's signed expiry or grants permission.
-			if !errors.Is(err, nodecommand.ErrChainSnapshotChanged) || c.validate() != nil {
+			if errors.Is(err, nodecommand.ErrChainSnapshotChanged) {
+				err = c.validate()
+			}
+			if err != nil {
+				// While the authority is briefly unreadable, drop this frame
+				// unprocessed (a command is not executed) and keep the socket.
+				if c.grace.Tolerate(err) {
+					log.Printf("[ws] skipped %s: chain authority unavailable: %v", msg.Type, err)
+					continue
+				}
 				return
 			}
 		}
