@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/chaingrace"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
@@ -71,6 +73,7 @@ type pendingSignal struct {
 
 type nodeConn struct {
 	ws                  *websocket.Conn
+	grace               chaingrace.Grace
 	writeMu             sync.Mutex
 	address             string
 	public              []byte
@@ -198,6 +201,10 @@ func (m *Manager) HandleConnection(conn *websocket.Conn) {
 		}
 
 		nextID, err := m.handleMessage(nodeID, client, msg)
+		if errors.Is(err, errSkipFrame) {
+			log.Printf("[coordinator] skipped message from %s: %v", nodeID, err)
+			continue
+		}
 		if err != nil {
 			log.Printf("[coordinator] invalid message from %s: %v", nodeID, err)
 			if client.address != "" || m.workerAuthority != nil {
@@ -291,10 +298,18 @@ func readTyped(conn *websocket.Conn, wantType string, out interface{}) error {
 	return json.Unmarshal(raw.Payload, out)
 }
 
+// errSkipFrame drops one inbound frame and keeps the connection: its authority
+// could not be read for a moment, or a signed observation arrived too late.
+var errSkipFrame = errors.New("frame skipped")
+
 func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message) (string, error) {
 	if err := m.authorizeWorker(conn); err != nil {
+		if conn.grace.Tolerate(err) {
+			return currentID, fmt.Errorf("%w: current chain authority unavailable: %v", errSkipFrame, err)
+		}
 		return currentID, err
 	}
+	conn.grace.Succeeded()
 	switch msg.Type {
 	case "register":
 		var payload registerPayload
@@ -387,6 +402,9 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 		if signed.HostAddress != conn.address || signed.SessionNonce != conn.sessionNonce || signed.Sequence <= conn.observationSequence {
 			return currentID, fmt.Errorf("Host observation connection or sequence mismatch")
 		}
+		if heartbeat.Stale(signed, time.Now().UnixMilli()) {
+			return currentID, fmt.Errorf("%w: stale Host observation %d", errSkipFrame, signed.Sequence)
+		}
 		payload, err := heartbeat.Verify(signed, conn.public, time.Now().UnixMilli())
 		if err != nil {
 			return currentID, err
@@ -394,10 +412,17 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		err = m.observationAuthority(ctx, signed, conn.public)
 		cancel()
+		if chaingrace.Transient(err) {
+			return currentID, fmt.Errorf("%w: observation authority unavailable: %v", errSkipFrame, err)
+		}
 		if err != nil {
 			return currentID, err
 		}
-		if _, err = heartbeat.Verify(signed, conn.public, time.Now().UnixMilli()); err != nil {
+		now := time.Now().UnixMilli()
+		if heartbeat.Stale(signed, now) {
+			return currentID, fmt.Errorf("%w: Host observation %d expired during its authority read", errSkipFrame, signed.Sequence)
+		}
+		if _, err = heartbeat.Verify(signed, conn.public, now); err != nil {
 			return currentID, err
 		}
 		m.mu.Lock()

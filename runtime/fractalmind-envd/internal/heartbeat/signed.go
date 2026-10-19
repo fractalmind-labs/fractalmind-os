@@ -92,6 +92,13 @@ func Sign(signer wsauth.Signer, scope Scope, sessionNonce string, sequence uint6
 	return out, nil
 }
 
+// Stale reports an observation that is only too old or already expired. The
+// Coordinator drops such a frame and keeps the connection; malformed, future
+// or forged observations still fail Verify and close it.
+func Stale(s Signed, now int64) bool {
+	return now-s.ObservedAtMS > FreshnessMS || s.ExpiresAtMS <= now
+}
+
 // Verify authenticates exact bytes and freshness. Callers must additionally
 // prove the current chain scope; the Coordinator also pins its handshake nonce
 // and rejects duplicate/decreasing sequence numbers on each connection.
