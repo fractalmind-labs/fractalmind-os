@@ -250,6 +250,15 @@ func newRuntimeCommandExecutorWithStore(cfg *config.Config, store hostidentity.S
 		keys.Close()
 		return nil, fmt.Errorf("unsupported runtime.adapter_kind %q", cfg.Runtime.AdapterKind)
 	}
+	probes := make([]runtimeadapter.HealthProbe, 0, len(cfg.Runtime.HealthProbes))
+	for _, p := range cfg.Runtime.HealthProbes {
+		probes = append(probes, runtimeadapter.HealthProbe{Name: p.Name, Argv: p.Argv, Dir: p.Dir, TimeoutSeconds: p.TimeoutSeconds})
+	}
+	if adapter, err = runtimeadapter.WithHealthProbes(adapter, probes); err != nil {
+		rpc.Close()
+		keys.Close()
+		return nil, err
+	}
 	executor, err := newChainRuntimeExecutor(cfg, keys, rpc, adapter)
 	if err != nil {
 		rpc.Close()

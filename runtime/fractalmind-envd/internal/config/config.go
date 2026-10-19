@@ -152,6 +152,17 @@ type RuntimeConfig struct {
 	ResultGasBudget uint64            `yaml:"result_gas_budget"`
 	Model           ModelConfig       `yaml:"model"`
 	ChainQueue      bool              `yaml:"chain_queue"` // explicitly published encrypted deliveries only
+	// HealthProbes are fixed read-only checks a signed node-wide "health"
+	// observation runs instead of asking the Agent runtime. The command cannot
+	// choose or change them; only this file does.
+	HealthProbes []HealthProbeConfig `yaml:"health_probes"`
+}
+
+type HealthProbeConfig struct {
+	Name           string   `yaml:"name"`
+	Argv           []string `yaml:"argv"`
+	Dir            string   `yaml:"dir"`
+	TimeoutSeconds int      `yaml:"timeout_seconds"`
 }
 
 // Enabling this sends signed messages and approved file-task observations to
