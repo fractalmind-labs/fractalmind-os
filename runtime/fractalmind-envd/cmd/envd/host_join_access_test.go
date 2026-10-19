@@ -43,7 +43,7 @@ func TestHostJoinAccessParsesAndWritesALoadableConfig(t *testing.T) {
 		t.Fatal("invitation must be returned separately and not kept in the public fields")
 	}
 	path := filepath.Join(t.TempDir(), "sentinel.yaml")
-	if err = os.WriteFile(path, hostJoinConfig(access, "host", `Mac "Studio"`), 0o600); err != nil {
+	if err = os.WriteFile(path, hostJoinConfig(access, "host", `Mac "Studio"`, "native", ""), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := config.Load(path)
@@ -92,5 +92,26 @@ func TestHostJoinFingerprintGolden(t *testing.T) {
 	t.Logf("golden fingerprint %s", got)
 	if got != "MJ3Q-SB91" {
 		t.Fatalf("fingerprint changed: %s", got)
+	}
+}
+
+func TestHostJoinConfigCanUseFileKeys(t *testing.T) {
+	access, invite, err := parseHostJoinAccess(accessFixture(t, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	clear(invite)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sentinel.yaml")
+	keys := filepath.Join(dir, "keys")
+	if err = os.WriteFile(path, hostJoinConfig(access, "host", "test", "file", keys), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Identity.KeyStore != "file" || cfg.Identity.KeyDir != keys || !sameOrganization(cfg, access) {
+		t.Fatalf("file key configuration not written: %+v", cfg.Identity)
 	}
 }

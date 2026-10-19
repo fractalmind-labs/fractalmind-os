@@ -134,12 +134,15 @@ func defaultHostConfigPath() string {
 
 // hostJoinConfig is an observation-only worker: no execution adapter, no
 // remote shell and no automatic restart of local agents.
-func hostJoinConfig(access hostJoinAccess, profile, name string) []byte {
+func hostJoinConfig(access hostJoinAccess, profile, name, keyStore, keyDir string) []byte {
 	q := func(s string) string { encoded, _ := json.Marshal(s); return string(encoded) }
 	var b strings.Builder
 	b.WriteString("# Written by `fractalmind-envd join` from the FractalMind App's Host access string.\n")
 	b.WriteString("# Public configuration only: Host keys stay in the system credential store.\n")
 	fmt.Fprintf(&b, "identity:\n  key_profile: %s\n  hostname: %s\n", q(profile), q(name))
+	if keyStore == "file" {
+		fmt.Fprintf(&b, "  key_store: \"file\"\n  key_dir: %s\n", q(keyDir))
+	}
 	b.WriteString("roles:\n  coordinator: false\n  sponsor: false\n  relay: false\n  stun_server: false\n")
 	fmt.Fprintf(&b, "sui:\n  enabled: true\n  host_connection_enabled: true\n  network: %s\n  rpc: %s\n", q(access.Network), q(access.RPC))
 	if access.GraphQLURL != "" {
@@ -205,11 +208,15 @@ func runJoinCommand(args []string, input *os.File, output, diagnostic io.Writer)
 	configPath := flags.String("config", defaultHostConfigPath(), "configuration file to create or reuse")
 	name := flags.String("name", "", "Host name shown in the App (default: this computer's name)")
 	profile := flags.String("profile", "host", "credential-store profile for this Host's keys")
+	keyStore := flags.String("key-store", "native", "where to keep this Host's keys: native (OS credential store) or file (owner-only files; test and development Hosts)")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 {
 		return fmt.Errorf("the access string is read from stdin, never from arguments")
+	}
+	if *keyStore != "native" && *keyStore != "file" {
+		return fmt.Errorf("--key-store must be native or file")
 	}
 	if *name == "" {
 		*name, _ = os.Hostname()
@@ -230,7 +237,11 @@ func runJoinCommand(args []string, input *os.File, output, diagnostic io.Writer)
 		if err = os.MkdirAll(filepath.Dir(*configPath), 0o700); err != nil {
 			return err
 		}
-		if err = os.WriteFile(*configPath, hostJoinConfig(access, *profile, *name), 0o600); err != nil {
+		keyDir, err := filepath.Abs(filepath.Join(filepath.Dir(*configPath), "keys"))
+		if err != nil {
+			return err
+		}
+		if err = os.WriteFile(*configPath, hostJoinConfig(access, *profile, *name, *keyStore, keyDir), 0o600); err != nil {
 			return err
 		}
 		fmt.Fprintf(diagnostic, "Wrote configuration %s\n", *configPath)
@@ -244,7 +255,7 @@ func runJoinCommand(args []string, input *os.File, output, diagnostic io.Writer)
 	if !sameOrganization(cfg, access) {
 		return fmt.Errorf("%s belongs to another network or organization; pass --config with a new path", *configPath)
 	}
-	store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+	store, err := hostidentity.OpenConfiguredStore(cfg.Identity.KeyStore, cfg.Identity.SecretServiceCollection, cfg.Identity.KeyDir)
 	if err != nil {
 		return err
 	}
@@ -256,8 +267,8 @@ func runJoinCommand(args []string, input *os.File, output, diagnostic io.Writer)
 		cancel()
 	}
 	if err != nil {
-		if runtime.GOOS == "darwin" {
-			return fmt.Errorf("%w\nmacOS keeps Host keys in the login Keychain, which an SSH session cannot open. Run this command in Terminal on this Mac while logged in", err)
+		if runtime.GOOS == "darwin" && cfg.Identity.KeyStore != "file" {
+			return fmt.Errorf("%w\nmacOS keeps Host keys in the login Keychain, which an SSH session cannot open. Run this command in Terminal on this Mac while logged in, or use --key-store file on a test Host", err)
 		}
 		return err
 	}

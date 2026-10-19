@@ -84,8 +84,13 @@ type IdentityConfig struct {
 	// SecretServiceCollection explicitly selects a provisioned Linux collection.
 	// Empty retains the dedicated fractalmind collection; no fallback is allowed.
 	SecretServiceCollection string `yaml:"secret_service_collection"`
-	HostID                  string `yaml:"host_id"`
-	Hostname                string `yaml:"hostname"`
+	// KeyStore is "native" (default, the OS credential store) or "file":
+	// owner-only files in KeyDir, for test and development Hosts where an OS
+	// credential prompt cannot be answered.
+	KeyStore string `yaml:"key_store"`
+	KeyDir   string `yaml:"key_dir"`
+	HostID   string `yaml:"host_id"`
+	Hostname string `yaml:"hostname"`
 	// DesktopURL is the public URL of this node's envd-desktop server (e.g. a
 	// tunnel). When set, the worker advertises it on register so a console can
 	// open the remote desktop without the operator pasting the URL.

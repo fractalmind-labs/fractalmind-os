@@ -58,7 +58,7 @@ func runStoppedReviewCLI(ctx context.Context, cfg *config.Config, input io.Reade
 	if err != nil || value.Command.Target.OrganizationID != org {
 		return fmt.Errorf("original review must belong to the configured organization")
 	}
-	native, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+	native, err := hostidentity.OpenConfiguredStore(cfg.Identity.KeyStore, cfg.Identity.SecretServiceCollection, cfg.Identity.KeyDir)
 	if err != nil {
 		return err
 	}

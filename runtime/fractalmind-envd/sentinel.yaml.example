@@ -3,6 +3,8 @@
 
 identity:
   key_profile: default # local OS credential-store profile; initialize with --init-host
+  # key_store: native     # native (OS credential store, default) | file (owner-only files; test/dev Hosts only)
+  # key_dir: ""           # absolute directory for key_store: file
   host_id: ""          # chain runtime derives this from the secure Host signing address
   hostname: ""         # defaults to os.Hostname()
 
