@@ -145,6 +145,13 @@ Content-Type: application/json
 
 ## Status
 
+For a local Codex session without CDP, the optional
+[native queue bridge](codex-native-queue.md#heartbeat-relay) drains a dedicated
+`codexAppCDP` inbox into `codex queue`. FractalBot remains the sole scheduler;
+the relay preserves run metadata, retries unconfirmed deliveries, and archives
+expired envelopes. Gateway inbox acceptance is separate from native queue
+acceptance and task completion.
+
 `GET /status` includes a redacted `heartbeat` section with configured and effective cron, timezone, dispatch mode and timeout, next run, in-flight state, last dispatch result, and schedule-change audit fields.
 
 ```bash

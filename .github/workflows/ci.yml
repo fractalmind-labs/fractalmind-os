@@ -192,6 +192,10 @@ jobs:
       - name: Build, vet and test
         run: make test-go MODULE=${{ matrix.module }}
 
+      - name: Test FractalBot native Codex queue bridge
+        if: matrix.module == 'runtime/fractalbot'
+        run: make test-python MODULE=runtime/fractalbot
+
   agent-manager:
     name: agent-manager (Python ${{ matrix.python-version }})
     needs: changes

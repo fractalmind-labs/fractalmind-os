@@ -24,6 +24,10 @@ with each repository were moved here or removed.
 Editing `ci.yml` runs every job. `CI result` fails when any other job fails, so
 it is the single status check to require in branch protection.
 
+The FractalBot Go job also runs its standard-library Python queue bridge tests
+with `make test-python MODULE=runtime/fractalbot`, using the same entry point as
+local development.
+
 ## Pages
 
 `pages.yml` publishes the docs site and the explorer as one GitHub Pages site on

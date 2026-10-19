@@ -1,0 +1,44 @@
+# Merge this fragment into your private configuration. Replace all paths and
+# keep existing channel credentials, other receiver targets, any global fallback,
+# and scheduler state/profile overrides. Replace receiverId with your bot's ID.
+agents:
+  router: ohMyCode
+  ohMyCode:
+    enabled: true
+    defaultAgent: main
+    allowedAgents: [main]
+    targets:
+      project:
+        receivers:
+          - channel: feishu
+            receiverId: example-bot-app-id
+        workspace: /absolute/path/to/project
+        agentManagerScript: scripts/codex_queue_route.py
+        runtime: ohMyCode
+        defaultAgent: main
+        allowedAgents: [main]
+        assignTimeoutSeconds: 45
+  codexAppCDP:
+    enabled: true
+    # File inbox only: intentionally omit cdpEndpoint.
+    inboxPath: /Users/you/.fractalbot/codex-queue/inbox
+    fallbackToInbox: true
+    repairPolicy: "off"
+    watch:
+      enabled: false
+    defaultAgent: main
+    allowedAgents: [main]
+  heartbeat:
+    enabled: true
+    statePath: /absolute/path/to/project/heartbeat-state.json
+    maxConcurrent: 1
+    jobs:
+      - id: project-heartbeat
+        runtime: codexAppCDP
+        agent: main
+        text: Inspect the project's heartbeat instructions and advance actionable work.
+        cron: "11 * * * *"
+        timezone: Etc/UTC
+        agentCronProfiles:
+          idle: "11 */3 * * *"
+          deep-idle: "11 9 * * *"

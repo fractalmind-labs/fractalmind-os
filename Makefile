@@ -25,6 +25,7 @@ GO_MODULES := \
 GOFMT_MODULES := runtime/claude-code-go runtime/fractalbot
 
 PYTHON_PROJECTS := \
+	runtime/fractalbot \
 	skills/coordination/agent-manager-skill \
 	skills/coordination/team-manager-skill \
 	skills/interfaces/team-chat-skill \
@@ -115,14 +116,17 @@ lint: fmt-check
 	@echo "==> npm run typecheck (protocols/fractalmind-protocol/sdk)"; \
 	(cd protocols/fractalmind-protocol/sdk && npm run typecheck)
 
-# Python projects: agent-manager and team-manager have their own scripts/
-# and tests/ layout; team-chat and the skills CLI layout tests run directly
-# with unittest. MODULE= narrows to one project path.
+# Python projects: FractalBot's bridge, team-chat and skills layout use unittest;
+# agent-manager and team-manager have their own scripts/ and tests/ layouts.
+# MODULE= narrows to one project path.
 .PHONY: test-python
 test-python:
 	@modules="$(if $(MODULE),$(MODULE),$(PYTHON_PROJECTS))"; \
 	for m in $$modules; do \
 		case "$$m" in \
+			runtime/fractalbot) \
+				echo "==> FractalBot native Codex queue bridge tests"; \
+				(cd "$$m" && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v) || exit 1 ;; \
 			skills/coordination/agent-manager-skill) \
 				echo "==> agent-manager unit tests"; \
 				(cd "$$m" && python3 -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py') || exit 1 ;; \
