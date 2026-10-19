@@ -24,7 +24,7 @@ import {
 import { NativeDeviceSigner } from "../src/native-device";
 import type { ChainReadSession } from "../src/chain";
 
-async function fixture(review = false) {
+async function fixture(review = false, hostCommand = false) {
   const device = Ed25519Keypair.generate(),
     host = Ed25519Keypair.generate();
   const org = id("0x1"),
@@ -53,10 +53,10 @@ async function fixture(review = false) {
     target: {
       organizationId: org,
       nodeId: host.toSuiAddress(),
-      agentId: "native-" + "22".repeat(32),
+      agentId: hostCommand ? "" : "native-" + "22".repeat(32),
     },
     capability: { id: id("0x5"), revocationVersion: 1n },
-    action: "status",
+    action: hostCommand ? "health" : "status",
     scope: "observation",
     payload: review ? { handover_review: proposal } : {},
     expiresAtMs: now + 120000,
@@ -72,15 +72,15 @@ async function fixture(review = false) {
     grant_version: "1",
     membership_id: id("0xa"),
     host_address: host.toSuiAddress(),
-    managed_agent: managed,
+    managed_agent: (hostCommand ? null : managed) as string | null,
     delegate: device.toSuiAddress(),
     node_id: host.toSuiAddress(),
-    agent_id: command.target.agent_id!,
+    agent_id: command.target.agent_id ?? "",
     command_id: command.command_id,
     nonce: command.nonce,
     idempotency_key: command.idempotency_key,
     intent_hash: Array.from(nodeCommandIntentHash(command)),
-    action: "status",
+    action: hostCommand ? "health" : "status",
     scope: "observation",
     budget_asset: "",
     budget_amount: "0",
@@ -100,7 +100,7 @@ async function fixture(review = false) {
     schema_version: "1",
     adapter: "agent-manager-runtime",
     command_id: command.command_id,
-    operation: "status",
+    operation: hostCommand ? "health" : "status",
     duplicate: false,
     ok: true,
     observed_at: new Date(now).toISOString(),
@@ -444,4 +444,19 @@ test("Host review is bound to original signed command and fresh proposal; forged
     "ed25519:" + "00".repeat(32) + ":" + "00".repeat(64);
   await f.encode();
   await assert.rejects(f.reader.readReview(input));
+});
+
+test("a node-wide Host health Run is read with no managed Agent and an empty agent_id", async () => {
+  const f = await fixture(false, true);
+  const result = await f.reader.read(f.executionId, null);
+  assert.deepEqual(result.response?.result, { status: "idle" });
+  await assert.rejects(
+    f.reader.read(f.executionId, f.managed),
+    /invalid_source/,
+  );
+  const agentRun = await fixture(false, false);
+  await assert.rejects(
+    agentRun.reader.read(agentRun.executionId, null),
+    /invalid_source/,
+  );
 });

@@ -268,7 +268,7 @@ export class HandoverReview {
         input.bindingId,
         p.okr_id,
         c.capability.id,
-      ].every((v) => id.test(v)) ||
+      ].every((v) => typeof v === "string" && id.test(v)) ||
       p.managed_agent_id !== input.managedAgentId ||
       c.action !== "status" ||
       c.scope !== "observation" ||
@@ -624,7 +624,7 @@ export class HandoverReview {
         ticket.input.managedAgentId,
         c.capability.id,
         c.target.node_id,
-      ].every((v) => id.test(v)) ||
+      ].every((v) => typeof v === "string" && id.test(v)) ||
       ticket.input.managedAgentId !== p.managed_agent_id ||
       c.budget ||
       Object.keys(c.payload).some((k) => k !== "handover_review")

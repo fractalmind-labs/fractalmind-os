@@ -14,6 +14,7 @@ import type { ConnectionProfile, OrganizationSnapshot } from "./domain";
 import type { DiscoveredInstance } from "./agent-discovery";
 
 const LocalHostCard = lazy(() => import("./LocalHostCard"));
+const HostHealthCard = lazy(() => import("./HostHealthCard"));
 type Translate = (zh: string, en: string) => string;
 type Access = "binding" | "invite" | "revoke-member";
 const REFRESH_MS = 30_000;
@@ -624,6 +625,17 @@ function HostDetail({
       </div>
       {tab === "overview" && (
         <>
+          {row.member && row.membership === "valid" && (
+            <Suspense fallback={null}>
+              <HostHealthCard
+                profile={profile}
+                organizationId={organizationId}
+                deviceProfile={deviceProfile}
+                membershipId={row.member.id}
+                t={t}
+              />
+            </Suspense>
+          )}
           <div className="grid-2">
             <section className="card">
               <div className="card-h">

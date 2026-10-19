@@ -19,10 +19,7 @@ import { call, NativeDeviceSigner, type NativeInvoke } from "./native-device";
 export class ExecutionResultError extends Error {
   constructor(
     readonly code:
-      | "invalid_source"
-      | "invalid_result"
-      | "state_changed"
-      | "invalid_review",
+      "invalid_source" | "invalid_result" | "state_changed" | "invalid_review",
   ) {
     super(code);
   }
@@ -73,7 +70,9 @@ export class NativeExecutionResults {
       throw new ExecutionResultError("invalid_source");
     this.verifier = new DeviceIdentityVerifier(chain, signer, grantId);
   }
-  private async run(executionId: string, managedAgentId: string) {
+  /** managedAgentId null reads a node-wide Host health Run, which has no
+   * managed Agent and an empty agent_id. */
+  private async run(executionId: string, managedAgentId: string | null) {
     const { object: source } =
       await this.chain.sdk.client.client.core.getObject({
         objectId: executionId,
@@ -98,16 +97,21 @@ export class NativeExecutionResults {
       run.state > 5 ||
       run.intent_hash.length !== 32 ||
       run.host_address !== run.node_id ||
-      !/^(native|tmux)-[0-9a-f]{64}$/.test(run.agent_id)
+      (managedAgentId === null
+        ? run.agent_id !== "" || run.action !== "health"
+        : !/^(native|tmux)-[0-9a-f]{64}$/.test(run.agent_id))
     )
       throw new ExecutionResultError("invalid_source");
     return run;
   }
   async read(
     executionId: string,
-    managedAgentId: string,
+    managedAgentId: string | null,
   ): Promise<ExecutionResult> {
-    if (!id.test(executionId) || !id.test(managedAgentId))
+    if (
+      !id.test(executionId) ||
+      (managedAgentId !== null && !id.test(managedAgentId))
+    )
       throw new ExecutionResultError("invalid_source");
     const before = await this.verifier.verifyOrganization(this.organizationId);
     const run = await this.run(executionId, managedAgentId);
@@ -243,7 +247,7 @@ export class NativeExecutionResults {
         event.command_id !== run.command_id ||
         target.organization_id !== run.org_id ||
         target.node_id !== run.node_id ||
-        target.agent_id !== run.agent_id
+        (target.agent_id ?? "") !== run.agent_id
       )
         throw new ExecutionResultError("invalid_result");
       if (

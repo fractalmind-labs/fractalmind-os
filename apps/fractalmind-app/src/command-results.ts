@@ -30,8 +30,18 @@ export type CommandResultTarget = {
   command: SignedNodeCommand;
   membershipId: string;
   bindingId: string;
-  managedAgentId: string;
+  /** null only for a node-wide Host health observation (no Agent target). */
+  managedAgentId: string | null;
 };
+/** The one node-wide command the App issues: the Host's configured health
+ * probes, under the observation capability every admitted Host receives. */
+export function isHostHealthCommand(c: SignedNodeCommand) {
+  return (
+    c.action === "health" &&
+    c.scope === "observation" &&
+    c.target.agent_id === undefined
+  );
+}
 const id = /^0x[0-9a-f]{64}$/;
 
 /** Native command-result preparation for fee-quoted App transactions. No
@@ -107,17 +117,21 @@ export class NativeCommandResults {
       bcs.Address.parse(dynamicField.value.bcs) !== member.id
     )
       throw new CommandResultError("invalid_source");
-    const managed = await managedInstance(
-      this.chain,
-      this.organizationId,
-      c.target.node_id,
-      c.target.agent_id!,
-    );
+    const managed =
+      input.managedAgentId === null
+        ? null
+        : await managedInstance(
+            this.chain,
+            this.organizationId,
+            c.target.node_id,
+            c.target.agent_id!,
+          );
     if (
-      !managed ||
-      managed.id !== input.managedAgentId ||
-      managed.membership_id !== member.id ||
-      managed.revoked
+      input.managedAgentId !== null &&
+      (!managed ||
+        managed.id !== input.managedAgentId ||
+        managed.membership_id !== member.id ||
+        managed.revoked)
     )
       throw new CommandResultError("invalid_source");
     const index = await this.chain.sdk.productRecord.listCurrent(
@@ -149,18 +163,23 @@ export class NativeCommandResults {
   private async snapshot(raw: CommandResultTarget) {
     const input = structuredClone(raw),
       c = input.command;
+    // A node-wide target is only the Host health observation; every other
+    // command names one managed Agent instance.
+    const host = input.managedAgentId === null;
     if (
       ![
         input.membershipId,
         input.bindingId,
-        input.managedAgentId,
+        ...(host ? [] : [input.managedAgentId]),
         c?.target?.node_id,
         c?.capability?.id,
       ].every((v) => typeof v === "string" && id.test(v)) ||
       c.signer !== this.signer.device.address ||
       c.target.organization_id !== this.organizationId ||
-      typeof c.target.agent_id !== "string" ||
-      !/^(native|tmux)-[0-9a-f]{64}$/.test(c.target.agent_id) ||
+      (host
+        ? !isHostHealthCommand(c)
+        : typeof c.target.agent_id !== "string" ||
+          !/^(native|tmux)-[0-9a-f]{64}$/.test(c.target.agent_id)) ||
       !Number.isSafeInteger(c.expires_at_ms) ||
       !(
         (c.scope === "observation" &&
@@ -199,6 +218,10 @@ export class NativeCommandResults {
    * requires a separate fee confirmation and device signature. */
   async prepareDelivery(raw: CommandResultTarget, executionId: string) {
     if (!id.test(executionId)) throw new CommandResultError("invalid_source");
+    // Chain-queued delivery targets a managed Agent; Host commands go through
+    // the Coordinator only.
+    if (raw.managedAgentId === null)
+      throw new CommandResultError("invalid_command");
     const input = await this.snapshot(raw),
       c = input.command;
     const before = await this.source(input),
@@ -272,7 +295,7 @@ export class NativeCommandResults {
       grantId: this.grantId,
       membershipId: input.membershipId,
       bindingId: input.bindingId,
-      managedAgentId: input.managedAgentId,
+      managedAgentId: input.managedAgentId!,
       keyVersion: before.keyVersion,
       encryptedCommand: body,
     });
@@ -357,7 +380,7 @@ export class NativeCommandResults {
       grantId: this.grantId,
       membershipId: input.membershipId,
       bindingId: input.bindingId,
-      managedAgentId: input.managedAgentId,
+      managedAgentId: input.managedAgentId ?? undefined,
       command: c,
       resultKey,
       scheduled: compose.scheduled,

@@ -43,7 +43,7 @@ const Pointer = bcs.struct("InstancePointer", {
   control_confirmed: bcs.bool(),
   revoked: bcs.bool(),
 });
-async function fixture(review = false, delivery = false) {
+async function fixture(review = false, delivery = false, hostCommand = false) {
   const key = Ed25519Keypair.generate(),
     host = Ed25519Keypair.generate(),
     coordinator = Ed25519Keypair.generate();
@@ -253,7 +253,10 @@ async function fixture(review = false, delivery = false) {
             bytesToHex(nodeCommandIntentHash(input.command)),
           );
           assert.equal(input.resultKey.wrappedKey.length, 132);
-          assert.equal(input.managedAgentId, managedId);
+          assert.equal(
+            input.managedAgentId,
+            hostCommand ? undefined : managedId,
+          );
           duringBuilder();
           return input.tx ?? new Transaction();
         },
@@ -281,9 +284,9 @@ async function fixture(review = false, delivery = false) {
     target: {
       organizationId: org,
       nodeId: host.toSuiAddress(),
-      agentId: instance,
+      agentId: hostCommand ? "" : instance,
     },
-    action: "status",
+    action: hostCommand ? "health" : "status",
     scope: "observation",
     capability: { id: id("0xd"), revocationVersion: 1n },
     expiresAtMs: now + 60000,
@@ -293,7 +296,7 @@ async function fixture(review = false, delivery = false) {
     command,
     membershipId: memberId,
     bindingId,
-    managedAgentId: managedId,
+    managedAgentId: hostCommand ? null : managedId,
   };
   let run = {
     id: id("0x10"),
@@ -322,6 +325,8 @@ async function fixture(review = false, delivery = false) {
     };
   }
   return {
+    key,
+    host,
     controller,
     input,
     member,
@@ -502,4 +507,38 @@ test("noncanonical native replies fail closed and caller mutation cannot replace
   });
   await f.controller.prepare(f.input);
   assert.equal(f.counts().builds, 1);
+});
+
+test("a node-wide Host health command prepares its result key without any managed Agent", async () => {
+  const f = await fixture(false, false, true);
+  assert.equal(f.input.command.target.agent_id, undefined);
+  const prepared = await f.controller.prepare(f.input);
+  assert.ok(prepared.transaction);
+  assert.equal(f.counts().builds, 1);
+  assert.equal(f.counts().required, "read");
+  await prepared.assertCurrent();
+  await assert.rejects(
+    f.controller.prepareDelivery(f.input, id("0x10")),
+    /invalid_command/,
+  );
+});
+test("only the health observation may omit its Agent; other node-wide commands are refused", async () => {
+  const f = await fixture(false, false, true);
+  const status = await signNodeCommand(f.key, {
+    target: { organizationId: org, nodeId: f.host.toSuiAddress(), agentId: "" },
+    action: "status",
+    scope: "observation",
+    capability: { id: id("0xd"), revocationVersion: 1n },
+    expiresAtMs: Date.now() + 60000,
+    payload: {},
+  });
+  await assert.rejects(
+    f.controller.prepare({ ...f.input, command: status }),
+    /invalid_command/,
+  );
+  await assert.rejects(
+    f.controller.prepare({ ...f.input, managedAgentId: managedId }),
+    /invalid_command/,
+  );
+  assert.equal(f.counts().wraps, 0);
 });
