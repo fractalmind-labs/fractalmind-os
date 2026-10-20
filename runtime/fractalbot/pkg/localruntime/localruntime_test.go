@@ -142,7 +142,9 @@ func TestClaudeDesktopDeliverAndRelay(t *testing.T) {
 	// stops.
 	ctx, cancel := context.WithCancel(context.Background())
 	stopped := make(chan error, 1)
-	go func() { stopped <- RunRelay(ctx, RelayOptions{Inbox: inbox, SocketPath: sock, Token: "t", PollInterval: 10 * time.Millisecond}) }()
+	go func() {
+		stopped <- RunRelay(ctx, RelayOptions{Inbox: inbox, SocketPath: sock, Token: "t", PollInterval: 10 * time.Millisecond})
+	}()
 	deadline := time.Now().Add(3 * time.Second)
 	for cd.Presence(context.Background(), target) != Online {
 		if time.Now().After(deadline) {
