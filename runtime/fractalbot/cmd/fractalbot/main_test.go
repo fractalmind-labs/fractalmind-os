@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -876,4 +877,21 @@ func TestMain(m *testing.M) {
 		return p
 	}
 	os.Exit(m.Run())
+}
+
+func TestRedactStdout(t *testing.T) {
+	r, w, _ := os.Pipe()
+	orig := os.Stdout
+	os.Stdout = w
+	redactor := secrets.NewRedactor()
+	redactor.Add("feishu-x", "app-secret-value-123")
+	restore := redactStdout(redactor)
+	fmt.Println("sdk log app-secret-value-123 access_key=abcdef0123456789")
+	restore()
+	os.Stdout = orig
+	w.Close()
+	got, _ := io.ReadAll(r)
+	if strings.Contains(string(got), "app-secret-value-123") || strings.Contains(string(got), "abcdef0123456789") || !strings.Contains(string(got), "sdk log") {
+		t.Fatalf("stdout: %q", got)
+	}
 }
