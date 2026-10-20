@@ -276,7 +276,7 @@ func TestExampleConfigParses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("config.example.yaml: %v", err)
 	}
-	if !strings.HasPrefix(cfg.DataDir, "/home/me/Library/Application Support") || len(cfg.Schedules.Jobs) != 2 {
+	if cfg.DataDir != "/home/me/.fractalbot" || len(cfg.Schedules.Jobs) != 2 {
 		t.Fatalf("example: %+v", cfg)
 	}
 }
