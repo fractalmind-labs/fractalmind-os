@@ -854,3 +854,14 @@ func TestPollOnceDropsHistoricalMessagesBeforeStartWhenNoBaseline(t *testing.T) 
 		t.Fatalf("lastSeenMessageID=%d want 636", bot.getLastSeenMessageID())
 	}
 }
+
+func TestPollBackoff(t *testing.T) {
+	for _, tc := range []struct {
+		failures int
+		want     time.Duration
+	}{{1, 5 * time.Second}, {2, 10 * time.Second}, {3, 20 * time.Second}, {20, maxPollBackoff}} {
+		if got := pollBackoff(5*time.Second, tc.failures); got != tc.want {
+			t.Fatalf("failures=%d: %v, want %v", tc.failures, got, tc.want)
+		}
+	}
+}
