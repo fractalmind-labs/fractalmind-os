@@ -1,5 +1,5 @@
-// Package agentruntime defines the runtime-neutral delivery contract shared by
-// the Agent Manager and autonomous schedulers.
+// Package agentruntime defines the request the scheduler sends the router to
+// wake an agent.
 package agentruntime
 
 import (
@@ -7,15 +7,9 @@ import (
 	"time"
 )
 
-const (
-	OhMyCode      = "ohMyCode"
-	CodexAppCDP   = "codexAppCDP"
-	ClaudeDesktop = "claudeDesktop"
-
-	// DispatchModeHeartbeatRun asks the ohMyCode adapter to execute the
-	// agent-manager heartbeat lifecycle instead of enqueueing a generic task.
-	DispatchModeHeartbeatRun = "heartbeatRun"
-)
+// DispatchModeHeartbeatRun asks an agentManager agent to run agent-manager's
+// heartbeat lifecycle instead of assigning the prompt.
+const DispatchModeHeartbeatRun = "heartbeatRun"
 
 // DispatchRequest is an internal agent wakeup that is not associated with a
 // messaging channel.

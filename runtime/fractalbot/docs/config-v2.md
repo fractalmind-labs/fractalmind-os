@@ -248,6 +248,8 @@ fractalbot service uninstall
 
 The service starts this executable with this configuration file. It restarts the gateway when it exits and writes its log to `<dataDir>/logs/fractalbot.log`. The service definition holds no secrets.
 
+On macOS, the Automation permission (iMessage controls Messages and System Events) and Full Disk Access belong to the executable's path. The service resolves symlinks and runs the real file, so upgrade by replacing that file rather than moving the service to a new path. A new path needs the permissions granted again; until then, iMessage fails to start with `AppleEvent timed out (-1712)`.
+
 To rotate a secret:
 
 1. Generate a new value on the platform.

@@ -78,7 +78,7 @@ func heartbeatTestConfig(statePath string) *Config {
 		MaxConcurrent: 2,
 		Jobs: []JobConfig{{
 			ID:       "cloudbank-main",
-			Runtime:  agentruntime.CodexAppCDP,
+			Runtime:  "codexApp",
 			Agent:    "main",
 			Text:     "secret operator instruction",
 			Cron:     "*/10 * * * *",
@@ -119,7 +119,7 @@ func TestSchedulerCalculatesTimezoneAndDispatchesRuntimeEnvelope(t *testing.T) {
 		t.Fatalf("dispatch count=%d want 1", len(requests))
 	}
 	request := requests[0]
-	if request.Runtime != agentruntime.CodexAppCDP || request.Agent != "main" || request.Source != "heartbeat" {
+	if request.Runtime != "codexApp" || request.Agent != "main" || request.Source != "heartbeat" {
 		t.Fatalf("unexpected runtime request: %#v", request)
 	}
 	if request.JobID != "cloudbank-main" || request.RunID == "" || request.CoalesceKey != "heartbeat:cloudbank-main" {
@@ -206,7 +206,7 @@ func TestSchedulerPassesStartIfMissingToDispatchRequest(t *testing.T) {
 	clock := &testClock{now: base}
 	dispatcher := &recordingDispatcher{result: agentruntime.DispatchResult{Status: "assigned"}}
 	cfg := heartbeatTestConfig("")
-	cfg.Jobs[0].Runtime = agentruntime.OhMyCode
+	cfg.Jobs[0].Runtime = "agentManager"
 	cfg.Jobs[0].StartIfMissing = true
 	scheduler, err := newTestScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
 	if err != nil {
@@ -251,7 +251,7 @@ func TestSchedulerPassesCompletionAwareDispatchSettings(t *testing.T) {
 	clock := &testClock{now: base}
 	dispatcher := &recordingDispatcher{result: agentruntime.DispatchResult{Status: "heartbeat_terminal"}}
 	cfg := heartbeatTestConfig("")
-	cfg.Jobs[0].Runtime = agentruntime.OhMyCode
+	cfg.Jobs[0].Runtime = "agentManager"
 	cfg.Jobs[0].DispatchMode = agentruntime.DispatchModeHeartbeatRun
 	cfg.Jobs[0].TimeoutSeconds = 480
 	cfg.Jobs[0].Text = ""
