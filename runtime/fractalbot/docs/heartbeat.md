@@ -32,7 +32,7 @@ agents:
 
 `text` is the complete inline instruction. Heartbeat prompt files are not supported. Cron expressions use the standard five-field format, and every job requires an IANA timezone.
 
-A `claudeDesktop` job can add `target`, the name of a receiver target under `agents.ohMyCode.targets`. The heartbeat then queues to that target's `claudeDesktopInboxPath`, so it reaches the same Claude session as that bot's messages; without `target` it uses `agents.claudeDesktop.inboxPath`. The target must exist and use `runtime: claudeDesktop`, and other runtimes reject `target`:
+A `claudeDesktop` or `ohMyCode` job can add `target`, the name of a receiver target under `agents.ohMyCode.targets`, so the heartbeat reaches the same destination as that bot's messages. A `claudeDesktop` job then queues to the target's `claudeDesktopInboxPath` (without `target` it uses `agents.claudeDesktop.inboxPath`). The target must exist and use the job's runtime (a target without `runtime` is `ohMyCode`); `codexAppCDP` jobs reject `target`:
 
 ```yaml
       - id: "burry-main"
@@ -43,6 +43,20 @@ A `claudeDesktop` job can add `target`, the name of a receiver target under `age
         cron: "0 * * * *"
         timezone: "Asia/Shanghai"
 ```
+
+An `ohMyCode` job with `target` runs that target's `agentManagerScript` in its `workspace`, and its `agent` must be allowed by the target's `defaultAgent`/`allowedAgents` rather than the shared ones. This is how a scheduled job reaches a Codex App session through the queue adapter in [codex-native-queue.md](codex-native-queue.md):
+
+```yaml
+      - id: "project-heartbeat"
+        runtime: "ohMyCode"
+        agent: "main"
+        target: "project"
+        text: "Read HEARTBEAT.md if it exists. If nothing needs attention, reply HEARTBEAT_OK."
+        cron: "0 */4 * * *"
+        timezone: "Asia/Shanghai"
+```
+
+That adapter supports `assign` only, so leave `startIfMissing` and `dispatchMode` unset for such a job.
 
 `startIfMissing` is off by default. When it is true and the job targets `ohMyCode`, FractalBot checks `agent-manager status` and, if the session is not running, calls `start` before dispatch. Failed starts enter a 90s cooldown. This is not `heartbeat rescue` and does not apply to Codex App or Claude Desktop jobs.
 

@@ -54,6 +54,10 @@ The adapter supports `assign AGENT` only. `ohMyCode` lifecycle and monitor
 commands are not mapped to Codex by this helper. A successful assignment means
 the CLI confirmed queue acceptance in the configured session, not task completion.
 
+A scheduled job can use the same adapter: give an `ohMyCode` heartbeat job
+`target: project` (see [heartbeat.md](heartbeat.md)). It is delivered through
+`assign` like an inbound message.
+
 ## Heartbeat relay
 
 ```mermaid

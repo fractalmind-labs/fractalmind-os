@@ -442,3 +442,78 @@ func assertRuntimeEnvelope(t *testing.T, envelope InboundAppEnvelope, runID, tex
 		t.Fatalf("heartbeat envelope contains synthetic channel identity: %#v", envelope)
 	}
 }
+
+func TestDispatchRuntimeOhMyCodeUsesNamedTargetRoute(t *testing.T) {
+	shared := t.TempDir()
+	targetWorkspace := t.TempDir()
+	script := filepath.Join(targetWorkspace, "route.py")
+	scriptBody := `import pathlib, sys
+prompt = sys.stdin.read()
+if sys.argv[1:] != ["assign", "codex"] or "job_id: job-1" not in prompt:
+    raise SystemExit("unexpected route call")
+pathlib.Path("delivered.txt").write_text(prompt, encoding="utf-8")
+print("queued")
+`
+	if err := os.WriteFile(script, []byte(scriptBody), 0700); err != nil {
+		t.Fatalf("write route script: %v", err)
+	}
+	manager := NewManager(&config.AgentsConfig{OhMyCode: &config.OhMyCodeConfig{
+		Enabled:            true,
+		Workspace:          shared,
+		AgentManagerScript: filepath.Join(shared, "missing.py"),
+		DefaultAgent:       "main",
+		Targets: map[string]config.OhMyCodeTargetConfig{
+			"assistant": {Workspace: targetWorkspace, AgentManagerScript: script, DefaultAgent: "codex"},
+			"desktop":   {Workspace: targetWorkspace, DefaultAgent: "codex", Runtime: "claudeDesktop"},
+		},
+	}})
+
+	request := runtimeTestRequest(agentruntime.OhMyCode, "run-1")
+	request.Agent = "codex"
+	request.Target = "assistant"
+	result := manager.DispatchRuntime(context.Background(), request)
+	if result.Status != "assigned" || result.Error != "" || result.Agent != "codex" {
+		t.Fatalf("unexpected target dispatch result: %#v", result)
+	}
+	if _, err := os.Stat(filepath.Join(targetWorkspace, "delivered.txt")); err != nil {
+		t.Fatalf("target route script did not receive the heartbeat: %v", err)
+	}
+
+	request.Agent = "main"
+	if result := manager.DispatchRuntime(context.Background(), request); result.Status != "error" || !strings.Contains(result.Error, "not allowed") {
+		t.Fatalf("expected the target's agents to decide, got %#v", result)
+	}
+	request.Agent = "codex"
+	for _, target := range []string{"desktop", "missing"} {
+		request.Target = target
+		if result := manager.DispatchRuntime(context.Background(), request); result.Status != "error" {
+			t.Fatalf("target %q: expected error, got %#v", target, result)
+		}
+	}
+}
+
+func TestDispatchRuntimeStartIfMissingUsesNamedTargetRoute(t *testing.T) {
+	targetWorkspace := t.TempDir()
+	script := writeOhMyCodeLifecycleScript(t, targetWorkspace)
+	manager := NewManager(&config.AgentsConfig{OhMyCode: &config.OhMyCodeConfig{
+		Enabled:      true,
+		DefaultAgent: "main",
+		Targets: map[string]config.OhMyCodeTargetConfig{
+			"assistant": {Workspace: targetWorkspace, AgentManagerScript: script, DefaultAgent: "main"},
+		},
+	}})
+	request := runtimeTestRequest(agentruntime.OhMyCode, "run-1")
+	request.Target = "assistant"
+	request.StartIfMissing = true
+	result := manager.DispatchRuntime(context.Background(), request)
+	if result.Status != "assigned" || result.Error != "" {
+		t.Fatalf("unexpected result: %#v", result)
+	}
+	log, err := os.ReadFile(filepath.Join(targetWorkspace, "commands.log"))
+	if err != nil {
+		t.Fatalf("read commands log: %v", err)
+	}
+	if got := strings.Fields(string(log)); strings.Join(got, " ") != "status main start main status main assign main" {
+		t.Fatalf("unexpected lifecycle commands: %q", log)
+	}
+}
