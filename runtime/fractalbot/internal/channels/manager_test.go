@@ -3,6 +3,7 @@ package channels
 import (
 	"context"
 	"errors"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/configv2"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -459,16 +460,22 @@ func (p *panickingChannel) Send(ctx context.Context, msg OutboundMessage) (*Send
 }
 
 func TestManagerRejectsDuplicateFeishuAppIDAcrossBots(t *testing.T) {
-	// Two named bots that declare the same Feishu App ID resolve to the same
-	// inbound receiver identity. Registration must fail rather than let the
-	// second bot silently claim the identity, which would defeat #387's
-	// reply-isolation guarantee (the outbound reply could then route to
-	// whichever bot happened to register last).
-	cfg := v2Config(t, "  feishu:\n    support: {appId: cli_shared, appSecret: secret:feishu-support}\n    sales: {appId: cli_shared, appSecret: secret:feishu-sales}\n",
-		map[string]string{"support-main": "feishu.support", "sales-main": "feishu.sales"})
-	manager := NewManager(cfg, map[string]string{"feishu-support": "a", "feishu-sales": "b"})
-
-	if err := manager.registerConfiguredChannels(); err == nil || !strings.Contains(err.Error(), "feishu app ID is configured by more than one bot") {
+	// Two bots with one Feishu App ID would share an inbound receiver identity
+	// and break reply isolation (#387). Configuration validation rejects it,
+	// and registration still refuses a second bot for an App ID.
+	p := configv2.HostPlatform()
+	p.GOOS = "darwin"
+	yaml := "version: 2\nchannels:\n  feishu:\n    support: {appId: cli_shared, appSecret: secret:a}\n    sales: {appId: cli_shared, appSecret: secret:b}\nagents:\n  bot: {workspace: " + t.TempDir() + ", runtime: agentManager, channels: [feishu.support, feishu.sales]}\n"
+	if _, err := configv2.Parse([]byte(yaml), p); err == nil || !strings.Contains(err.Error(), "appId is also used by") {
+		t.Fatalf("expected the configuration to be rejected, got %v", err)
+	}
+	manager := NewManager(nil, nil)
+	first, _ := NewNamedFeishuBot("support", "cli_shared", "a", "", nil, "bot", []string{"bot"})
+	second, _ := NewNamedFeishuBot("sales", "cli_shared", "b", "", nil, "bot", []string{"bot"})
+	if err := manager.Register(first); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Register(second); err == nil || !strings.Contains(err.Error(), "feishu app ID is configured by more than one bot") {
 		t.Fatalf("expected duplicate-appID collision error, got %v", err)
 	}
 }
