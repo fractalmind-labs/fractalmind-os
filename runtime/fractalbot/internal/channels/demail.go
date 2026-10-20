@@ -40,9 +40,9 @@ type DemailOptions struct {
 	PackageID string
 	// Address is this node's Sui address (inbound recipient / outbound sender).
 	Address string
-	// IdentityKeyFile is a path to a base64 Ed25519 private key (32-byte seed
-	// or 64-byte key). It is read at Start and never logged.
-	IdentityKeyFile string
+	// IdentityKey is the base64 Ed25519 private key (32-byte seed or 64-byte
+	// key), resolved from the secret store. It is never logged.
+	IdentityKey string
 	// SponsorAddress is the gas sponsor Sui address for outbound sends.
 	// It may equal Address: that is a supported self-sponsored route where
 	// the sender pays its own gas and only one signature is produced.
@@ -74,15 +74,15 @@ type DemailOptions struct {
 // every sender is denied, matching the deny-all default of the other gateway
 // channels.
 type DemailChannel struct {
-	rpcURL          string
-	graphqlURL      string
-	packageID       string
-	address         string
-	identityKeyFile string
-	sponsorAddress  string
-	gasCoin         string
-	cursorFile      string
-	pollInterval    time.Duration
+	rpcURL         string
+	graphqlURL     string
+	packageID      string
+	address        string
+	identityKey    string
+	sponsorAddress string
+	gasCoin        string
+	cursorFile     string
+	pollInterval   time.Duration
 
 	allowlist DemailAllowlist
 	// peers maps normalized recipient address -> Ed25519 public key.
@@ -180,7 +180,7 @@ func NewDemailChannel(opts DemailOptions) (*DemailChannel, error) {
 		graphqlURL:        strings.TrimSpace(opts.GraphQLURL),
 		packageID:         strings.TrimSpace(opts.PackageID),
 		address:           address,
-		identityKeyFile:   strings.TrimSpace(opts.IdentityKeyFile),
+		identityKey:       strings.TrimSpace(opts.IdentityKey),
 		sponsorAddress:    sponsor,
 		gasCoin:           gasCoin,
 		pollInterval:      pollInterval,
@@ -261,7 +261,7 @@ func (b *DemailChannel) Start(ctx context.Context) error {
 
 	runFn := b.runListenerFn
 	if runFn == nil {
-		identityKey, err := loadDemailIdentityKey(b.identityKeyFile)
+		identityKey, err := loadDemailIdentityKey(b.identityKey)
 		if err != nil {
 			b.cancel()
 			return err
@@ -702,21 +702,13 @@ func (a DemailAllowlist) Allowed(address string) bool {
 
 // loadDemailIdentityKey reads a base64 Ed25519 private key (32-byte seed or
 // 64-byte key) from path. Key material is never logged.
-func loadDemailIdentityKey(path string) (ed25519.PrivateKey, error) {
-	if strings.TrimSpace(path) == "" {
-		return nil, errors.New("demail identityKeyFile is required")
+func loadDemailIdentityKey(material string) (ed25519.PrivateKey, error) {
+	if strings.TrimSpace(material) == "" {
+		return nil, errors.New("demail identityKey is required")
 	}
-	expanded, err := expandHomePath(path)
+	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(material))
 	if err != nil {
-		return nil, fmt.Errorf("demail identityKeyFile: %w", err)
-	}
-	data, err := os.ReadFile(expanded)
-	if err != nil {
-		return nil, fmt.Errorf("demail identityKeyFile: %w", err)
-	}
-	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(data)))
-	if err != nil {
-		return nil, errors.New("demail identityKeyFile: content must be base64")
+		return nil, errors.New("demail identityKey: must be base64")
 	}
 	switch len(raw) {
 	case ed25519.SeedSize:
@@ -724,7 +716,7 @@ func loadDemailIdentityKey(path string) (ed25519.PrivateKey, error) {
 	case ed25519.PrivateKeySize:
 		return ed25519.PrivateKey(raw), nil
 	default:
-		return nil, fmt.Errorf("demail identityKeyFile: key must be %d-byte seed or %d-byte key, got %d bytes", ed25519.SeedSize, ed25519.PrivateKeySize, len(raw))
+		return nil, fmt.Errorf("demail identityKey: key must be %d-byte seed or %d-byte key, got %d bytes", ed25519.SeedSize, ed25519.PrivateKeySize, len(raw))
 	}
 }
 

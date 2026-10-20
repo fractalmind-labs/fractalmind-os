@@ -194,10 +194,10 @@ func TestDiscordAgentsEmptyConfigHint(t *testing.T) {
 		channelType: "dm",
 	})
 
-	if !strings.Contains(sent.text, "agents.ohMyCode.defaultAgent") {
+	if !strings.Contains(sent.text, "agents.<name>.channels") {
 		t.Fatalf("expected defaultAgent hint, got %q", sent.text)
 	}
-	if !strings.Contains(sent.text, "agents.ohMyCode.allowedAgents") {
+	if !strings.Contains(sent.text, "agents.<name>.channels") {
 		t.Fatalf("expected allowedAgents hint, got %q", sent.text)
 	}
 	if !strings.Contains(sent.text, "/agent <name> <task>") {
@@ -468,7 +468,7 @@ func TestDiscordDefaultAgentMissingGuidance(t *testing.T) {
 		channelType: "dm",
 	})
 
-	if !strings.Contains(sent.text, "agents.ohMyCode.defaultAgent") {
+	if !strings.Contains(sent.text, "Set the channel default") {
 		t.Fatalf("expected config key hint, got %q", sent.text)
 	}
 	if !strings.Contains(sent.text, "/agent <name> <task>") {
@@ -647,7 +647,7 @@ func TestDiscordMonitorAllowed(t *testing.T) {
 		channelType: "dm",
 	})
 
-	if !strings.Contains(sent.text, "agents.ohMyCode.enabled") {
+	if !strings.Contains(sent.text, "lifecycle commands are not available") {
 		t.Fatalf("expected config hint, got %q", sent.text)
 	}
 }
@@ -812,7 +812,7 @@ func TestDiscordAgentsAllowedWithoutAllowlist(t *testing.T) {
 	if strings.Contains(sent.text, "Unauthorized") {
 		t.Fatalf("did not expect unauthorized for /agents, got %q", sent.text)
 	}
-	if !strings.Contains(sent.text, "Allowed agents:") && !strings.Contains(sent.text, "agents.ohMyCode.defaultAgent") {
+	if !strings.Contains(sent.text, "Allowed agents:") && !strings.Contains(sent.text, "agents.<name>.channels") {
 		t.Fatalf("expected agents output or config hint, got %q", sent.text)
 	}
 }

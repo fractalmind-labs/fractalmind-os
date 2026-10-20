@@ -2,11 +2,7 @@ package channels
 
 import (
 	"context"
-	"strings"
 	"testing"
-	"time"
-
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 )
 
 func TestManagerRegistersIMessageChannel(t *testing.T) {
@@ -14,42 +10,28 @@ func TestManagerRegistersIMessageChannel(t *testing.T) {
 	currentGOOS = "darwin"
 	defer func() { currentGOOS = originalGOOS }()
 
-	manager := NewManager(&config.ChannelsConfig{
-		IMessage: &config.IMessageConfig{
-			Enabled:   true,
-			Recipient: "recipient@example.com",
-			Message:   "hello",
-		},
-	}, nil)
-
-	if err := manager.Start(context.Background()); err != nil {
-		t.Fatalf("start: %v", err)
+	cfg := v2Config(t, "  imessage:\n    main: {recipient: recipient@example.com}\n", map[string]string{"bot": "imessage.main"})
+	manager := NewManager(cfg, nil)
+	if err := manager.registerConfiguredChannels(); err != nil {
+		t.Fatalf("register: %v", err)
 	}
-	defer func() { _ = manager.Stop() }()
-
-	waitForCondition(t, time.Second, func() bool {
-		channel := manager.Get("imessage")
-		return channel != nil && channel.IsRunning()
-	})
+	bot, ok := manager.Get("imessage").(*IMessageBot)
+	if !ok || bot.recipient != "recipient@example.com" {
+		t.Fatalf("imessage channel: %#v", manager.Get("imessage"))
+	}
 }
 
-func TestManagerRejectsIMessageOnNonDarwin(t *testing.T) {
+func TestManagerReportsIMessageOnNonDarwinAsUnavailable(t *testing.T) {
 	originalGOOS := currentGOOS
 	currentGOOS = "linux"
 	defer func() { currentGOOS = originalGOOS }()
 
-	manager := NewManager(&config.ChannelsConfig{
-		IMessage: &config.IMessageConfig{
-			Enabled:   true,
-			Recipient: "recipient@example.com",
-		},
-	}, nil)
-
-	err := manager.Start(context.Background())
-	if err == nil {
-		t.Fatalf("expected non-darwin start error")
+	cfg := v2Config(t, "  imessage:\n    main: {recipient: recipient@example.com}\n", map[string]string{"bot": "imessage.main"})
+	manager := NewManager(cfg, nil)
+	if err := manager.Start(context.Background()); err != nil {
+		t.Fatalf("start: %v", err)
 	}
-	if !strings.Contains(err.Error(), "darwin") {
-		t.Fatalf("expected darwin error, got %v", err)
+	if reason := manager.Unavailable()["imessage.main"]; reason == "" {
+		t.Fatal("expected imessage to be reported unavailable")
 	}
 }

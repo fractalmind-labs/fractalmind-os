@@ -9,7 +9,7 @@ go mod download
 cp config.example.yaml config.yaml
 ```
 
-Edit `config.yaml` to enable at least one channel. The complete option set and inline guidance live in [`config.example.yaml`](../config.example.yaml).
+Edit `config.yaml`: channels, agents and schedules. [`config.example.yaml`](../config.example.yaml) is annotated and [Configuration](config-v2.md) is the full reference. Store secrets with `fractalbot secret set <name>` and run `fractalbot config check`.
 
 ```bash
 go run ./cmd/fractalbot --config ./config.yaml
@@ -17,15 +17,27 @@ go run ./cmd/fractalbot --config ./config.yaml
 
 ## Local Telegram demo
 
-For a polling-based Telegram-to-oh-my-code demo, set these values in `config.yaml`:
+For a polling-based Telegram-to-agent-manager demo:
 
-- `channels.telegram.botToken`
-- `channels.telegram.adminID`
-- `channels.telegram.allowedUsers`
-- `agents.router: ohMyCode`
-- `agents.ohMyCode.enabled: true`
-- `agents.ohMyCode.workspace`
-- `agents.ohMyCode.defaultAgent` and `allowedAgents`
+```yaml
+version: 2
+channels:
+  telegram:
+    main:
+      botToken: secret:telegram-main
+      adminId: 123456789
+      allowedUsers: [123456789]
+agents:
+  coder:
+    workspace: /absolute/path/to/oh-my-code
+    runtime: agentManager
+    channels: [telegram.main]
+```
+
+```bash
+go run ./cmd/fractalbot --config ./config.yaml secret set telegram-main
+go run ./cmd/fractalbot --config ./config.yaml config check
+```
 
 Start the gateway:
 
@@ -33,7 +45,7 @@ Start the gateway:
 go run ./cmd/fractalbot --config ./config.yaml
 ```
 
-In a Telegram DM, use `/whoami` to confirm your user ID, `/ping` to verify the channel, then send a normal task or `/agent coder-a summarize current status`.
+In a Telegram DM, use `/whoami` to confirm your user ID, `/ping` to verify the channel, then send a normal task.
 
 ## Build and test
 

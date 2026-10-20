@@ -68,14 +68,20 @@ FractalBot reads `~/Library/Messages/chat.db` using an embedded SQLite driver (`
 ```yaml
 channels:
   imessage:
-    enabled: true
-    recipient: "+1234567890"        # default outbound target (phone/email/Apple ID)
-    pollingEnabled: true            # enable inbound message polling
-    pollingIntervalSeconds: 5       # poll interval (min: 1, default: 5)
-    pollingLimit: 20                # max messages per poll (max: 100, default: 20)
-    # databasePath: "~/Library/Messages/chat.db"  # override if needed
-    # service: ""                   # leave empty for auto-discovery
+    main:
+      recipient: "+1234567890"      # default outbound target (phone/email/Apple ID)
+      pollIntervalSeconds: 5        # poll interval (min: 1, default: 5)
+      pollLimit: 20                 # max messages per poll (max: 100, default: 20)
+      # databasePath: "~/Library/Messages/chat.db"  # override if needed
+      # service: ""                 # leave empty for auto-discovery
+      default: assistant            # needed when several agents share it
+
+agents:
+  assistant:
+    channels: [imessage.main]       # plus workspace and runtime
 ```
+
+A Mac has one iMessage account, so configure one instance and bind it to every agent that should be reachable over iMessage; see [Routing](routing.md).
 
 | Field | Default | Description |
 |-------|---------|-------------|

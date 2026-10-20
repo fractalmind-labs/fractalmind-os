@@ -1,175 +1,99 @@
-# Agent Heartbeats
+# Schedules
 
-FractalBot can wake supported Agent Runtimes on explicit-timezone cron schedules. A heartbeat asks an Agent to inspect and advance its work; it is not a runtime readiness probe and it is not a synthetic channel message.
-
-Supported targets are `ohMyCode`, `codexAppCDP`, and `claudeDesktop`. Each job selects its Runtime and Agent directly, independently of the inbound `agents.router` setting.
+FractalBot is the only scheduler for agent wakeups. Each schedule wakes one agent on a cron. It is delivered the way that agent's messages are: through the agent's Claude Desktop inbox, its Codex App thread or its agent-manager session.
 
 ## Configuration
 
-The target Runtime must be enabled, and the job's Agent must be accepted by its `defaultAgent` or `allowedAgents` configuration.
-
 ```yaml
-agents:
-  heartbeat:
-    enabled: true
-    statePath: "./workspace/heartbeat-state.json"
-    maxConcurrent: 2
-    jobs:
-      - id: "cloudbank-main"
-        runtime: "codexAppCDP"
-        agent: "main"
-        text: "Inspect the current project and continue any actionable work."
-        cron: "*/10 * * * *"
-        timezone: "Asia/Shanghai"
-        agentCronProfiles:
-          idle: "0 * * * *"
-          deep-idle: "0 */6 * * *"
-        resetCronOnInbound: true
-        # ohMyCode only. Default false. When true, FractalBot starts a missing
-        # tmux session before dispatching this heartbeat tick.
-        startIfMissing: false
+schedules:
+  maxConcurrent: 2
+  jobs:
+    assistant-heartbeat:
+      agent: assistant
+      cron: "0 * * * *"
+      backoff:
+        idle: "0 */3 * * *"
+        deep-idle: "0 9 * * *"
+      resetOnInbound: true
+      prompt: Read HEARTBEAT.md and follow it. If nothing needs attention, reply HEARTBEAT_OK.
+    researcher-morning-report:
+      agent: researcher
+      cron: "30 7 * * *"
+      timezone: Europe/Berlin
+      promptFile: tasks/morning-report.md
 ```
 
-`text` is the complete inline instruction. Heartbeat prompt files are not supported. Cron expressions use the standard five-field format, and every job requires an IANA timezone.
+- `prompt` is inline. `promptFile` is relative to the agent's workspace and is read on every run, so edit the task file without touching the configuration.
+- Cron expressions are five-field. The time zone is the job's `timezone`, else the top-level `timezone`, else the system's.
+- `backoff` lists the only lower-frequency schedules the agent may switch to. Arbitrary agent-provided cron expressions are rejected.
+- `resetOnInbound: true` restores `cron` when a channel message is delivered to this job's agent. Messages to other agents do not affect it.
 
-A `claudeDesktop` or `ohMyCode` job can add `target`, the name of a receiver target under `agents.ohMyCode.targets`, so the heartbeat reaches the same destination as that bot's messages. A `claudeDesktop` job then queues to the target's `claudeDesktopInboxPath` (without `target` it uses `agents.claudeDesktop.inboxPath`). The target must exist and use the job's runtime (a target without `runtime` is `ohMyCode`); `codexAppCDP` jobs reject `target`:
+Field reference: [config-v2.md](config-v2.md#schedules).
 
-```yaml
-      - id: "burry-main"
-        runtime: "claudeDesktop"
-        agent: "main"
-        target: "burry"
-        text: "Read HEARTBEAT.md if it exists. If nothing needs attention, reply HEARTBEAT_OK."
-        cron: "0 * * * *"
-        timezone: "Asia/Shanghai"
-```
+## What the agent receives
 
-An `ohMyCode` job with `target` runs that target's `agentManagerScript` in its `workspace`, and its `agent` must be allowed by the target's `defaultAgent`/`allowedAgents` rather than the shared ones. This is how a scheduled job reaches a Codex App session through the queue adapter in [codex-native-queue.md](codex-native-queue.md):
+Every wakeup carries `job_id`, `run_id`, the agent and its runtime, the scheduled time and an expiry, then the instruction. The gateway appends:
 
-```yaml
-      - id: "project-heartbeat"
-        runtime: "ohMyCode"
-        agent: "main"
-        target: "project"
-        text: "Read HEARTBEAT.md if it exists. If nothing needs attention, reply HEARTBEAT_OK."
-        cron: "0 */4 * * *"
-        timezone: "Asia/Shanghai"
-```
+- the command to report the run's outcome;
+- when `backoff` is set, the commands to lower the frequency and to restore it.
 
-That adapter supports `assign` only, so leave `startIfMissing` and `dispatchMode` unset for such a job.
+So prompts only need to describe the task.
 
-`startIfMissing` is off by default. When it is true and the job targets `ohMyCode`, FractalBot checks `agent-manager status` and, if the session is not running, calls `start` before dispatch. Failed starts enter a 90s cooldown. This is not `heartbeat rescue` and does not apply to Codex App or Claude Desktop jobs.
+## Lowering and restoring the frequency
 
-The configured `cron` remains the default. `agentCronProfiles` contains the only alternative schedules an Agent may select; arbitrary Agent-provided cron expressions are rejected.
-
-### Completion-aware ohMyCode heartbeats
-
-By default, an `ohMyCode` heartbeat uses the existing generic `agent-manager assign` delivery. That preserves custom `text` instructions, but successful delivery only means that agent-manager accepted the task; it does not mean the heartbeat work finished.
-
-Set `dispatchMode: heartbeatRun` when agent-manager's native heartbeat lifecycle should remain authoritative:
-
-```yaml
-agents:
-  ohMyCode:
-    enabled: true
-    workspace: "/absolute/path/to/workspace"
-    defaultAgent: "main"
-    allowedAgents: ["main"]
-  heartbeat:
-    enabled: true
-    jobs:
-      - id: "main"
-        runtime: "ohMyCode"
-        agent: "main"
-        dispatchMode: "heartbeatRun"
-        timeoutSeconds: 480
-        cron: "*/5 * * * *"
-        timezone: "Asia/Shanghai"
-```
-
-This mode calls `agent-manager heartbeat run <agent> --timeout <duration>`. The job stays in flight until agent-manager returns a terminal ACK, skip, or failure, so overlapping ticks are coalesced for the full lifecycle rather than only for task assignment. The HB ID printed by agent-manager is recorded as `last_envelope_id` in `/status`.
-
-`text` is optional and not delivered in this mode because agent-manager owns the canonical heartbeat prompt. `timeoutSeconds` defaults to 480 and may be set from 1 to 86400 seconds; zero selects the default. A terminal agent-manager failure is recorded as `heartbeat_failed` and is not retried by FractalBot, avoiding duplicate heartbeat execution. Generic runtime delivery errors keep the existing bounded retry behavior.
-
-## Schedule adjustment
-
-A normal heartbeat requires no callback. Only when the Agent determines that there is no actionable work should it reduce the frequency:
+Only when the agent finds nothing to do should it lower the frequency:
 
 ```bash
-fractalbot heartbeat cron set \
-  --job cloudbank-main \
-  --profile idle \
-  --reason "no actionable tasks"
+fractalbot heartbeat cron set --job assistant-heartbeat --profile idle --reason "no actionable tasks"
+fractalbot heartbeat cron reset --job assistant-heartbeat
 ```
 
-Setting the active profile again is a successful no-op. Restore the configured default with:
-
-```bash
-fractalbot heartbeat cron reset --job cloudbank-main
-```
-
-The equivalent loopback-only API is:
-
-```http
-PUT /api/v1/heartbeat/jobs/cloudbank-main/cron
-Content-Type: application/json
-
-{"profile":"idle","reason":"no actionable tasks"}
-```
-
-```http
-DELETE /api/v1/heartbeat/jobs/cloudbank-main/cron
-```
-
-When `resetCronOnInbound` is true, a normal user message successfully routed to the same Runtime and Agent also restores the default cron. Rejected, malformed, or unrelated messages do not reset it.
-
-## Delivery behavior
-
-- One run per job may be in flight; overlapping ticks are skipped.
-- `maxConcurrent` limits dispatches across all jobs.
-- The effective profile and delivery telemetry are written atomically to `statePath`.
-- Restart preserves the effective profile but calculates the next future occurrence. Missed heartbeats are never replayed.
-- Codex App and Claude Desktop inbox fallback uses a stable key per job. A newer queued heartbeat replaces the older unconsumed heartbeat.
-- Runtime delivery errors receive a bounded exponential-backoff retry. The final failure is recorded without changing the Agent-selected schedule.
-- `startIfMissing: true` on an `ohMyCode` job starts a missing tmux session before dispatch. Default remains no extra start.
-- `ohMyCode` jobs using `dispatchMode: heartbeatRun` hold the in-flight lease through agent-manager's terminal result and do not retry terminal heartbeat failures.
+Setting the active profile again is a no-op. The loopback-only API is `PUT /api/v1/heartbeat/jobs/<id>/cron` with `{"profile":"idle","reason":"…"}`, and `DELETE` on the same path to restore the configured cron.
 
 ## Outcomes
 
-Delivery only says the runtime accepted a heartbeat, not whether it was worth running. Every heartbeat prompt therefore ends with the command the Agent uses to report what the run came to:
+Delivery only says the runtime accepted a wakeup, not whether the run was worth it. The agent reports what the run came to:
 
 ```bash
-fractalbot heartbeat outcome \
-  --job cloudbank-main \
-  --run <run_id from the wakeup> \
-  --result noop \
-  --summary "nothing actionable"
+fractalbot heartbeat outcome --job assistant-heartbeat --run <run_id> --result noop --summary "nothing actionable"
 ```
 
-`--result` is one of `noop` (nothing needed doing), `acted` (did work), `notified` (sent a person a message) or `failed` (could not complete). `--summary` is optional, one line, and kept to 500 characters. Only the job's latest run can report; reporting the same run again replaces its outcome rather than counting twice. The loopback-only API is:
+- `--result` is one of `noop` (nothing needed doing), `acted` (did work), `notified` (sent a person a message) or `failed` (could not complete).
+- `--summary` is one line of at most 500 characters.
+- Only the latest run can report, and reporting the same run again replaces its outcome.
 
-```http
-POST /api/v1/heartbeat/jobs/cloudbank-main/outcome
-Content-Type: application/json
+The loopback-only API is `POST /api/v1/heartbeat/jobs/<id>/outcome` with `{"run_id":"…","result":"noop","summary":"…"}`.
 
-{"run_id":"<run_id>","result":"noop","summary":"nothing actionable"}
-```
+## agent-manager heartbeat lifecycle
 
-`/status` shows, per job, `delivered_runs`, `outcome_counts`, `unreported_runs` (delivered runs that never reported), and the last outcome with its time and summary. They are kept in `statePath`, so a week of them answers which heartbeats do work, which are mostly `noop` and should be slowed down or removed, and which Agents don't report at all.
+For an `agentManager` agent, `mode: heartbeatRun` runs `agent-manager heartbeat run <session> --timeout <duration>` instead of assigning the prompt. The job stays in flight until agent-manager returns its terminal ACK, skip or failure, and the HB ID it prints is recorded in `/status`.
+
+- **Timeout:** `timeoutSeconds` defaults to 480.
+- **Prompt:** `prompt` is optional, because agent-manager owns the heartbeat prompt.
+- **Failures:** a terminal failure is recorded as `heartbeat_failed` and is not retried.
+
+With `runtimes.agentManager.startIfMissing: true`, a stopped agent-manager agent is started before a schedule is delivered to it.
+
+## Delivery behavior
+
+- **Overlap:** one run per job may be in flight; overlapping ticks are skipped.
+- **Concurrency:** `maxConcurrent` limits dispatches across all jobs.
+- **Restarts:** restart keeps the selected backoff level and computes the next future run. Missed runs are never replayed.
+- **Queued wakeups:** in a Claude Desktop inbox, a newer wakeup for the same job replaces one still waiting.
+- **Errors:** delivery errors get a bounded exponential-backoff retry, and the final failure is recorded.
+- **State:** schedule state and outcomes are written atomically to `<dataDir>/state/schedules.json`.
 
 ## Status
 
-For a local Codex session without CDP, the optional
-[native queue bridge](codex-native-queue.md#heartbeat-relay) drains a dedicated
-`codexAppCDP` inbox into `codex queue`. FractalBot remains the sole scheduler;
-the relay preserves run metadata, retries unconfirmed deliveries, and archives
-expired envelopes. Gateway inbox acceptance is separate from native queue
-acceptance and task completion.
+`GET /status` lists each agent with its schedules. Each schedule shows:
 
-`GET /status` includes a redacted `heartbeat` section with configured and effective cron, timezone, dispatch mode and timeout, next run, in-flight state, last dispatch result, and schedule-change audit fields.
+- configured and effective cron, time zone, next run and in-flight state;
+- the last dispatch and its result;
+- the schedule-change audit;
+- `delivered_runs`, `outcome_counts`, `unreported_runs` and the last outcome.
+
+Prompt text is never included.
 
 ```bash
 curl -sS http://127.0.0.1:18789/status | python3 -m json.tool
 ```
-
-The inline instruction is not included in status output.

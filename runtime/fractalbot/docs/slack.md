@@ -26,11 +26,22 @@ Subscribe to **Bot Events**:
 ```yaml
 channels:
   slack:
-    enabled: true
-    botToken: "xoxb-your-bot-token"
-    appToken: "xapp-your-app-level-token"
-    allowedUsers:
-      - "U12345678"  # your Slack user ID
+    main:
+      botToken: secret:slack-bot
+      appToken: secret:slack-app
+      allowedUsers:
+        - "U12345678"  # your Slack user ID
+
+agents:
+  assistant:
+    channels: [slack.main]  # plus workspace and runtime
+```
+
+Store the tokens on this machine:
+
+```bash
+fractalbot secret set slack-bot   # paste the xoxb- token
+fractalbot secret set slack-app   # paste the xapp- token
 ```
 
 Notes:

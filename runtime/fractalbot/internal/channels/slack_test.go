@@ -235,10 +235,10 @@ func TestSlackAgentsEmptyConfigHint(t *testing.T) {
 		channelType: "im",
 	})
 
-	if !strings.Contains(sent.text, "agents.ohMyCode.defaultAgent") {
+	if !strings.Contains(sent.text, "agents.<name>.channels") {
 		t.Fatalf("expected defaultAgent hint, got %q", sent.text)
 	}
-	if !strings.Contains(sent.text, "agents.ohMyCode.allowedAgents") {
+	if !strings.Contains(sent.text, "agents.<name>.channels") {
 		t.Fatalf("expected allowedAgents hint, got %q", sent.text)
 	}
 	if !strings.Contains(sent.text, "/agent <name> <task>") {
@@ -269,7 +269,7 @@ func TestSlackDefaultAgentMissingGuidance(t *testing.T) {
 		channelType: "im",
 	})
 
-	if !strings.Contains(sent.text, "agents.ohMyCode.defaultAgent") {
+	if !strings.Contains(sent.text, "Set the channel default") {
 		t.Fatalf("expected config key hint, got %q", sent.text)
 	}
 	if !strings.Contains(sent.text, "/agent <name> <task>") {
@@ -930,7 +930,7 @@ func TestSlackMonitorAllowed(t *testing.T) {
 		channelType: "im",
 	})
 
-	if !strings.Contains(sent.text, "agents.ohMyCode.enabled") {
+	if !strings.Contains(sent.text, "lifecycle commands are not available") {
 		t.Fatalf("expected config hint, got %q", sent.text)
 	}
 }

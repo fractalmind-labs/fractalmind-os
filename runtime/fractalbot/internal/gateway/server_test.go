@@ -3,653 +3,104 @@ package gateway
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/channels"
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/configv2"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/router"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/secrets"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/localruntime"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/protocol"
-	"github.com/gorilla/websocket"
 )
 
-func TestGatewayEchoAndStatus(t *testing.T) {
-	cfg := &config.Config{
-		Gateway: &config.GatewayConfig{
-			Bind: "127.0.0.1",
-			Port: 0,
-		},
-		Channels: &config.ChannelsConfig{},
-		Agents:   &config.AgentsConfig{},
-	}
-
-	server, err := NewServer(cfg)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
-	server.startTime = time.Now()
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/ws", server.handleWebSocket)
-	mux.HandleFunc("/status", server.handleStatus)
-
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws"
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-	if err != nil {
-		t.Fatalf("Dial failed: %v", err)
-	}
-	defer conn.Close()
-
-	msg := protocol.Message{
-		Kind:   protocol.MessageKindEvent,
-		Action: protocol.ActionEcho,
-		Data: map[string]string{
-			"text": "hello",
-		},
-	}
-
-	if err := conn.WriteJSON(&msg); err != nil {
-		t.Fatalf("WriteJSON failed: %v", err)
-	}
-
-	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-
-	var resp protocol.Message
-	if err := conn.ReadJSON(&resp); err != nil {
-		t.Fatalf("ReadJSON failed: %v", err)
-	}
-
-	if resp.Kind != protocol.MessageKindEvent || resp.Action != protocol.ActionEcho {
-		t.Fatalf("unexpected response: %#v", resp)
-	}
-
-	data, ok := resp.Data.(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected map data, got %#v", resp.Data)
-	}
-	if data["text"] != "hello" {
-		t.Fatalf("unexpected echo payload: %#v", data)
-	}
-
-	if err := waitForActiveClients(server, 1, time.Second); err != nil {
-		t.Fatalf("active clients not tracked: %v", err)
-	}
-
-	statusResp, err := fetchStatus(ts.URL + "/status")
-	if err != nil {
-		t.Fatalf("status request failed: %v", err)
-	}
-	if statusResp.Status != "ok" {
-		t.Fatalf("unexpected status: %#v", statusResp)
-	}
-	if statusResp.ActiveClients != 1 {
-		t.Fatalf("unexpected active_clients: %d", statusResp.ActiveClients)
-	}
-	if statusResp.Uptime == "" {
-		t.Fatalf("expected uptime in status response")
-	}
-
-	_ = conn.Close()
-
-	if err := waitForActiveClients(server, 0, time.Second); err != nil {
-		t.Fatalf("client cleanup failed: %v", err)
-	}
+// recordingAdapter accepts every delivery.
+type recordingAdapter struct {
+	mu  sync.Mutex
+	got []localruntime.Request
 }
 
-func TestChannelStatusReportsNamedFeishuBots(t *testing.T) {
-	server, err := NewServer(&config.Config{
-		Gateway: &config.GatewayConfig{Bind: "127.0.0.1", Port: 0},
-		Channels: &config.ChannelsConfig{Feishu: &config.FeishuConfig{
-			Enabled: true,
-			Bots: map[string]config.FeishuBotConfig{
-				"sales":   {AppID: "cli_sales", AppSecret: "sales-secret"},
-				"support": {AppID: "cli_support", AppSecret: "support-secret"},
-			},
-		}},
-		Agents: &config.AgentsConfig{},
-	})
-	if err != nil {
-		t.Fatalf("NewServer: %v", err)
-	}
-	for _, name := range []string{"feishu/sales", "feishu/support"} {
-		if err := server.agentManager.ChannelManager.Register(&fakeSendChannel{name: name}); err != nil {
-			t.Fatalf("register %s: %v", name, err)
+func (a *recordingAdapter) Name() string { return "agentManager" }
+func (a *recordingAdapter) Capabilities() localruntime.Capabilities {
+	return localruntime.Capabilities{}
+}
+func (a *recordingAdapter) Deliver(_ context.Context, _ localruntime.Target, r localruntime.Request) localruntime.Result {
+	a.mu.Lock()
+	a.got = append(a.got, r)
+	a.mu.Unlock()
+	return localruntime.Result{Status: localruntime.Delivered, EnvelopeID: r.Envelope.ID}
+}
+func (a *recordingAdapter) Presence(context.Context, localruntime.Target) localruntime.Presence {
+	return localruntime.Online
+}
+
+// testConfig has two agentManager agents sharing telegram.main, slack.main
+// for ops only, and one schedule for cloudbank.
+func testConfig(t *testing.T) *configv2.Config {
+	t.Helper()
+	dir := t.TempDir()
+	for _, ws := range []string{"cloudbank", "ops"} {
+		if err := os.MkdirAll(filepath.Join(dir, ws), 0o755); err != nil {
+			t.Fatal(err)
 		}
 	}
-
-	statuses := server.channelStatus()
-	if len(statuses) != 2 || statuses[0].Name != "feishu/sales" || statuses[1].Name != "feishu/support" {
-		t.Fatalf("unexpected named Feishu statuses: %#v", statuses)
-	}
-	for _, status := range statuses {
-		if !status.Enabled {
-			t.Fatalf("expected enabled status: %#v", status)
-		}
-	}
-}
-
-type statusPayload struct {
-	Status        string `json:"status"`
-	ActiveClients int    `json:"active_clients"`
-	Uptime        string `json:"uptime"`
-	Channels      []struct {
-		Name    string `json:"name"`
-		Enabled bool   `json:"enabled"`
-		Running bool   `json:"running"`
-		Mode    string `json:"mode"`
-		Webhook *struct {
-			RegisterOnStart      bool `json:"register_on_start"`
-			DeleteOnStop         bool `json:"delete_on_stop"`
-			PublicURLConfigured  bool `json:"public_url_configured"`
-			ListenAddrConfigured bool `json:"listen_addr_configured"`
-			Registered           bool `json:"registered"`
-		} `json:"webhook"`
-		LastError    string `json:"last_error"`
-		LastActivity string `json:"last_activity"`
-	} `json:"channels"`
-	Agents *struct {
-		WorkspaceConfigured bool `json:"workspace_configured"`
-		MaxConcurrent       int  `json:"max_concurrent"`
-		OhMyCode            *struct {
-			Enabled             bool     `json:"enabled"`
-			WorkspaceConfigured bool     `json:"workspace_configured"`
-			DefaultAgent        string   `json:"default_agent"`
-			AllowedAgents       []string `json:"allowed_agents"`
-			LastRouting         *struct {
-				SelectedAgent string `json:"selected_agent"`
-				Channel       string `json:"channel"`
-				ChatID        string `json:"chat_id"`
-				UserID        string `json:"user_id"`
-				Username      string `json:"username"`
-				Status        string `json:"status"`
-				Error         string `json:"error"`
-				RecordedAt    string `json:"recorded_at"`
-			} `json:"last_routing"`
-		} `json:"oh_my_code"`
-		ClaudeDesktop *struct {
-			Enabled          bool     `json:"enabled"`
-			CDPEndpoint      string   `json:"cdp_endpoint"`
-			TargetSelector   string   `json:"target_selector"`
-			InboxConfigured  bool     `json:"inbox_configured"`
-			FallbackToInbox  bool     `json:"fallback_to_inbox"`
-			DefaultAgent     string   `json:"default_agent"`
-			AllowedAgents    []string `json:"allowed_agents"`
-			DeliveryTimeoutS int      `json:"delivery_timeout_seconds"`
-		} `json:"claude_desktop"`
-	} `json:"agents"`
-}
-
-func fetchStatus(url string) (*statusPayload, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	var payload statusPayload
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return nil, err
-	}
-	return &payload, nil
-}
-
-func waitForActiveClients(server *Server, want int, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if server.activeClients() == want {
-			return nil
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	return fmt.Errorf("active clients did not reach %d", want)
-}
-
-func TestStatusIncludesChannelAndAgentInfo(t *testing.T) {
-	cfg := &config.Config{
-		Gateway: &config.GatewayConfig{
-			Bind: "127.0.0.1",
-			Port: 0,
-		},
-		Channels: &config.ChannelsConfig{
-			Telegram: &config.TelegramConfig{
-				Enabled:                true,
-				Mode:                   "webhook",
-				WebhookListenAddr:      "0.0.0.0:18790",
-				WebhookPublicURL:       "https://example.com/telegram/webhook",
-				WebhookRegisterOnStart: true,
-				WebhookDeleteOnStop:    true,
-			},
-		},
-		Agents: &config.AgentsConfig{
-			Workspace:     "/tmp/agents",
-			MaxConcurrent: 3,
-			OhMyCode: &config.OhMyCodeConfig{
-				Enabled:       true,
-				Workspace:     "/tmp/oh-my-code",
-				DefaultAgent:  "qa-1",
-				AllowedAgents: []string{"qa-1", "coder-a"},
-			},
-		},
-	}
-
-	server, err := NewServer(cfg)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/status", server.handleStatus)
-
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	statusResp, err := fetchStatus(ts.URL + "/status")
-	if err != nil {
-		t.Fatalf("status request failed: %v", err)
-	}
-
-	if len(statusResp.Channels) != 1 {
-		t.Fatalf("expected 1 channel, got %d", len(statusResp.Channels))
-	}
-	if statusResp.Channels[0].Name != "telegram" {
-		t.Fatalf("unexpected channel name: %s", statusResp.Channels[0].Name)
-	}
-	if !statusResp.Channels[0].Enabled {
-		t.Fatalf("expected telegram to be enabled")
-	}
-	if statusResp.Channels[0].Running {
-		t.Fatalf("expected telegram running=false before start")
-	}
-	if statusResp.Channels[0].Mode != "webhook" {
-		t.Fatalf("unexpected telegram mode: %s", statusResp.Channels[0].Mode)
-	}
-	if statusResp.Channels[0].Webhook == nil {
-		t.Fatalf("expected webhook status")
-	}
-	if !statusResp.Channels[0].Webhook.RegisterOnStart {
-		t.Fatalf("expected webhook register_on_start true")
-	}
-	if !statusResp.Channels[0].Webhook.DeleteOnStop {
-		t.Fatalf("expected webhook delete_on_stop true")
-	}
-	if !statusResp.Channels[0].Webhook.PublicURLConfigured {
-		t.Fatalf("expected webhook public_url_configured true")
-	}
-	if !statusResp.Channels[0].Webhook.ListenAddrConfigured {
-		t.Fatalf("expected webhook listen_addr_configured true")
-	}
-
-	if statusResp.Agents == nil {
-		t.Fatalf("expected agents info")
-	}
-	if !statusResp.Agents.WorkspaceConfigured {
-		t.Fatalf("expected workspace configured")
-	}
-	if statusResp.Agents.MaxConcurrent != 3 {
-		t.Fatalf("unexpected max_concurrent: %d", statusResp.Agents.MaxConcurrent)
-	}
-	if statusResp.Agents.OhMyCode == nil {
-		t.Fatalf("expected oh_my_code info")
-	}
-	if !statusResp.Agents.OhMyCode.Enabled {
-		t.Fatalf("expected oh_my_code enabled")
-	}
-	if statusResp.Agents.OhMyCode.DefaultAgent != "qa-1" {
-		t.Fatalf("unexpected default_agent: %s", statusResp.Agents.OhMyCode.DefaultAgent)
-	}
-	if len(statusResp.Agents.OhMyCode.AllowedAgents) != 2 {
-		t.Fatalf("unexpected allowed_agents: %v", statusResp.Agents.OhMyCode.AllowedAgents)
-	}
-}
-
-type fakeTelemetryChannel struct {
-	name         string
-	running      bool
-	lastError    time.Time
-	lastActivity time.Time
-}
-
-func (f *fakeTelemetryChannel) Name() string {
-	return f.name
-}
-
-func (f *fakeTelemetryChannel) Start(ctx context.Context) error {
-	f.running = true
-	return nil
-}
-
-func (f *fakeTelemetryChannel) Stop(ctx context.Context) error {
-	_ = ctx
-	f.running = false
-	return nil
-}
-
-func (f *fakeTelemetryChannel) Send(ctx context.Context, msg channels.OutboundMessage) (*channels.SendResult, error) {
-	_ = ctx
-	return nil, nil
-}
-
-func (f *fakeTelemetryChannel) IsRunning() bool {
-	return f.running
-}
-
-func (f *fakeTelemetryChannel) IsAllowed(senderID string) bool {
-	return true
-}
-
-func (f *fakeTelemetryChannel) LastError() time.Time {
-	return f.lastError
-}
-
-func (f *fakeTelemetryChannel) LastActivity() time.Time {
-	return f.lastActivity
-}
-
-func TestStatusIncludesChannelTelemetry(t *testing.T) {
-	cfg := &config.Config{
-		Gateway: &config.GatewayConfig{
-			Bind: "127.0.0.1",
-			Port: 0,
-		},
-		Channels: &config.ChannelsConfig{
-			Telegram: &config.TelegramConfig{Enabled: true},
-		},
-		Agents: &config.AgentsConfig{},
-	}
-
-	server, err := NewServer(cfg)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
-
-	lastError := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
-	lastActivity := time.Date(2024, 1, 3, 4, 5, 6, 0, time.UTC)
-	fake := &fakeTelemetryChannel{
-		name:         "telegram",
-		lastError:    lastError,
-		lastActivity: lastActivity,
-	}
-	if err := server.agentManager.ChannelManager.Register(fake); err != nil {
-		t.Fatalf("register fake channel: %v", err)
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/status", server.handleStatus)
-
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	statusResp, err := fetchStatus(ts.URL + "/status")
-	if err != nil {
-		t.Fatalf("status request failed: %v", err)
-	}
-	if len(statusResp.Channels) != 1 {
-		t.Fatalf("expected 1 channel, got %d", len(statusResp.Channels))
-	}
-	if got := statusResp.Channels[0].LastError; got != lastError.Format(time.RFC3339) {
-		t.Fatalf("last_error=%q", got)
-	}
-	if got := statusResp.Channels[0].LastActivity; got != lastActivity.Format(time.RFC3339) {
-		t.Fatalf("last_activity=%q", got)
-	}
-}
-
-func TestStatusIncludesClaudeDesktopConfig(t *testing.T) {
-	cfg := &config.Config{
-		Gateway:  &config.GatewayConfig{Bind: "127.0.0.1", Port: 0},
-		Channels: &config.ChannelsConfig{},
-		Agents: &config.AgentsConfig{
-			Router: "claudeDesktop",
-			ClaudeDesktop: &config.ClaudeDesktopConfig{
-				Enabled:                true,
-				CDPEndpoint:            "http://127.0.0.1:19334",
-				TargetSelector:         "Claude",
-				InboxPath:              "/tmp/claude-inbox",
-				FallbackToInbox:        true,
-				DefaultAgent:           "main",
-				AllowedAgents:          []string{"main"},
-				DeliveryTimeoutSeconds: 20,
-			},
-		},
-	}
-	server, err := NewServer(cfg)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/status", server.handleStatus)
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-	statusResp, err := fetchStatus(ts.URL + "/status")
-	if err != nil {
-		t.Fatalf("fetch status: %v", err)
-	}
-	claude := statusResp.Agents.ClaudeDesktop
-	if claude == nil || !claude.Enabled || claude.CDPEndpoint != "http://127.0.0.1:19334" || claude.TargetSelector != "Claude" || !claude.InboxConfigured || !claude.FallbackToInbox || claude.DefaultAgent != "main" || claude.DeliveryTimeoutS != 20 {
-		t.Fatalf("unexpected Claude Desktop status: %#v", claude)
-	}
-	if len(claude.AllowedAgents) != 1 || claude.AllowedAgents[0] != "main" {
-		t.Fatalf("unexpected allowed agents: %#v", claude.AllowedAgents)
-	}
-}
-
-func TestStatusDoesNotExposeSecrets(t *testing.T) {
-	cfg := &config.Config{
-		Gateway: &config.GatewayConfig{
-			Bind: "127.0.0.1",
-			Port: 0,
-		},
-		Channels: &config.ChannelsConfig{
-			Telegram: &config.TelegramConfig{
-				Enabled:  true,
-				BotToken: "bot-token-secret",
-			},
-			Feishu: &config.FeishuConfig{
-				Enabled:   true,
-				AppID:     "cli_secret",
-				AppSecret: "app-secret",
-			},
-		},
-		Agents: &config.AgentsConfig{},
-	}
-
-	server, err := NewServer(cfg)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/status", server.handleStatus)
-
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	resp, err := http.Get(ts.URL + "/status")
-	if err != nil {
-		t.Fatalf("status request failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read response: %v", err)
-	}
-
-	text := string(body)
-	if strings.Contains(text, "bot-token-secret") || strings.Contains(text, "app-secret") || strings.Contains(text, "cli_secret") {
-		t.Fatalf("status response leaked secrets: %s", text)
-	}
-}
-
-func TestStatusIncludesOhMyCodeRoutingTelemetry(t *testing.T) {
-	workspace := t.TempDir()
-	scriptPath := filepath.Join(workspace, "agent_manager.py")
-
-	script := `import sys
-
-if len(sys.argv) >= 2 and sys.argv[1] == "assign":
-    print("assign ok")
-    sys.exit(0)
-
-print("unexpected command", file=sys.stderr)
-sys.exit(1)
+	yaml := `version: 2
+dataDir: ` + filepath.Join(dir, "data") + `
+timezone: Asia/Shanghai
+channels:
+  telegram:
+    main: {botToken: secret:telegram-main, default: cloudbank}
+  slack:
+    main: {botToken: secret:slack-bot, appToken: secret:slack-app}
+agents:
+  cloudbank:
+    workspace: ` + filepath.Join(dir, "cloudbank") + `
+    runtime: agentManager
+    channels: [telegram.main]
+  ops:
+    workspace: ` + filepath.Join(dir, "ops") + `
+    runtime: agentManager
+    channels: [telegram.main, slack.main]
+schedules:
+  maxConcurrent: 1
+  jobs:
+    cloudbank-main:
+      agent: cloudbank
+      cron: "*/10 * * * *"
+      prompt: secret heartbeat instruction
+      backoff: {idle: "0 * * * *"}
+      resetOnInbound: true
 `
-
-	if err := os.WriteFile(scriptPath, []byte(script), 0644); err != nil {
-		t.Fatalf("write script: %v", err)
-	}
-
-	cfg := &config.Config{
-		Gateway: &config.GatewayConfig{
-			Bind: "127.0.0.1",
-			Port: 0,
-		},
-		Channels: &config.ChannelsConfig{},
-		Agents: &config.AgentsConfig{
-			Workspace: workspace,
-			OhMyCode: &config.OhMyCodeConfig{
-				Enabled:            true,
-				Workspace:          workspace,
-				AgentManagerScript: scriptPath,
-				DefaultAgent:       "qa-1",
-			},
-		},
-	}
-
-	server, err := NewServer(cfg)
+	p := configv2.HostPlatform()
+	p.GOOS = "linux"
+	cfg, err := configv2.Parse([]byte(yaml), p)
 	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
+		t.Fatal(err)
 	}
-
-	reply, err := server.agentManager.HandleIncoming(context.Background(), &protocol.Message{
-		Data: map[string]interface{}{
-			"channel":  "telegram",
-			"text":     "hello",
-			"chat_id":  int64(321),
-			"user_id":  int64(456),
-			"username": "bob",
-		},
-	})
-	if err != nil {
-		t.Fatalf("HandleIncoming failed: %v", err)
-	}
-	if reply != "处理中…" {
-		t.Fatalf("unexpected reply: %q", reply)
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/status", server.handleStatus)
-
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	statusResp, err := fetchStatus(ts.URL + "/status")
-	if err != nil {
-		t.Fatalf("status request failed: %v", err)
-	}
-	if statusResp.Agents == nil || statusResp.Agents.OhMyCode == nil || statusResp.Agents.OhMyCode.LastRouting == nil {
-		t.Fatalf("expected last_routing telemetry, got %#v", statusResp.Agents)
-	}
-	routing := statusResp.Agents.OhMyCode.LastRouting
-	if routing.SelectedAgent != "qa-1" {
-		t.Fatalf("selected_agent=%q", routing.SelectedAgent)
-	}
-	if routing.Channel != "telegram" || routing.ChatID != "321" || routing.UserID != "456" || routing.Username != "bob" {
-		t.Fatalf("unexpected routing payload: %#v", routing)
-	}
-	if routing.Status != "assigned" {
-		t.Fatalf("status=%q", routing.Status)
-	}
-	if routing.RecordedAt == "" {
-		t.Fatal("expected recorded_at")
-	}
+	return cfg
 }
 
-func TestHealthEndpointReturnsJSON(t *testing.T) {
-	cfg := &config.Config{
-		Gateway: &config.GatewayConfig{
-			Bind: "127.0.0.1",
-			Port: 0,
-		},
-		Channels: &config.ChannelsConfig{
-			Telegram: &config.TelegramConfig{Enabled: true},
-		},
-		Agents: &config.AgentsConfig{},
-	}
+func newTestServerWith(t *testing.T) (*Server, *recordingAdapter, error) {
+	t.Helper()
+	cfg := testConfig(t)
+	adapter := &recordingAdapter{}
+	rt := router.New(cfg, map[string]localruntime.Adapter{"agentManager": adapter})
+	redactor := secrets.NewRedactor()
+	redactor.Add("telegram-main", "123456:telegram-secret-value")
+	server, err := NewServer(cfg, Options{Router: rt, Redactor: redactor})
+	return server, adapter, err
+}
 
-	server, err := NewServer(cfg)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
-	server.startTime = time.Now().Add(-5 * time.Second)
-
-	fake := &fakeSendChannel{name: "telegram", running: true}
-	if err := server.agentManager.ChannelManager.Register(fake); err != nil {
-		t.Fatalf("register fake channel: %v", err)
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", server.handleHealth)
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	resp, err := http.Get(ts.URL + "/health")
-	if err != nil {
-		t.Fatalf("health request failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
-	}
-	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
-		t.Fatalf("expected application/json, got %q", ct)
-	}
-
-	var payload struct {
-		Status   string `json:"status"`
-		Uptime   string `json:"uptime"`
-		Channels []struct {
-			Name    string `json:"name"`
-			Running bool   `json:"running"`
-		} `json:"channels"`
-		MessagesProcessed int64 `json:"messages_processed"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode health response: %v", err)
-	}
-
-	if payload.Status != "ok" {
-		t.Fatalf("expected status=ok, got %q", payload.Status)
-	}
-	if payload.Uptime == "" || payload.Uptime == "0s" {
-		t.Fatalf("expected non-zero uptime, got %q", payload.Uptime)
-	}
-	if len(payload.Channels) != 1 {
-		t.Fatalf("expected 1 channel, got %d", len(payload.Channels))
-	}
-	if payload.Channels[0].Name != "telegram" {
-		t.Fatalf("expected channel name=telegram, got %q", payload.Channels[0].Name)
-	}
-	if !payload.Channels[0].Running {
-		t.Fatalf("expected channel running=true")
-	}
-	if payload.MessagesProcessed != 0 {
-		t.Fatalf("expected messages_processed=0, got %d", payload.MessagesProcessed)
-	}
+func newTestServer(t *testing.T) (*Server, error) {
+	server, _, err := newTestServerWith(t)
+	return server, err
 }
 
 type fakeSendChannel struct {
@@ -692,355 +143,149 @@ func (f *fakeSendChannel) IsRunning() bool { return f.running }
 
 func (f *fakeSendChannel) IsAllowed(senderID string) bool { return true }
 
+func TestStatusGroupsByAgent(t *testing.T) {
+	server, _, err := newTestServerWith(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server.startTime = time.Now().Add(-time.Second)
+	fake := &fakeSendChannel{name: "telegram", running: true}
+	if err := server.channels.Register(fake); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	server.handleStatus(rec, httptest.NewRequest(http.MethodGet, "/status", nil))
+	var payload struct {
+		Agents []struct {
+			Name      string   `json:"name"`
+			Runtime   string   `json:"runtime"`
+			Channels  []string `json:"channels"`
+			Presence  string   `json:"presence"`
+			Schedules []struct {
+				ID string `json:"id"`
+			} `json:"schedules"`
+		} `json:"agents"`
+		Channels []struct {
+			Ref     string   `json:"ref"`
+			Agents  []string `json:"agents"`
+			Default string   `json:"default"`
+			Running bool     `json:"running"`
+		} `json:"channels"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode: %v\n%s", err, rec.Body.String())
+	}
+	if len(payload.Agents) != 2 || payload.Agents[0].Name != "cloudbank" || payload.Agents[0].Presence != "online" ||
+		len(payload.Agents[0].Schedules) != 1 || payload.Agents[0].Schedules[0].ID != "cloudbank-main" || len(payload.Agents[1].Schedules) != 0 {
+		t.Fatalf("agents: %+v", payload.Agents)
+	}
+	if len(payload.Channels) != 2 || payload.Channels[0].Ref != "telegram.main" || !payload.Channels[0].Running ||
+		payload.Channels[0].Default != "cloudbank" || strings.Join(payload.Channels[0].Agents, ",") != "cloudbank,ops" {
+		t.Fatalf("channels: %+v", payload.Channels)
+	}
+	if strings.Contains(rec.Body.String(), "secret heartbeat instruction") {
+		t.Fatal("status leaked a schedule prompt")
+	}
+}
+
+func TestHealthEndpointReturnsJSON(t *testing.T) {
+	server, err := newTestServer(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := server.channels.Register(&fakeSendChannel{name: "telegram", running: true}); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	server.handleHealth(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `{"name":"telegram","running":true}`) {
+		t.Fatalf("health: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestMessageSendAPI(t *testing.T) {
-	cfg := &config.Config{
-		Gateway:  &config.GatewayConfig{Bind: "127.0.0.1", Port: 0},
-		Channels: &config.ChannelsConfig{Telegram: &config.TelegramConfig{Enabled: true}},
-		Agents:   &config.AgentsConfig{},
-	}
-
-	server, err := NewServer(cfg)
+	server, err := newTestServer(t)
 	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
+		t.Fatal(err)
 	}
-
-	fake := &fakeSendChannel{name: "telegram"}
-	if err := server.agentManager.ChannelManager.Register(fake); err != nil {
-		t.Fatalf("register fake channel: %v", err)
+	telegram := &fakeSendChannel{name: "telegram"}
+	slack := &fakeSendChannel{name: "slack"}
+	for _, ch := range []channels.Channel{telegram, slack} {
+		if err := server.channels.Register(ch); err != nil {
+			t.Fatal(err)
+		}
 	}
-	fakeSlack := &fakeSendChannel{name: "slack"}
-	if err := server.agentManager.ChannelManager.Register(fakeSlack); err != nil {
-		t.Fatalf("register fake slack channel: %v", err)
+	send := func(body string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		server.handleMessageSend(rec, httptest.NewRequest(http.MethodPost, "/api/v1/message/send", strings.NewReader(body)))
+		return rec
 	}
-	fakeFeishu := &fakeSendChannel{name: "feishu"}
-	if err := server.agentManager.ChannelManager.Register(fakeFeishu); err != nil {
-		t.Fatalf("register fake feishu channel: %v", err)
+	if rec := send(`{"channel":"telegram","to":"1","text":"plain"}`); rec.Code != http.StatusOK || telegram.lastText != "plain" {
+		t.Fatalf("plain: %d %s %q", rec.Code, rec.Body.String(), telegram.lastText)
 	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/message/send", server.handleMessageSend)
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	t.Run("success", func(t *testing.T) {
-		resp, err := http.Post(
-			ts.URL+"/api/v1/message/send",
-			"application/json",
-			strings.NewReader(`{"channel":"telegram","to":"12345","text":"hello from api"}`),
-		)
-		if err != nil {
-			t.Fatalf("post failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("unexpected status %d body=%s", resp.StatusCode, string(body))
-		}
-
-		if fake.lastChat != "12345" {
-			t.Fatalf("expected lastChat=12345 got %s", fake.lastChat)
-		}
-		if fake.lastText != "hello from api" {
-			t.Fatalf("expected text captured, got %q", fake.lastText)
-		}
-
-		var payload messageSendResponse
-		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		if payload.Status != "ok" || payload.Channel != "telegram" || payload.To != "12345" {
-			t.Fatalf("unexpected response payload: %#v", payload)
-		}
-	})
-
-	t.Run("success with thread ts", func(t *testing.T) {
-		fakeSlack.lastChat = ""
-		fakeSlack.lastText = ""
-		fakeSlack.lastThread = ""
-
-		resp, err := http.Post(
-			ts.URL+"/api/v1/message/send",
-			"application/json",
-			strings.NewReader(`{"channel":"slack","to":"C0A8ESWV7D0","text":"reply","thread_ts":"1234567890.123456"}`),
-		)
-		if err != nil {
-			t.Fatalf("post failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("unexpected status %d body=%s", resp.StatusCode, string(body))
-		}
-		if fakeSlack.lastChat != "C0A8ESWV7D0" {
-			t.Fatalf("expected lastChat=C0A8ESWV7D0 got %s", fakeSlack.lastChat)
-		}
-		if fakeSlack.lastText != "reply" {
-			t.Fatalf("expected text captured, got %q", fakeSlack.lastText)
-		}
-		if fakeSlack.lastThread != "1234567890.123456" {
-			t.Fatalf("expected thread ts passed, got %q", fakeSlack.lastThread)
-		}
-	})
-
-	t.Run("thread ts tolerated for non-threaded channel", func(t *testing.T) {
-		fake.lastChat = ""
-		fake.lastText = ""
-
-		resp, err := http.Post(
-			ts.URL+"/api/v1/message/send",
-			"application/json",
-			strings.NewReader(`{"channel":"telegram","to":"98765","text":"hello","thread_ts":"1234567890.123456"}`),
-		)
-		if err != nil {
-			t.Fatalf("post failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("unexpected status %d body=%s", resp.StatusCode, string(body))
-		}
-		if fake.lastChat != "98765" {
-			t.Fatalf("expected lastChat=98765 got %s", fake.lastChat)
-		}
-		if fake.lastText != "hello" {
-			t.Fatalf("expected text captured, got %q", fake.lastText)
-		}
-	})
-
-	t.Run("validation", func(t *testing.T) {
-		resp, err := http.Post(
-			ts.URL+"/api/v1/message/send",
-			"application/json",
-			strings.NewReader(`{"channel":"telegram","to":"","text":""}`),
-		)
-		if err != nil {
-			t.Fatalf("post failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusBadRequest {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("expected 400, got %d body=%s", resp.StatusCode, string(body))
-		}
-	})
-
-	t.Run("not found", func(t *testing.T) {
-		resp, err := http.Post(
-			ts.URL+"/api/v1/message/send",
-			"application/json",
-			strings.NewReader(`{"channel":"unknown-channel","to":"1","text":"hello"}`),
-		)
-		if err != nil {
-			t.Fatalf("post failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusNotFound {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("expected 404, got %d body=%s", resp.StatusCode, string(body))
-		}
-	})
-
-	t.Run("image to unsupported channel returns explicit error", func(t *testing.T) {
-		resp, err := http.Post(
-			ts.URL+"/api/v1/message/send",
-			"application/json",
-			strings.NewReader(`{"channel":"telegram","to":"12345","text":"caption","images":["/tmp/a.png"]}`),
-		)
-		if err != nil {
-			t.Fatalf("post failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusBadRequest {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("expected 400, got %d body=%s", resp.StatusCode, string(body))
-		}
-		var payload messageSendResponse
-		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		if !strings.Contains(payload.Error, "does not support image attachment") {
-			t.Fatalf("expected explicit unsupported-channel error, got %q", payload.Error)
-		}
-	})
-
-	t.Run("image to feishu passes through with text", func(t *testing.T) {
-		fakeFeishu.lastChat = ""
-		fakeFeishu.lastText = ""
-		fakeFeishu.lastImages = nil
-
-		resp, err := http.Post(
-			ts.URL+"/api/v1/message/send",
-			"application/json",
-			strings.NewReader(`{"channel":"feishu","to":"oc_1","text":"caption","images":["/tmp/a.png","/tmp/b.png"]}`),
-		)
-		if err != nil {
-			t.Fatalf("post failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("unexpected status %d body=%s", resp.StatusCode, string(body))
-		}
-		if fakeFeishu.lastText != "caption" {
-			t.Fatalf("expected caption text, got %q", fakeFeishu.lastText)
-		}
-		if len(fakeFeishu.lastImages) != 2 || fakeFeishu.lastImages[0] != "/tmp/a.png" || fakeFeishu.lastImages[1] != "/tmp/b.png" {
-			t.Fatalf("expected both image paths forwarded, got %v", fakeFeishu.lastImages)
-		}
-	})
-
-	t.Run("images-only send passes validation", func(t *testing.T) {
-		fakeFeishu.lastChat = ""
-		fakeFeishu.lastText = ""
-		fakeFeishu.lastImages = nil
-
-		resp, err := http.Post(
-			ts.URL+"/api/v1/message/send",
-			"application/json",
-			strings.NewReader(`{"channel":"feishu","to":"oc_2","images":["/tmp/a.png"]}`),
-		)
-		if err != nil {
-			t.Fatalf("post failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("expected images-only send to pass, got %d body=%s", resp.StatusCode, string(body))
-		}
-		if len(fakeFeishu.lastImages) != 1 || fakeFeishu.lastImages[0] != "/tmp/a.png" {
-			t.Fatalf("expected image forwarded, got %v", fakeFeishu.lastImages)
-		}
-	})
-}
-
-func TestStatusEndpointReportsCodexAppCDPRouting(t *testing.T) {
-	inbox := filepath.Join(t.TempDir(), "inbox")
-	cfg := &config.Config{
-		Gateway:  &config.GatewayConfig{Bind: "127.0.0.1", Port: 0},
-		Channels: &config.ChannelsConfig{},
-		Agents: &config.AgentsConfig{
-			Router: "codexAppCDP",
-			CodexAppCDP: &config.CodexAppCDPConfig{
-				Enabled:         true,
-				TargetSelector:  "Codex",
-				HostID:          "local",
-				InboxPath:       inbox,
-				FallbackToInbox: true,
-				RepairPolicy:    "status-only",
-				DefaultAgent:    "main",
-				AllowedAgents:   []string{"main"},
-			},
-		},
+	// A shared channel names the sending agent; a dedicated one does not.
+	if rec := send(`{"channel":"telegram","to":"1","text":"from ops","agent":"ops"}`); rec.Code != http.StatusOK || telegram.lastText != "[ops] from ops" {
+		t.Fatalf("shared: %d %q", rec.Code, telegram.lastText)
 	}
-	server, err := NewServer(cfg)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
+	if rec := send(`{"channel":"slack","to":"C1","text":"only ops here","agent":"ops"}`); rec.Code != http.StatusOK || slack.lastText != "only ops here" {
+		t.Fatalf("dedicated: %d %q", rec.Code, slack.lastText)
 	}
-	_, err = server.agentManager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
-		"channel": "feishu",
-		"text":    "hello",
-		"agent":   "main",
-		"chat_id": "oc_1",
-		"open_id": "ou_1",
-	}})
-	if err != nil {
-		t.Fatalf("HandleIncoming failed: %v", err)
+	if rec := send(`{"channel":"slack","to":"C1","text":"x","agent":"cloudbank"}`); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "does not use channel slack.main") {
+		t.Fatalf("unbound agent: %d %s", rec.Code, rec.Body.String())
 	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/status", server.handleStatus)
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	resp, err := http.Get(ts.URL + "/status")
-	if err != nil {
-		t.Fatalf("status request: %v", err)
+	if rec := send(`{"channel":"telegram","to":"1"}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("missing text: %d", rec.Code)
 	}
-	defer resp.Body.Close()
-	var payload map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode status: %v", err)
-	}
-	agents := payload["agents"].(map[string]interface{})
-	if agents["router"] != "codexAppCDP" {
-		t.Fatalf("router=%v", agents["router"])
-	}
-	codex := agents["codex_app_cdp"].(map[string]interface{})
-	if codex["enabled"] != true || codex["default_agent"] != "main" || codex["inbox_configured"] != true {
-		t.Fatalf("unexpected codex status: %#v", codex)
-	}
-	if codex["repair_policy"] != "status-only" || codex["check_on_incoming_message"] != true {
-		t.Fatalf("unexpected codex readiness config: %#v", codex)
-	}
-	routing := agents["last_routing"].(map[string]interface{})
-	if routing["backend"] != "codexAppCDP" || routing["status"] != "queued" || routing["envelope_id"] == "" {
-		t.Fatalf("unexpected routing status: %#v", routing)
+	telegram.sendErr = &sendError{"GET https://api.telegram.org/bot123456:telegram-secret-value/sendMessage failed"}
+	rec := send(`{"channel":"telegram","to":"1","text":"x"}`)
+	if rec.Code != http.StatusBadGateway || strings.Contains(rec.Body.String(), "telegram-secret-value") {
+		t.Fatalf("send error must be redacted: %d %s", rec.Code, rec.Body.String())
 	}
 }
 
-func TestStatusEndpointReportsCodexAppCDPDefaultRepairAndWatch(t *testing.T) {
-	cfg := &config.Config{
-		Gateway:  &config.GatewayConfig{Bind: "127.0.0.1", Port: 0},
-		Channels: &config.ChannelsConfig{},
-		Agents: &config.AgentsConfig{
-			Router: "codexAppCDP",
-			CodexAppCDP: &config.CodexAppCDPConfig{
-				Enabled:      true,
-				CDPEndpoint:  "http://127.0.0.1:9222",
-				DefaultAgent: "main",
-				TargetProject: config.CodexAppCDPTargetProjectConfig{
-					Name:    "CloudBank",
-					CWD:     "/repo/cloudbank",
-					Session: "main",
-				},
-			},
-		},
-	}
-	server, err := NewServer(cfg)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
+type sendError struct{ msg string }
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/status", server.handleStatus)
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
+func (e *sendError) Error() string { return e.msg }
 
-	resp, err := http.Get(ts.URL + "/status")
+func TestInboundMessageRestoresTheAgentsSchedule(t *testing.T) {
+	server, adapter, err := newTestServerWith(t)
 	if err != nil {
-		t.Fatalf("status request: %v", err)
+		t.Fatal(err)
 	}
-	defer resp.Body.Close()
-	var payload map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode status: %v", err)
+	if _, err := server.heartbeat.SetProfile("cloudbank-main", "idle", "no actionable tasks", "agent"); err != nil {
+		t.Fatalf("SetProfile: %v", err)
 	}
-	agents := payload["agents"].(map[string]interface{})
-	codex := agents["codex_app_cdp"].(map[string]interface{})
-	if codex["repair_policy"] != "relaunch" {
-		t.Fatalf("expected relaunch default, got %#v", codex)
+	inbound := func(text string) {
+		if _, err := server.router.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{"channel": "telegram", "chat_id": "1", "text": text}}); err != nil {
+			t.Fatal(err)
+		}
 	}
-	watch := codex["watch"].(map[string]interface{})
-	if watch["enabled"] != true {
-		t.Fatalf("expected watch enabled by default, got %#v", watch)
+	inbound("@ops for ops")
+	if job := server.heartbeat.Status().Jobs[0]; job.EffectiveProfile != "idle" {
+		t.Fatalf("ops' message reset cloudbank's schedule: %#v", job)
 	}
-	targetProject := codex["target_project"].(map[string]interface{})
-	if targetProject["name"] != "CloudBank" || targetProject["cwd"] != "/repo/cloudbank" || targetProject["session"] != "main" {
-		t.Fatalf("unexpected target_project: %#v", targetProject)
+	inbound("for cloudbank")
+	if job := server.heartbeat.Status().Jobs[0]; job.EffectiveProfile != "" || job.LastScheduleReason != "normal inbound activity" {
+		t.Fatalf("cloudbank's message did not reset its schedule: %#v", job)
+	}
+	if len(adapter.got) != 2 {
+		t.Fatalf("deliveries: %d", len(adapter.got))
+	}
+}
+
+func TestScheduleConfigResolvesAgents(t *testing.T) {
+	cfg := testConfig(t)
+	sc := ScheduleConfig(cfg)
+	if !sc.Enabled || sc.StatePath != cfg.Paths().Schedules() || len(sc.Jobs) != 1 {
+		t.Fatalf("schedule config: %+v", sc)
+	}
+	if j := sc.Jobs[0]; j.Runtime != "agentManager" || j.Agent != "cloudbank" || j.Timezone != "Asia/Shanghai" || !j.ResetCronOnInbound || j.AgentCronProfiles["idle"] != "0 * * * *" {
+		t.Fatalf("job: %+v", j)
 	}
 }
 
 func TestHeartbeatCronAPIAndStatus(t *testing.T) {
-	inbox := filepath.Join(t.TempDir(), "inbox")
-	cfg := heartbeatGatewayConfig(t, inbox)
-	server, err := NewServer(cfg)
+	server, err := newTestServer(t)
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
@@ -1112,7 +357,7 @@ func TestHeartbeatCronAPIAndStatus(t *testing.T) {
 }
 
 func TestHeartbeatCronAPIRejectsInvalidAndRemoteRequests(t *testing.T) {
-	server, err := NewServer(heartbeatGatewayConfig(t, filepath.Join(t.TempDir(), "inbox")))
+	server, err := newTestServer(t)
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
@@ -1149,7 +394,7 @@ func TestHeartbeatCronAPIRejectsInvalidAndRemoteRequests(t *testing.T) {
 }
 
 func TestHeartbeatOutcomeAPIRejectsStaleInvalidAndRemoteRequests(t *testing.T) {
-	server, err := NewServer(heartbeatGatewayConfig(t, filepath.Join(t.TempDir(), "inbox")))
+	server, err := newTestServer(t)
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
@@ -1184,62 +429,5 @@ func TestHeartbeatOutcomeAPIRejectsStaleInvalidAndRemoteRequests(t *testing.T) {
 	// The cron endpoint still routes through the same handler.
 	if response := send(http.MethodPut, "/api/v1/heartbeat/jobs/cloudbank-main/cron", `{"profile":"idle","reason":"idle"}`, "127.0.0.1:1"); response.Code != http.StatusOK {
 		t.Fatalf("cron via job handler: status=%d body=%s", response.Code, response.Body.String())
-	}
-}
-
-func TestHeartbeatProfileResetsAfterMatchingInboundRoute(t *testing.T) {
-	server, err := NewServer(heartbeatGatewayConfig(t, filepath.Join(t.TempDir(), "inbox")))
-	if err != nil {
-		t.Fatalf("NewServer: %v", err)
-	}
-	if _, err := server.heartbeat.SetProfile("cloudbank-main", "idle", "no actionable tasks", "agent"); err != nil {
-		t.Fatalf("SetProfile: %v", err)
-	}
-
-	_, err = server.agentManager.HandleIncoming(context.Background(), &protocol.Message{Data: map[string]interface{}{
-		"channel": "feishu",
-		"text":    "new user task",
-		"chat_id": "oc_1",
-	}})
-	if err != nil {
-		t.Fatalf("HandleIncoming: %v", err)
-	}
-	job := server.heartbeat.Status().Jobs[0]
-	if job.EffectiveProfile != "" || job.LastScheduleReason != "normal inbound activity" {
-		t.Fatalf("matching inbound did not reset heartbeat: %#v", job)
-	}
-}
-
-func heartbeatGatewayConfig(t *testing.T, inbox string) *config.Config {
-	t.Helper()
-	return &config.Config{
-		Gateway:  &config.GatewayConfig{Bind: "127.0.0.1", Port: 0},
-		Channels: &config.ChannelsConfig{},
-		Agents: &config.AgentsConfig{
-			Workspace: t.TempDir(),
-			Router:    "codexAppCDP",
-			CodexAppCDP: &config.CodexAppCDPConfig{
-				Enabled:       true,
-				InboxPath:     inbox,
-				DefaultAgent:  "main",
-				AllowedAgents: []string{"main"},
-			},
-			Heartbeat: &config.HeartbeatConfig{
-				Enabled:       true,
-				MaxConcurrent: 1,
-				Jobs: []config.HeartbeatJobConfig{{
-					ID:       "cloudbank-main",
-					Runtime:  "codexAppCDP",
-					Agent:    "main",
-					Text:     "secret heartbeat instruction",
-					Cron:     "*/10 * * * *",
-					Timezone: "Asia/Shanghai",
-					AgentCronProfiles: map[string]string{
-						"idle": "0 * * * *",
-					},
-					ResetCronOnInbound: true,
-				}},
-			},
-		},
 	}
 }

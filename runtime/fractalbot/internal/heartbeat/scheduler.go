@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agentruntime"
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 	"github.com/robfig/cron/v3"
 )
 
@@ -80,7 +79,7 @@ const (
 const maxOutcomeSummaryRunes = 500
 
 type compiledJob struct {
-	config           config.HeartbeatJobConfig
+	config           JobConfig
 	defaultSchedule  cron.Schedule
 	profileSchedules map[string]cron.Schedule
 	state            persistedJobState
@@ -89,7 +88,7 @@ type compiledJob struct {
 
 // Scheduler owns cron state, dispatch concurrency, and profile overrides.
 type Scheduler struct {
-	config       *config.HeartbeatConfig
+	config       *Config
 	dispatcher   agentruntime.Dispatcher
 	statePath    string
 	now          func() time.Time
@@ -107,13 +106,43 @@ type Scheduler struct {
 	dispatchWg sync.WaitGroup
 }
 
-// New creates a scheduler and restores persisted profile overrides. Missed
-// executions are intentionally ignored; every next run is computed from now.
-func New(cfg *config.HeartbeatConfig, workspace string, dispatcher agentruntime.Dispatcher) (*Scheduler, error) {
-	return newScheduler(cfg, workspace, dispatcher, time.Now, defaultTickInterval)
+// Config is what the scheduler runs: the configuration's schedules with each
+// job's agent resolved.
+type Config struct {
+	Enabled bool
+	// StatePath holds schedule state and reported outcomes.
+	StatePath     string
+	MaxConcurrent int
+	Jobs          []JobConfig
 }
 
-func newScheduler(cfg *config.HeartbeatConfig, workspace string, dispatcher agentruntime.Dispatcher, now func() time.Time, tickInterval time.Duration) (*Scheduler, error) {
+// JobConfig is one schedule.
+type JobConfig struct {
+	ID string
+	// Runtime is the agent's runtime, for status only.
+	Runtime string
+	Agent   string
+	// Exactly one of Text and PromptFile (absolute, read on every run).
+	Text           string
+	PromptFile     string
+	DispatchMode   string
+	TimeoutSeconds int
+	Cron           string
+	Timezone       string
+	// AgentCronProfiles are the backoff levels the agent may switch to.
+	AgentCronProfiles map[string]string
+	// ResetCronOnInbound restores Cron when the agent receives a message.
+	ResetCronOnInbound bool
+	StartIfMissing     bool
+}
+
+// New creates a scheduler and restores persisted profile overrides. Missed
+// executions are intentionally ignored; every next run is computed from now.
+func New(cfg *Config, dispatcher agentruntime.Dispatcher) (*Scheduler, error) {
+	return newScheduler(cfg, dispatcher, time.Now, defaultTickInterval)
+}
+
+func newScheduler(cfg *Config, dispatcher agentruntime.Dispatcher, now func() time.Time, tickInterval time.Duration) (*Scheduler, error) {
 	if cfg == nil {
 		return nil, nil
 	}
@@ -130,7 +159,7 @@ func newScheduler(cfg *config.HeartbeatConfig, workspace string, dispatcher agen
 	scheduler := &Scheduler{
 		config:       cfg,
 		dispatcher:   dispatcher,
-		statePath:    resolveStatePath(cfg.StatePath, workspace),
+		statePath:    resolveStatePath(cfg.StatePath, ""),
 		now:          now,
 		tickInterval: tickInterval,
 		retryDelay:   dispatchRetryDelay,
@@ -313,13 +342,12 @@ func (s *Scheduler) ResetProfile(jobID, reason, updatedBy string) (JobStatus, er
 	return s.jobStatusLocked(job), nil
 }
 
-// ResetForInbound restores matching idle jobs after a normal inbound message
-// was successfully routed to the same Runtime and Agent.
-func (s *Scheduler) ResetForInbound(runtimeName, agentName string) {
+// ResetForInbound restores an agent's idle jobs after one of its channels
+// delivered it a message. Other agents' jobs are untouched.
+func (s *Scheduler) ResetForInbound(agentName string) {
 	if s == nil || s.config == nil || !s.config.Enabled {
 		return
 	}
-	runtimeName = strings.TrimSpace(runtimeName)
 	agentName = strings.TrimSpace(agentName)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -327,7 +355,7 @@ func (s *Scheduler) ResetForInbound(runtimeName, agentName string) {
 	now := s.now()
 	previous := make(map[string]persistedJobState)
 	for id, job := range s.jobs {
-		if !job.config.ResetCronOnInbound || job.config.Runtime != runtimeName || job.config.Agent != agentName || job.state.EffectiveProfile == "" {
+		if !job.config.ResetCronOnInbound || job.config.Agent != agentName || job.state.EffectiveProfile == "" {
 			continue
 		}
 		previous[id] = job.state
@@ -408,8 +436,8 @@ func (s *Scheduler) runDue(now time.Time) {
 				request: agentruntime.DispatchRequest{
 					Runtime:        job.config.Runtime,
 					Agent:          job.config.Agent,
-					Target:         job.config.Target,
 					Text:           job.config.Text,
+					PromptFile:     job.config.PromptFile,
 					Source:         "heartbeat",
 					JobID:          id,
 					RunID:          runID,

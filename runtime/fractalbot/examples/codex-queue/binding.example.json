@@ -1,7 +1,0 @@
-{
-  "thread_id": "00000000-0000-4000-8000-000000000001",
-  "workspace": "/absolute/path/to/project",
-  "codex_bin": "/absolute/path/to/codex",
-  "agent": "main",
-  "heartbeat_jobs": ["project-heartbeat"]
-}
