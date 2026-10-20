@@ -17,9 +17,10 @@ Version 1 files are not loaded. `fractalbot config check` names the version 2 re
 
 ```yaml
 version: 2
-dataDir: ~/.fractalbot
+dataDir: ~/.fractalbot          # inboxes, dedupe, polling offsets, schedule state
 timezone: Asia/Shanghai
 
+# ── Channels: how to reach each chat platform ───────────────
 channels:
   feishu:
     xiaoyi:
@@ -29,45 +30,52 @@ channels:
     burry:
       appId: cli_yyy
       appSecret: secret:feishu-burry
+
+  # Shared by the three agents: messages that name no one go to xiaoyi.
   telegram:
-    main:                       # shared by three agents
+    main:
       botToken: secret:telegram-main
       allowedUsers: [5088760910]
       default: xiaoyi
-      chats:
-        "-100123456789": burry  # this group always goes to burry
+      chats: {"-100123456789": burry}   # this group always goes to burry
   imessage:
     main:
       recipient: "+8600000000000"
       default: xiaoyi
 
+# ── Agents: who receives messages and schedules ─────────────
 agents:
-  xiaoyi:
-    workspace: ~/xiaoyi-clawd
-    runtime: codexApp
-    session: 01a15669-badd-7c31-b094-660961b49af7   # Codex thread ID
-    channels: [feishu.xiaoyi, telegram.main, imessage.main]
-  xiaoyi-desktop:               # schedules only, delivered to Claude Desktop
+  xiaoyi:                       # a Claude Desktop session (its start hook runs `fractalbot relay`)
     workspace: ~/xiaoyi-clawd
     runtime: claudeDesktop
-  burry:
+    channels: [feishu.xiaoyi, telegram.main, imessage.main]
+
+  burry:                        # a pinned Codex App thread
     workspace: ~/burry-claw
-    runtime: agentManager
+    runtime: codexApp
+    session: 01a15696-d74e-7740-825f-911aee042f56
     channels: [feishu.burry, telegram.main, imessage.main]
 
+  builder:                      # a tmux agent run by agent-manager
+    workspace: ~/workspace/builder
+    runtime: agentManager
+    channels: [telegram.main, imessage.main]
+
+# ── Schedules: when to wake which agent ─────────────────────
 schedules:
   maxConcurrent: 3
   jobs:
     xiaoyi-heartbeat:
-      agent: xiaoyi-desktop
+      agent: xiaoyi
       cron: "11 * * * *"
       backoff: {idle: "11 */3 * * *", deep-idle: "11 9 * * *"}
-      resetOnInbound: true
+      resetOnInbound: true      # a message to xiaoyi restores hourly runs
       prompt: Read HEARTBEAT.md and follow it.
+
     burry-btc-risk-radar:
       agent: burry
       cron: "5 */2 * * *"
-      promptFile: tasks/schedules/btc-risk-radar.md
+      promptFile: tasks/schedules/btc-risk-radar.md   # read on every run
 ```
 
 ## Top level
@@ -123,7 +131,7 @@ When several agents share a channel, an agent replies with `fractalbot message s
 | `channels` | Channel instances as `type.name`. An agent with no channels only runs schedules. |
 | `session` | `codexApp`: the Codex thread ID (required). `agentManager`: the agent-manager agent (default `main`). `claudeDesktop`: none. |
 
-An agent has one runtime. To send one workspace's messages to Codex and its schedules to Claude Desktop, configure two agents with the same workspace, as `xiaoyi` and `xiaoyi-desktop` do above.
+An agent has one runtime. To send one workspace's messages to one runtime and its schedules to another, configure two agents with the same workspace (for example `xiaoyi` with `runtime: codexApp` and channels, and `xiaoyi-desktop` with `runtime: claudeDesktop` and only schedules).
 
 ## Runtimes
 
@@ -139,7 +147,7 @@ Start the relay from a Claude Desktop session's start hook:
 
 ```sh
 fractalbot relay              # finds the agent whose workspace is the current directory
-fractalbot relay --agent xiaoyi-desktop
+fractalbot relay --agent xiaoyi
 ```
 
 ## Schedules

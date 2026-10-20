@@ -280,3 +280,25 @@ func TestExampleConfigParses(t *testing.T) {
 		t.Fatalf("example: %+v", cfg)
 	}
 }
+
+func TestDocExampleParses(t *testing.T) {
+	data, err := os.ReadFile("../../docs/config-v2.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := string(data)
+	_, after, ok := strings.Cut(doc, "## Example\n\n```yaml\n")
+	if !ok {
+		t.Fatal("docs/config-v2.md has no Example section")
+	}
+	example, _, _ := strings.Cut(after, "```")
+	p := Platform{GOOS: "darwin", Home: "/home/me", Getenv: func(string) string { return "" },
+		DirExists: func(string) bool { return true }, FileExists: func(string) bool { return true }}
+	cfg, err := Parse([]byte(example), p)
+	if err != nil {
+		t.Fatalf("docs/config-v2.md example: %v", err)
+	}
+	if len(cfg.Agents) != 3 || len(cfg.Schedules.Jobs) != 2 {
+		t.Fatalf("example: %d agents, %d jobs", len(cfg.Agents), len(cfg.Schedules.Jobs))
+	}
+}
