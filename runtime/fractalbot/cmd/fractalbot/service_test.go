@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestServiceDefinitions(t *testing.T) {
@@ -34,8 +36,9 @@ func TestServiceDefinitions(t *testing.T) {
 
 func TestServiceInstallAndRestartCommands(t *testing.T) {
 	var calls []string
-	orig := serviceRunner
-	t.Cleanup(func() { serviceRunner = orig })
+	orig, origSleep := serviceRunner, serviceSleep
+	t.Cleanup(func() { serviceRunner, serviceSleep = orig, origSleep })
+	serviceSleep = func(time.Duration) {}
 	serviceRunner = func(name string, args ...string) (string, error) {
 		calls = append(calls, name+" "+strings.Join(args, " "))
 		return "", nil
@@ -65,5 +68,26 @@ func TestServiceInstallAndRestartCommands(t *testing.T) {
 	calls = nil
 	if err := installService(s, &out); err != nil || !strings.Contains(strings.Join(calls, "\n"), "schtasks /Create /F /SC ONLOGON") {
 		t.Fatalf("windows: %v %v", err, calls)
+	}
+}
+
+func TestServiceInstallRetriesBootstrapOnMacOS(t *testing.T) {
+	orig, origSleep := serviceRunner, serviceSleep
+	t.Cleanup(func() { serviceRunner, serviceSleep = orig, origSleep })
+	serviceSleep = func(time.Duration) {}
+	bootstraps := 0
+	serviceRunner = func(name string, args ...string) (string, error) {
+		if len(args) > 0 && args[0] == "bootstrap" {
+			bootstraps++
+			if bootstraps < 3 {
+				return "Bootstrap failed: 5: Input/output error", errors.New("exit status 5")
+			}
+		}
+		return "", nil
+	}
+	home := t.TempDir()
+	s := serviceSpec{GOOS: "darwin", Home: home, Executable: "/bin/fractalbot", ConfigPath: "/c.yaml", LogDir: filepath.Join(home, "logs")}
+	if err := installService(s, &bytes.Buffer{}); err != nil || bootstraps != 3 {
+		t.Fatalf("err=%v bootstraps=%d", err, bootstraps)
 	}
 }

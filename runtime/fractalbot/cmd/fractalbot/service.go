@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/configv2"
 )
@@ -21,6 +22,9 @@ const (
 	serviceTask    = "FractalBot"
 	serviceLogFile = "fractalbot.log"
 )
+
+// serviceSleep waits between service manager retries; tests replace it.
+var serviceSleep = time.Sleep
 
 // serviceRunner runs service manager commands; tests replace it.
 var serviceRunner = func(name string, args ...string) (string, error) {
@@ -159,7 +163,17 @@ func installService(s serviceSpec, out io.Writer) error {
 		if s.GOOS == "darwin" {
 			// Replace a loaded definition so the new one takes effect.
 			_, _ = serviceRunner("launchctl", "bootout", "gui/"+uid()+"/"+serviceLabel)
-			if msg, err := serviceRunner("launchctl", "bootstrap", "gui/"+uid(), path); err != nil {
+			// bootout returns before the old job has fully unloaded, and
+			// bootstrapping then fails with an I/O error; retry briefly.
+			var msg string
+			var err error
+			for attempt := 0; attempt < 10; attempt++ {
+				if msg, err = serviceRunner("launchctl", "bootstrap", "gui/"+uid(), path); err == nil {
+					break
+				}
+				serviceSleep(time.Second)
+			}
+			if err != nil {
 				return fmt.Errorf("launchctl bootstrap: %v %s", err, msg)
 			}
 		} else {
