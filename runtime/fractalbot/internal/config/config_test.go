@@ -653,11 +653,18 @@ func TestLoadConfigHeartbeatJobReceiverTarget(t *testing.T) {
 		return err
 	}
 
-	if err := load("claudeDesktop", "burry", "claudeDesktop"); err != nil {
-		t.Fatalf("LoadConfig: %v", err)
+	for _, ok := range []struct{ jobRuntime, targetRuntime string }{
+		{"claudeDesktop", "claudeDesktop"},
+		{"ohMyCode", "ohMyCode"},
+		{"ohMyCode", `""`},
+	} {
+		if err := load(ok.jobRuntime, "burry", ok.targetRuntime); err != nil {
+			t.Fatalf("%+v: LoadConfig: %v", ok, err)
+		}
 	}
 	for _, tc := range []struct{ jobRuntime, target, targetRuntime, want string }{
-		{"ohMyCode", "burry", "claudeDesktop", "only claudeDesktop jobs"},
+		{"codexAppCDP", "burry", "claudeDesktop", "only claudeDesktop and ohMyCode jobs"},
+		{"ohMyCode", "burry", "claudeDesktop", `does not use runtime ohMyCode`},
 		{"claudeDesktop", "missing", "claudeDesktop", `receiver target "missing" is not configured`},
 		{"claudeDesktop", "burry", "ohMyCode", `does not use runtime claudeDesktop`},
 	} {
@@ -1002,5 +1009,24 @@ func TestLoadConfigDemailDisabledByDefault(t *testing.T) {
 	}
 	if cfg.Channels.Demail != nil {
 		t.Fatalf("expected nil demail config, got %#v", cfg.Channels.Demail)
+	}
+}
+
+func TestLoadConfigOhMyCodeHeartbeatTargetUsesTargetAgents(t *testing.T) {
+	workspace := t.TempDir()
+	load := func(jobAgent string) error {
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		content := "agents:\n  router: ohMyCode\n  ohMyCode:\n    enabled: true\n    defaultAgent: main\n    targets:\n      assistant:\n        receivers: [{channel: feishu, receiverId: cli_assistant}]\n        workspace: \"" + workspace + "\"\n        defaultAgent: codex\n  heartbeat:\n    enabled: true\n    jobs:\n      - id: assistant-heartbeat\n        runtime: ohMyCode\n        agent: " + jobAgent + "\n        target: assistant\n        text: Read HEARTBEAT.md\n        cron: \"0 * * * *\"\n        timezone: Asia/Shanghai\n"
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatalf("write config: %v", err)
+		}
+		_, err := LoadConfig(path)
+		return err
+	}
+	if err := load("codex"); err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if err := load("main"); err == nil || !strings.Contains(err.Error(), `agents.ohMyCode.targets["assistant"]`) {
+		t.Fatalf("expected the target's agents to decide, got %v", err)
 	}
 }

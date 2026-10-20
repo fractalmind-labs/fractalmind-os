@@ -22,7 +22,10 @@ const (
 type DispatchRequest struct {
 	Runtime string
 	Agent   string
-	// Target is the receiver target whose Claude Desktop inbox to use.
+	// Target names a receiver target under agents.ohMyCode.targets whose
+	// destination to use: its Claude Desktop inbox for claudeDesktop, or its
+	// agent-manager workspace and script for ohMyCode. Empty uses the shared
+	// runtime settings.
 	Target         string
 	Text           string
 	Source         string

@@ -60,11 +60,15 @@ func (m *Manager) DispatchRuntime(ctx context.Context, request agentruntime.Disp
 
 func (m *Manager) dispatchOhMyCodeRuntime(ctx context.Context, request agentruntime.DispatchRequest) agentruntime.DispatchResult {
 	result := agentruntime.DispatchResult{Runtime: request.Runtime, Agent: request.Agent}
-	workspace, script, err := m.resolveOhMyCodeWorkspaceAndScript()
+	route, err := m.ohMyCodeDispatchRoute(request.Target)
 	if err != nil {
 		return runtimeDispatchError(result, err)
 	}
-	name, err := m.validateOhMyCodeAgent(request.Agent)
+	workspace, script, err := resolveOhMyCodeWorkspaceAndScript(route.Workspace, route.AgentManagerScript)
+	if err != nil {
+		return runtimeDispatchError(result, err)
+	}
+	name, err := m.validateOhMyCodeRouteAgent(route, request.Agent)
 	if err != nil {
 		return runtimeDispatchError(result, err)
 	}
@@ -73,7 +77,7 @@ func (m *Manager) dispatchOhMyCodeRuntime(ctx context.Context, request agentrunt
 	// startIfMissing applies to both delivery modes below. The status, start and
 	// verify calls carry their own lifecycle timeouts.
 	if request.StartIfMissing {
-		if err := m.ensureOhMyCodeAgentRunning(ctx, name); err != nil {
+		if err := m.ensureOhMyCodeAgentRunning(ctx, route, workspace, script, name); err != nil {
 			return runtimeDispatchError(result, err)
 		}
 	}
@@ -112,8 +116,8 @@ func (m *Manager) dispatchOhMyCodeRuntime(ctx context.Context, request agentrunt
 	}
 
 	timeout := defaultOhMyCodeAssignTimeout
-	if m.config.OhMyCode.AssignTimeoutSeconds > 0 {
-		timeout = time.Duration(m.config.OhMyCode.AssignTimeoutSeconds) * time.Second
+	if route.AssignTimeoutSeconds > 0 {
+		timeout = time.Duration(route.AssignTimeoutSeconds) * time.Second
 	}
 	dispatchCtx := ctx
 	if timeout > 0 {
@@ -168,13 +172,54 @@ func (m *Manager) markStartIfMissingFailed(agentName string) {
 	m.startIfMissingFailAt[agentName] = time.Now()
 }
 
-func (m *Manager) ensureOhMyCodeAgentRunning(ctx context.Context, agentName string) error {
-	if m.startIfMissingCooldownActive(agentName) {
-		return fmt.Errorf("ohMyCode agent %q start_if_missing cooldown active", agentName)
+// ohMyCodeDispatchRoute returns the agent-manager settings for a runtime
+// dispatch: those of the named receiver target, so a heartbeat reaches the
+// same destination as that bot's messages, or the shared settings when no
+// target is named.
+func (m *Manager) ohMyCodeDispatchRoute(targetName string) (ohMyCodeRoute, error) {
+	if m.config == nil || m.config.OhMyCode == nil {
+		return ohMyCodeRoute{}, errors.New("agents.ohMyCode is not configured")
 	}
-	workspace, script, err := m.resolveOhMyCodeWorkspaceAndScript()
-	if err != nil {
-		return err
+	ohMyCode := m.config.OhMyCode
+	if !ohMyCode.Enabled {
+		return ohMyCodeRoute{}, errors.New("agents.ohMyCode is disabled")
+	}
+	targetName = strings.TrimSpace(targetName)
+	if targetName == "" {
+		return ohMyCodeRoute{
+			Workspace:            ohMyCode.Workspace,
+			AgentManagerScript:   ohMyCode.AgentManagerScript,
+			DefaultAgent:         ohMyCode.DefaultAgent,
+			AllowedAgents:        append([]string(nil), ohMyCode.AllowedAgents...),
+			AssignTimeoutSeconds: ohMyCode.AssignTimeoutSeconds,
+		}, nil
+	}
+	target, ok := ohMyCode.Targets[targetName]
+	if !ok {
+		return ohMyCodeRoute{}, fmt.Errorf("receiver target %q is not configured", targetName)
+	}
+	if runtime := strings.TrimSpace(target.Runtime); runtime != "" && runtime != agentruntime.OhMyCode {
+		return ohMyCodeRoute{}, fmt.Errorf("receiver target %q does not use runtime ohMyCode", targetName)
+	}
+	return ohMyCodeRoute{
+		Target:               targetName,
+		Workspace:            target.Workspace,
+		AgentManagerScript:   target.AgentManagerScript,
+		DefaultAgent:         target.DefaultAgent,
+		AllowedAgents:        append([]string(nil), target.AllowedAgents...),
+		AssignTimeoutSeconds: target.AssignTimeoutSeconds,
+	}, nil
+}
+
+func (m *Manager) ensureOhMyCodeAgentRunning(ctx context.Context, route ohMyCodeRoute, workspace, script, agentName string) error {
+	// A target's agent is a different session from the shared one of the
+	// same name, so each keeps its own start cooldown.
+	cooldownKey := agentName
+	if route.Target != "" {
+		cooldownKey = route.Target + "/" + agentName
+	}
+	if m.startIfMissingCooldownActive(cooldownKey) {
+		return fmt.Errorf("ohMyCode agent %q start_if_missing cooldown active", agentName)
 	}
 	statusCtx, cancel := context.WithTimeout(ctx, defaultOhMyCodeLifecycleTimeout)
 	defer cancel()
@@ -182,15 +227,17 @@ func (m *Manager) ensureOhMyCodeAgentRunning(ctx context.Context, agentName stri
 	if statusErr == nil && ohMyCodeStatusRunning(statusOut) {
 		return nil
 	}
-	if _, err := m.StartAgent(ctx, agentName); err != nil {
-		m.markStartIfMissingFailed(agentName)
+	startCtx, startCancel := context.WithTimeout(ctx, defaultOhMyCodeLifecycleTimeout)
+	defer startCancel()
+	if _, err := runOhMyCodeAgentManager(startCtx, workspace, script, "", "start", agentName); err != nil {
+		m.markStartIfMissingFailed(cooldownKey)
 		return fmt.Errorf("start_if_missing start %q: %w", agentName, err)
 	}
 	verifyCtx, verifyCancel := context.WithTimeout(ctx, defaultOhMyCodeLifecycleTimeout)
 	defer verifyCancel()
 	statusOut, statusErr = runOhMyCodeAgentManager(verifyCtx, workspace, script, "", "status", agentName)
 	if statusErr != nil || !ohMyCodeStatusRunning(statusOut) {
-		m.markStartIfMissingFailed(agentName)
+		m.markStartIfMissingFailed(cooldownKey)
 		if statusErr != nil {
 			return fmt.Errorf("start_if_missing status %q after start: %w", agentName, statusErr)
 		}
