@@ -233,16 +233,42 @@ func (m *Manager) resolveFeishuOutboundChannel(receiverID string) (string, error
 	return "feishu", nil
 }
 
+// startRetryDelay is the wait before the attempt-th retry of a failed start:
+// 10s doubling to 5 minutes. Tests shorten it.
+var startRetryDelay = func(attempt int) time.Duration {
+	delay := 10 * time.Second << min(attempt, 5)
+	return min(delay, 5*time.Minute)
+}
+
+// startChannel starts a channel, retrying with backoff until it starts or the
+// manager stops, so a transient failure (a provider outage, a busy system
+// service) does not leave the channel down until the gateway restarts. The
+// start stays in flight while retrying, so the channel is never started twice.
 func (m *Manager) startChannel(name string, channel Channel, ctx context.Context) {
 	defer m.clearInFlightStart(name)
+	for attempt := 0; ; attempt++ {
+		err := startOnce(name, channel, ctx)
+		if err == nil || ctx.Err() != nil {
+			return
+		}
+		delay := startRetryDelay(attempt)
+		log.Printf("channel %s failed to start: %v (retrying in %s)", name, err, delay)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+	}
+}
+
+func startOnce(name string, channel Channel, ctx context.Context) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("channel %s panicked: %v", name, r)
+			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
-	if err := channel.Start(ctx); err != nil {
-		log.Printf("channel %s failed to start: %v", name, err)
-	}
+	return channel.Start(ctx)
 }
 
 func (m *Manager) hasInFlightStart(name string) bool {
