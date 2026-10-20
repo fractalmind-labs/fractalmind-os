@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/configv2"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -492,5 +493,70 @@ func TestManagerSkipsChannelsWithMissingSecrets(t *testing.T) {
 	}
 	if got := manager.Unavailable()["feishu.support"]; got != "secret feishu-support is not set" {
 		t.Fatalf("unavailable reason: %q", got)
+	}
+}
+
+type flakyChannel struct {
+	fakeChannel
+	mu       sync.Mutex
+	failures int
+	attempts int
+}
+
+func (f *flakyChannel) Start(ctx context.Context) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.attempts++
+	if f.attempts <= f.failures {
+		return errors.New("transient")
+	}
+	f.running = true
+	return nil
+}
+
+func (f *flakyChannel) IsRunning() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.running
+}
+
+func TestManagerRetriesFailedStart(t *testing.T) {
+	orig := startRetryDelay
+	startRetryDelay = func(int) time.Duration { return 5 * time.Millisecond }
+	t.Cleanup(func() { startRetryDelay = orig })
+
+	manager := NewManager(nil, nil)
+	flaky := &flakyChannel{fakeChannel: fakeChannel{name: "flaky"}, failures: 2}
+	if err := manager.Register(flaky); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	waitForCondition(t, time.Second, flaky.IsRunning)
+	flaky.mu.Lock()
+	attempts := flaky.attempts
+	flaky.mu.Unlock()
+	if attempts != 3 {
+		t.Fatalf("attempts=%d", attempts)
+	}
+
+	// Stopping the manager ends the retries of a channel that never starts.
+	stuck := &flakyChannel{fakeChannel: fakeChannel{name: "stuck"}, failures: 1 << 30}
+	if err := manager.Register(stuck); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	waitForCondition(t, time.Second, func() bool { return !manager.hasInFlightStart("stuck") })
+}
+
+func TestStartRetryDelayBacksOff(t *testing.T) {
+	if startRetryDelay(0) != 10*time.Second || startRetryDelay(1) != 20*time.Second || startRetryDelay(9) != 5*time.Minute {
+		t.Fatalf("delays: %v %v %v", startRetryDelay(0), startRetryDelay(1), startRetryDelay(9))
 	}
 }
