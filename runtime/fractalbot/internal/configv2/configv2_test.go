@@ -302,3 +302,20 @@ func TestDocExampleParses(t *testing.T) {
 		t.Fatalf("example: %d agents, %d jobs", len(cfg.Agents), len(cfg.Schedules.Jobs))
 	}
 }
+
+func TestReadmeExampleParses(t *testing.T) {
+	data, err := os.ReadFile("../../README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, after, ok := strings.Cut(string(data), "```yaml\nversion: 2\n")
+	if !ok {
+		t.Fatal("README.md has no configuration example")
+	}
+	example, _, _ := strings.Cut(after, "```")
+	p := Platform{GOOS: "darwin", Home: "/home/me", Getenv: func(string) string { return "" },
+		DirExists: func(string) bool { return true }, FileExists: func(string) bool { return true }}
+	if _, err := Parse([]byte("version: 2\n"+example), p); err != nil {
+		t.Fatalf("README.md example: %v", err)
+	}
+}
