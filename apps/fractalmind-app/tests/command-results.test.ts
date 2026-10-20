@@ -232,7 +232,7 @@ async function fixture(review = false, delivery = false, hostCommand = false) {
   const chain = {
     profile: { network: "localnet", humanId: human },
     checkNetwork: async () => "TestChain",
-    human: async () => ({
+    identity: async () => ({
       human: { organizations: [org] },
       clockMs: chainClock,
       loadedAtMs: Date.now(),

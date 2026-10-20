@@ -169,14 +169,7 @@ export class ChainReadSession {
     if (clock.id !== object.objectId) throw new ChainReadError("invalid_clock");
     return { clockMs: BigInt(clock.timestamp_ms), loadedAtMs: Date.now() };
   }
-  async human(): Promise<{
-    human: Human;
-    grants: ReadSection<Grant[]>;
-    organizations: OrganizationData[];
-    chainIdentifier: string;
-    clockMs: bigint;
-    loadedAtMs: number;
-  }> {
+  private async readIdentity() {
     const chainIdentifier = await this.checkNetwork();
     const registryId = await this.sdk.identity.resolveRegistry(
       this.profile.registryId,
@@ -188,6 +181,24 @@ export class ChainReadSession {
       human.network !== this.profile.network
     )
       throw new ChainReadError("invalid_provenance");
+    return { human, chainIdentifier };
+  }
+  /** Public identity and chain time without loading every grant/organization. */
+  async identity() {
+    const identity = await this.readIdentity();
+    const clock = await this.clock();
+    await this.checkNetwork();
+    return { ...identity, ...clock };
+  }
+  async human(): Promise<{
+    human: Human;
+    grants: ReadSection<Grant[]>;
+    organizations: OrganizationData[];
+    chainIdentifier: string;
+    clockMs: bigint;
+    loadedAtMs: number;
+  }> {
+    const { human, chainIdentifier } = await this.readIdentity();
     const [organizations, grants] = await Promise.all([
       Promise.all(human.organizations.map((id) => this.organization(id))),
       section(() =>

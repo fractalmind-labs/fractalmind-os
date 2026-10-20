@@ -22,6 +22,7 @@ import {
   HostAdmission,
   coordinatorInput,
   hostDirectory,
+  hostEntries,
 } from "../src/host-admission";
 import { OrganizationBcs } from "../src/device-identity";
 import { ChainReadSession } from "../src/chain";
@@ -110,9 +111,13 @@ async function fixture() {
     mode = "normal",
     prepares = 0,
     submissions = 0;
+  const reads: string[] = [];
   let lastInviteTx: Transaction | undefined, lastSpend: bigint | undefined;
   const core = {
     getObject: async ({ objectId }: { objectId: string }) => {
+      reads.push(objectId);
+      if (mode === "history_offline" && objectId === inviteId)
+        throw new Error("History unavailable");
       const objects = {
         [orgId]: {
           type: `${packageId}::organization::Organization`,
@@ -169,7 +174,7 @@ async function fixture() {
   const chain = {
     profile: { network: "localnet", humanId },
     checkNetwork: async () => "Test1",
-    human: async () => ({
+    identity: async () => ({
       human: { organizations: [orgId] },
       clockMs,
       loadedAtMs: Date.now(),
@@ -251,6 +256,7 @@ async function fixture() {
   return {
     controller,
     chain,
+    reads,
     binding,
     invite,
     operation,
@@ -313,6 +319,46 @@ test("Host reconstruction rejects foreign types/ownership/UID/index provenance; 
   await assert.rejects(hostDirectory(f.chain, orgId), /RPC offline/);
   f.setIndexMode("missing");
   assert.deepEqual((await hostDirectory(f.chain, orgId)).invitations, []);
+});
+test("Entry discovery and invitation preflight skip unrelated history, while full management fails closed", async () => {
+  const f = await fixture();
+  f.setMode("history_offline");
+  const entries = await hostEntries(f.chain, orgId);
+  assert.equal(entries.bindings[0].id, bindingId);
+  assert.equal(
+    "invitations" in entries,
+    false,
+    "a partial read must not claim there are no invitations",
+  );
+  assert.equal(f.reads.includes(inviteId), false);
+  assert.equal(
+    f.reads.length,
+    3,
+    "entry discovery reads the org twice and binding once, independent of history size",
+  );
+  const quote = await f.controller.prepare(f.operation, attempt, true);
+  assert.equal(f.reads.includes(inviteId), false);
+  await f.controller.submit(quote as any);
+  assert.equal(f.reads.includes(inviteId), false);
+  assert.deepEqual(f.counts(), { prepares: 1, submissions: 1 });
+  await assert.rejects(hostDirectory(f.chain, orgId), /History unavailable/);
+});
+test("Entry-only discovery retains source, index and revocation checks", async () => {
+  const f = await fixture();
+  for (const mode of ["foreign", "owned", "uid"]) {
+    f.setMode(mode);
+    await assert.rejects(hostEntries(f.chain, orgId), /invalid_source/);
+  }
+  f.setMode("normal");
+  f.setIndexMode("offline");
+  await assert.rejects(hostEntries(f.chain, orgId), /RPC offline/);
+  f.setIndexMode("normal");
+  f.binding.revoked = true;
+  await assert.rejects(
+    f.controller.prepare(f.operation, attempt, true),
+    /unavailable/,
+  );
+  assert.deepEqual(f.counts(), { prepares: 0, submissions: 0 });
 });
 test("Ambiguous original transaction is queried before a new source, confirmation or invitation secret", async () => {
   const f = await fixture(),
