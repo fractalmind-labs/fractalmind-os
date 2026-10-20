@@ -1,304 +1,113 @@
-# Agent Routing
+# Routing
 
-FractalBot selects one inbound runtime with `agents.router`. Supported values are `ohMyCode`, `codexAppCDP`, and `claudeDesktop`. If `router` is empty, the first enabled runtime is selected in that order; if none is enabled, supported inbound messages use the legacy echo behavior.
-
-Generic Agent Router ingress currently accepts Telegram, Feishu/Lark, Slack, Discord, and iMessage. Demail transport can receive and send messages, but Demail messages do not yet enter these Agent Routers.
-
-## Agent selection
-
-Send `/agent <name> <task>` (or `/to <name> <task>`) to select an allowed agent. Use `/admin <text>` to send recovery or management text to the reserved `admin` agent. Messages without an explicit selection use the active router's `defaultAgent`.
-
-Agent names are logical IDs. For an agent-manager workspace with a tmux
-namespace, address the reserved main agent as `main`; do not configure the
-physical session name (for example, `xiaoyi--main`). FractalBot also accepts a
-namespace-qualified `--main` value and normalizes it to `main` for compatibility.
-
-When `allowedAgents` is set, only listed names are accepted, so add `admin` before enabling `/admin`. `/agents` shows the available names. Routed envelopes include the available source context (`channel`, chat/thread/user/message IDs, original text, and timestamp) plus `selected_agent` so the target can reply through the correct channel.
-
-Common commands:
-
-| Command | Purpose |
-| --- | --- |
-| `/agents` | List allowed agent names. |
-| `/admin <text>` | Route recovery or management text to the `admin` agent. |
-| `/monitor <name> [lines]` | Show recent oh-my-code agent output, capped at 200 lines. |
-| `/startagent <name>` | Start an oh-my-code agent; admin only. |
-| `/stopagent <name>` | Stop an oh-my-code agent; admin only. |
-| `/doctor` | Run oh-my-code diagnostics; admin only. |
-| `/whoami` | Show channel identity values for allowlist setup. |
-| `/ping` | Check channel responsiveness. |
-
-`/tool` and `/tools` are intentionally unavailable in gateway mode.
-
-## oh-my-code
-
-The `ohMyCode` router invokes the agent-manager script in an existing oh-my-code workspace.
+FractalBot delivers each message to one agent. Channels are bound to agents in the configuration:
 
 ```yaml
 agents:
-  router: "ohMyCode"
-  ohMyCode:
-    enabled: true
-    workspace: "/path/to/oh-my-code"
-    agentManagerScript: ".claude/skills/agent-manager/scripts/main.py"
-    defaultAgent: "qa-1"
-    allowedAgents:
-      - "qa-1"
-      - "admin"
-      - "coder-a"
-    assignTimeoutSeconds: 90
+  xiaoyi:
+    workspace: ~/xiaoyi-clawd
+    runtime: codexApp
+    session: 01a15669-badd-7c31-b094-660961b49af7
+    channels: [feishu.xiaoyi, telegram.main]
+  burry:
+    workspace: ~/burry-claw
+    runtime: claudeDesktop
+    channels: [feishu.burry, telegram.main]
 ```
 
-The workspace requires Python, tmux, and agent-manager. If routed agents need to send channel replies, make the `use-fractalbot` skill available in that workspace.
+- **A dedicated channel** is bound to one agent. Every message on it goes to that agent; here, `feishu.burry` goes to burry.
+- **A shared channel** is bound to several agents and must name a `default`. Each message goes to one of them, chosen in this order:
+  1. **Mention.** `@burry …` at the start of the text, or `/agent burry …` / `/to burry …`. This applies to one message.
+  2. **Pinned chat.** `chats` on the channel pins a chat or group to one agent.
+  3. **`/use`.** `/use burry` sends the conversation to burry until `/use` is sent with no name. The choice survives restarts.
+  4. **Default.** The channel's `default`.
+- **`/who`** shows the current receiver and the agents on the channel.
+- **Only bound agents can be chosen.** Naming another agent gets a reply listing the agents that can be chosen.
 
-### Receiver-specific targets
+A channel that no agent receives is a configuration error. FractalBot never forwards a message to a host or agent that is not configured here.
 
-One gateway can route different bot/receiver identities to separate named
-oh-my-code workspaces. Prefer `receivers`, which binds both the normalized
-`channel` and `receiverId`. That pairing prevents a receiver identity shared
-by two different channel types from selecting the wrong workspace.
+## The prompt
 
-`receiverIds` remains supported for existing deployments, but is
-channel-agnostic and must be globally unique. New configurations should use
-`receivers`.
+Every runtime receives the same prompt. It starts with the routing context:
 
-Feishu uses the configured App ID as `receiver_id`; it does **not** use a
-sender or chat ID. A gateway may run the legacy singleton Feishu bot plus any
-number of named `channels.feishu.bots` instances. Each named instance opens
-its own connection, receives with its own App ID, and replies through that same
-identity. The same chat can therefore be safely served by multiple bots.
+- the channel and channel instance;
+- the chat, sender and receiving bot (`receiver_id` for Feishu);
+- the agent, how it was chosen (`selected_by`) and the envelope ID.
 
-```yaml
-agents:
-  router: "ohMyCode"
-  ohMyCode:
-    enabled: true
+The user's message follows. Messages from senders below full trust are wrapped in `<user_input>` with a security note. Long bodies are written to a file and referenced with `body_mode: file_pointer`.
 
-    # Existing single-workspace configuration remains the fallback for an
-    # unmatched or unavailable receiver identity.
-    workspace: "/path/to/default-workspace"
-    defaultAgent: "main"
-    allowedAgents: ["main"]
-
-    targets:
-      support:
-        receivers:
-          - channel: feishu
-            receiverId: "cli_support_bot"
-        workspace: "/path/to/support-workspace"
-        agentManagerScript: ".claude/skills/agent-manager/scripts/main.py"
-        defaultAgent: "support-main"
-        allowedAgents: ["support-main", "admin"]
-        assignTimeoutSeconds: 90
-```
-
-For two Feishu bots without a legacy singleton, configure the bot instances
-alongside those receiver targets:
-
-```yaml
-channels:
-  feishu:
-    enabled: true
-    bots:
-      support:
-        appId: "cli_support_bot"
-        appSecret: "..."
-      sales:
-        appId: "cli_sales_bot"
-        appSecret: "..."
-```
-
-The inbound assignment includes `receiver_id` for Feishu. When an agent sends
-a later outbound reply through the CLI, preserve that identity explicitly:
+Agents reply with the `use-fractalbot` skill:
 
 ```bash
-fractalbot message send --channel feishu --receiver-id cli_support_bot --to <chat_id> --text "reply"
+fractalbot message send --channel feishu --receiver-id cli_xxx --to oc_xxx --text "done"
+fractalbot message send --channel telegram --to 123 --agent burry --text "BTC is flat"
 ```
 
-With named multi-bot configuration, an outbound Feishu send without
-`--receiver-id` is rejected rather than guessing a bot. Existing singleton
-configuration continues to work without this flag.
+On a shared channel, `--agent` makes the gateway prefix the text with `[burry]` so people can tell who replied. It also checks that the agent is bound to the channel. For Feishu, `--receiver-id` selects the bot that received the message.
 
-Each scoped channel/receiver pair must be unique across targets; invalid or
-duplicate routes fail configuration validation. A named target owns the default agent for
-messages without an explicit `/agent` or `/to` selection. Explicit selections
-are checked again against the chosen target's `allowedAgents`. Status
-diagnostics record the named target but never the raw receiver identity.
+## Runtimes
 
-## ChatGPT / Codex App
+### Claude Desktop
 
-The `codexAppCDP` router delivers into a project conversation managed by the ChatGPT/Codex desktop app. The configuration key keeps its historical `codexAppCDP` name. Delivery first uses the running renderer's in-process `start-turn-for-host` bridge through CDP. If an upgraded App no longer exposes that handler, FractalBot uses a guarded visible-composer fallback in the exact resolved thread, protects an unrelated draft, and requires target-thread readback. It does not start a separate `codex app-server --listen` backend.
-
-```yaml
-agents:
-  router: "codexAppCDP"
-  codexAppCDP:
-    enabled: true
-    cdpEndpoint: "http://127.0.0.1:9222"
-    targetSelector: "Codex"
-    hostId: "local"
-    targetProject:
-      name: "CloudBank"
-      cwd: "/Users/you/Develop/SuLabsOrg/CloudBank"
-      session: "main"
-    conversationId: ""
-    inboxPath: "/Users/you/Develop/SuLabsOrg/CloudBank/.fractalbot/inbox"
-    fallbackToInbox: true
-    repairPolicy: "relaunch"
-    checkOnIncomingMessage: true
-    watch:
-      enabled: true
-      intervalSeconds: 60
-      cooldownSeconds: 90
-    defaultAgent: "main"
-    allowedAgents:
-      - "main"
-    deliveryTimeoutSeconds: 20
-```
-
-Launch the installed desktop bundle with CDP enabled. Current releases use `ChatGPT.app`; older installations or local aliases may expose `Codex.app`.
-
-```bash
-open -na /Applications/ChatGPT.app --args --remote-debugging-port=9222
-curl -fsS http://127.0.0.1:9222/json/version
-curl -fsS http://127.0.0.1:9222/json/list
-```
-
-Prefer `targetProject.cwd` plus `targetProject.session` over a pinned `conversationId`. FractalBot resolves the current non-archived conversation before each delivery. A configured `conversationId` remains an explicit override.
-
-Repair policies are `off`, `status-only`, `new-instance`, and `relaunch`. The default for an enabled route is `relaunch`, with the watchdog enabled. Set `status-only` when FractalBot should report readiness without controlling the app lifecycle.
-
-When both direct bridge delivery and the guarded composer fallback fail, and `fallbackToInbox` is true, FractalBot atomically writes the normalized envelope to `inboxPath` for later consumption.
-
-### Native queue bridge without CDP
-
-An existing Codex session can receive messages through the optional
-[`codex queue` bridge](codex-native-queue.md). Point the intended receiver
-target's `agentManagerScript` at the adapter to preserve the other receivers,
-and use a dedicated Codex inbox for heartbeats. Queue acceptance and task
-completion remain separate; replies are sent explicitly through FractalBot.
-
-## Claude Desktop
-
-The `claudeDesktop` router either submits to an authenticated Claude chat page exposed by CDP or queues to a private inbox consumed by a relay running inside the target Claude session.
-
-```yaml
-agents:
-  router: "claudeDesktop"
-  claudeDesktop:
-    enabled: true
-    # Leave empty when the signed Claude Desktop build blocks remote debugging.
-    cdpEndpoint: ""
-    targetSelector: ""
-    inboxPath: "/Users/you/.fractalbot/claude-desktop-inbox"
-    fallbackToInbox: true
-    defaultAgent: "main"
-    allowedAgents:
-      - "main"
-    deliveryTimeoutSeconds: 20
-```
-
-When CDP is enabled, the selected target must be a signed-in Claude chat, not a login page:
-
-```bash
-curl -fsS http://127.0.0.1:19334/json/version
-curl -fsS http://127.0.0.1:19334/json/list
-```
-
-### Authenticated inbox relay
-
-Current signed Claude Desktop builds may reject `--remote-debugging-port`. In that case, omit `cdpEndpoint` so FractalBot queues immediately, and start the relay from the target Claude session. The relay reads `CLAUDE_CODE_MESSAGING_SOCKET` and `CLAUDE_CODE_MESSAGING_TOKEN` only from that session's environment, validates that the socket is owned by the current user with private permissions, sends the required auth frame, and archives delivered envelopes under `inboxPath/done/`.
-
-Add a workspace-local Claude setting so only the intended project starts the relay:
+`runtime: claudeDesktop` writes each delivery to the agent's inbox, `<dataDir>/inbox/<agent>/`. A relay inside the agent's Claude Desktop session moves envelopes into the session over its authenticated messaging socket. Start the relay from the workspace's session start hook:
 
 ```json
 {
-  "crossSessionInbound": "accept",
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "umask 077; mkdir -p \"$HOME/.fractalbot/claude-desktop-inbox\"; nohup fractalbot --config \"$HOME/.config/fractalbot/config.yaml\" claude-desktop relay >>\"$HOME/.fractalbot/claude-desktop-inbox/.relay.log\" 2>&1 &",
-            "timeout": 10
-          }
-        ]
-      }
-    ]
+    "SessionStart": [{"hooks": [{"type": "command", "command": "fractalbot relay >/dev/null 2>&1 &"}]}]
   }
 }
 ```
 
-The command runs until the Claude session's socket closes. A private inbox lock makes repeated `SessionStart` hooks idempotent. Run it in the foreground for diagnostics, or process the current queue once:
+- **Which agent.** Without `--agent`, the relay serves the `claudeDesktop` agent whose workspace is the current directory.
+- **One relay per inbox.** A second relay exits successfully, saying another one already consumes the inbox.
+- **Delivered or invalid envelopes.** Delivered envelopes move to `done/`; unreadable ones move to `failed/`.
+- **While the session is closed,** deliveries wait in the inbox.
+- **Presence.** `/status` reports the agent `online` while a relay holds its inbox.
 
-```bash
-fractalbot --config "$HOME/.config/fractalbot/config.yaml" claude-desktop relay
-fractalbot --config "$HOME/.config/fractalbot/config.yaml" claude-desktop relay --once
-```
+The inbox format is specified in [inbox-protocol.md](inbox-protocol.md).
 
-Do not copy the messaging token into a config file or command-line flag. One inbox should have one intended Claude Desktop session relay.
+### Codex App
 
-When a message is queued, FractalBot checks that inbox's relay lock: if a relay process holds it and its Claude session socket still exists, the sender gets `处理中…`; otherwise `已排队，Claude 会话上线后处理。`, and the message waits for the next session that starts a relay. Whether the agent has actually picked a message up is the agent's own reply to send (for example from a workspace rule), not FractalBot's.
+`runtime: codexApp` queues each delivery into the agent's pinned Codex thread with `codex queue --thread <session> --message …`, run in the workspace. Codex's own durable queue holds the message until the thread is free, so an active turn finishes first.
 
-To move one bot to Claude Desktop while the others keep the agent-manager, leave `router: "ohMyCode"`, enable `claudeDesktop`, and give that bot's receiver target `runtime: claudeDesktop` (no workspace needed):
+- **Confirmation.** A delivery succeeds only when `codex` confirms the target thread. Its error output is never logged, because it may quote the message.
+- **Requirements.** No App debugging port, inbox relay or per-workspace script is needed.
+- **Setup.** Find the thread ID in Codex and set it as the agent's `session`. Set `runtimes.codexApp.codex` when `codex` is not on the gateway's PATH.
 
-```yaml
-agents:
-  router: "ohMyCode"
-  ohMyCode:
-    enabled: true
-    targets:
-      xiaoyi:
-        receivers:
-          - channel: feishu
-            receiverId: "cli_xxx"
-        defaultAgent: main
-        runtime: claudeDesktop
-      burry:
-        receivers:
-          - channel: feishu
-            receiverId: "cli_yyy"
-        workspace: "/path/to/burry"
-        defaultAgent: main
-  claudeDesktop:
-    enabled: true
-    cdpEndpoint: ""
-    inboxPath: "/Users/you/.fractalbot/claude-desktop-inbox"
-    fallbackToInbox: true
-    defaultAgent: main
-```
+### agent-manager
 
-The delivered prompt includes the inbound `receiver_id`, so replies can be sent as the receiving bot.
+`runtime: agentManager` runs the workspace's agent-manager `assign <session>` with the prompt on standard input. The session defaults to `main`. Delivery means agent-manager accepted the task.
 
-To relay different bots into different Claude sessions, give each such target its own inbox with `claudeDesktopInboxPath`, and start each session's relay on its inbox with `--inbox-path`. Targets without one keep `agents.claudeDesktop.inboxPath`:
+- **Script.** `runtimes.agentManager.script` changes the entrypoint (default `.claude/skills/agent-manager/scripts/main.py`).
+- **Timeout.** `assignTimeoutSeconds` bounds the assign call.
+- **Starting.** `startIfMissing` starts a stopped agent before a schedule is delivered.
 
-```yaml
-      xiaoyi:
-        receivers:
-          - channel: feishu
-            receiverId: "cli_xxx"
-        defaultAgent: main
-        runtime: claudeDesktop
-        claudeDesktopInboxPath: "/Users/you/.fractalbot/claude-desktop-inbox/xiaoyi"
-```
+### Capabilities
 
-```bash
-fractalbot --config "$HOME/.config/fractalbot/config.yaml" claude-desktop relay --inbox-path "$HOME/.fractalbot/claude-desktop-inbox/xiaoyi"
-```
-
-`claudeDesktopInboxPath` is only valid with `runtime: claudeDesktop`. A `claudeDesktop` heartbeat job reaches the same session when it names the receiver target with `target` (see [heartbeat.md](heartbeat.md)); without one it uses the shared inbox.
-
-FractalBot does not launch Claude Desktop, patch the application, bypass its CDP authentication guard, scrape chat history, or inject input through AppleScript. If the target is unavailable, logged out, lacks a compose box, or rejects submission, a configured fallback inbox receives the normalized envelope and delivery prompt with private file permissions.
+| | claudeDesktop | codexApp | agentManager |
+| --- | --- | --- | --- |
+| Durable while the session is closed | yes (inbox) | yes (Codex queue) | no |
+| Starts work in an idle session | yes | yes | yes |
+| Can start a stopped agent | no | no | yes |
+| Can stop work at process level | no | no | yes |
+| Waits for a heartbeat's terminal outcome | no | no | yes (`mode: heartbeatRun`) |
+| Presence in `/status` | relay running | unknown | agent-manager status |
 
 ## Observability
 
-Use the status endpoint to inspect the selected router and most recent outcome:
+`GET /status` groups by agent. For each agent it lists:
 
-```bash
-curl -sS http://127.0.0.1:18789/status | python3 -m json.tool
-```
+- runtime, workspace, bound channels and presence;
+- declared capabilities;
+- the last delivery (source, how the agent was chosen, status, envelope and error);
+- the agent's schedules.
 
-For desktop routes, `agents.last_routing` records the backend, status (`delivered`, `queued`, or `error`), selected agent, envelope ID, inbox path, and delivery error. The Codex App route also reports CDP readiness and the resolved project conversation.
+The `channels` section lists each instance with the following:
 
-See [Troubleshooting](troubleshooting.md) for startup and delivery failures.
+- its agents and default;
+- whether it is running;
+- why it is unavailable (such as a missing secret);
+- telemetry.
+
+Secrets are masked in every error.

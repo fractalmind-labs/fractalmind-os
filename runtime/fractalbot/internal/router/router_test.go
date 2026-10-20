@@ -164,6 +164,9 @@ func TestDedicatedAndSharedChannelSelection(t *testing.T) {
 	if len(reset) == 0 || reset[0] != "burry" {
 		t.Fatalf("inbound hook: %v", reset)
 	}
+	if reply, err := r.HandleIncoming(ctx, msg(map[string]interface{}{"channel": "demail", "text": "agent mail"})); reply != "" || err != nil {
+		t.Fatalf("demail must not be routed: %q %v", reply, err)
+	}
 	if _, err := r.HandleIncoming(ctx, msg(map[string]interface{}{"channel": "slack", "text": "x"})); err == nil {
 		t.Fatal("unconfigured channel accepted")
 	}
@@ -191,5 +194,20 @@ func TestScheduleDispatch(t *testing.T) {
 	st := r.Status(ctx)
 	if len(st) != 2 || st[0].Name != "burry" || st[0].LastDelivery == nil || st[0].LastDelivery.Source != "schedule:radar" {
 		t.Fatalf("status: %+v", st)
+	}
+}
+
+func TestLifecycleCommands(t *testing.T) {
+	r, _, _ := setup(t)
+	ctx := context.Background()
+	if _, err := r.MonitorAgent(ctx, "xiaoyi", 10); err == nil || !strings.Contains(err.Error(), "runs in codexApp") {
+		t.Fatalf("codexApp monitor: %v", err)
+	}
+	if _, err := r.StartAgent(ctx, "nobody"); err == nil {
+		t.Fatal("unknown agent started")
+	}
+	out, err := r.Doctor(ctx)
+	if err != nil || !strings.Contains(out, "burry: agentManager") || !strings.Contains(out, "xiaoyi: codexApp") {
+		t.Fatalf("doctor: %q %v", out, err)
 	}
 }

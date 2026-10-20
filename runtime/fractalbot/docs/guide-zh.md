@@ -111,29 +111,28 @@ go build -o fractalbot ./cmd/fractalbot
 
 ```bash
 mkdir -p ~/.config/fractalbot && cat > ~/.config/fractalbot/config.yaml << 'EOF'
-gateway:
-  port: 18789
-  bind: 127.0.0.1
+version: 2
 
 channels:
   slack:
-    enabled: true
-    botToken: "xoxb-your-bot-token"      # 替换为你的 Bot Token
-    appToken: "xapp-your-app-token"      # 替换为你的 App-Level Token
-    allowedUsers:
-      - "U0YOUR_ID"                      # 替换为你的 Slack User ID
+    main:
+      botToken: secret:slack-bot         # 值不写在配置里，见下一步
+      appToken: secret:slack-app
+      allowedUsers:
+        - "U0YOUR_ID"                    # 替换为你的 Slack User ID
 
 agents:
-  workspace: ./workspace
-  maxConcurrent: 2
-  ohMyCode:
-    enabled: true
-    workspace: "/path/to/your/workspace" # 替换为你的工作仓库路径
-    defaultAgent: "dev"
-    allowedAgents:
-      - "dev"
-    assignTimeoutSeconds: 90
+  dev:
+    workspace: /path/to/your/workspace   # 替换为你的工作仓库路径
+    runtime: agentManager                # 也可以是 claudeDesktop 或 codexApp
+    session: dev                         # agent-manager 里的 Agent 名
+    channels: [slack.main]
 EOF
+
+# 密钥存到本机（macOS 钥匙串 / Windows 凭据管理器 / Linux 文件），输入时不回显
+fractalbot secret set slack-bot   # 粘贴 xoxb- token
+fractalbot secret set slack-app   # 粘贴 xapp- token
+fractalbot config check           # 校验配置、确认密钥已设置
 ```
 
 > **获取 Slack token：** 见下方 [Slack 配置](#slack-socket-mode无需公网端口) 详细步骤。
@@ -264,15 +263,12 @@ settings:
 ```yaml
 channels:
   telegram:
-    enabled: true
-    botToken: "123456:ABC-DEF..."       # 从 @BotFather 获取
-    adminID: 5088760910                  # 你的 Telegram User ID
-    allowedUsers:
-      - 5088760910                       # 白名单，同 adminID
-    mode: "polling"                      # 本地推荐 polling
-    pollingTimeoutSeconds: 25
-    pollingLimit: 100
-    pollingOffsetFile: "./workspace/telegram.offset"
+    main:
+      botToken: secret:telegram-main     # fractalbot secret set telegram-main
+      adminId: 5088760910                # 你的 Telegram User ID
+      allowedUsers:
+        - 5088760910                     # 白名单，同 adminId
+      pollingTimeoutSeconds: 25          # 默认 polling 模式
 ```
 
 ### Slack（Socket Mode，无需公网端口）
@@ -288,11 +284,11 @@ channels:
 ```yaml
 channels:
   slack:
-    enabled: true
-    botToken: "xoxb-your-bot-token"
-    appToken: "xapp-your-app-token"
-    allowedUsers:
-      - "U08C93FU222"                    # Slack User ID
+    main:
+      botToken: secret:slack-bot         # fractalbot secret set slack-bot
+      appToken: secret:slack-app         # fractalbot secret set slack-app
+      allowedUsers:
+        - "U08C93FU222"                  # Slack User ID
 ```
 
 **权限分层建议：**
@@ -327,10 +323,10 @@ channels:
 ```yaml
 channels:
   discord:
-    enabled: true
-    token: "your-bot-token"
-    allowedUsers:
-      - "123456789012345678"             # Discord User ID
+    main:
+      token: secret:discord              # fractalbot secret set discord
+      allowedUsers:
+        - "123456789012345678"           # Discord User ID
 ```
 
 ### 飞书/Lark
@@ -341,12 +337,12 @@ channels:
 ```yaml
 channels:
   feishu:
-    enabled: true
-    appId: "cli_xxx"
-    appSecret: "your_app_secret"
-    domain: "feishu"                     # 国际版用 "lark"
-    allowedUsers:
-      - "ou_xxxxx"
+    assistant:                           # 实例名；多个飞书应用各写一段
+      appId: "cli_xxx"
+      appSecret: secret:feishu-assistant # fractalbot secret set feishu-assistant
+      domain: "feishu"                   # 国际版用 "lark"
+      allowedUsers:
+        - "ou_xxxxx"
 ```
 
 ---
@@ -355,7 +351,7 @@ channels:
 
 > 已通过快速入门跑通单 Agent？本节介绍完整的多 Agent 架构。
 
-FractalBot 通过 `agents.ohMyCode` 配置将消息路由到 [agent-manager](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill)（基于 tmux + Claude Code 的 Agent 管理系统）。每个 Agent 跑在独立的 tmux session 里。
+FractalBot 通过 `runtime: agentManager` 的 Agent 将消息路由到 [agent-manager](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill)（基于 tmux + Claude Code 的 Agent 管理系统）。每个 Agent 跑在独立的 tmux session 里。
 
 ### 1. 配置 AGENTS.md
 
@@ -395,7 +391,7 @@ skills:
 
 | 关键字段 | 说明 |
 |----------|------|
-| `name: main` | 固定为 `main`，FractalBot 的 `defaultAgent` 通常指向它 |
+| `name: main` | 固定为 `main`；FractalBot 里 agentManager Agent 的 `session` 默认就是 `main` |
 | `heartbeat.cron` | 定期巡检的 cron 表达式 |
 | `skills` | 必须包含 `agent-manager` + `use-fractalbot` |
 
@@ -479,24 +475,40 @@ agents/
 
 ### 3. 配置路由
 
-在 `config.yaml` 中将消息路由到 agent-manager：
+每个 agent-manager Agent 在 `config.yaml` 里写成一个 Agent，绑定它要接收的渠道（写成 `类型.实例名`）：
 
 ```yaml
 agents:
-  workspace: ./workspace
-  maxConcurrent: 4
-  ohMyCode:
-    enabled: true
-    workspace: "/path/to/your/workspace"     # 包含 agents/ 目录的仓库路径
-    defaultAgent: "dev"                      # 普通消息默认路由到此 Agent
-    allowedAgents:                           # /agent 命令可选的 Agent 列表
-      - "dev"
-      - "admin"
-      - "qa"
-    assignTimeoutSeconds: 90                 # Agent 响应超时（秒）
+  dev:
+    workspace: /path/to/your/workspace       # 包含 agents/ 目录的仓库路径
+    runtime: agentManager
+    session: dev                             # 对应 agents/EMP_*.md 的 name
+    channels: [slack.main]
+  qa:
+    workspace: /path/to/your/workspace
+    runtime: agentManager
+    session: qa
+    channels: [slack.main]
+
+channels:
+  slack:
+    main:
+      # …
+      default: dev                           # 两个 Agent 共用时，普通消息给 dev
+
+runtimes:
+  agentManager:
+    assignTimeoutSeconds: 90
 ```
 
-> `defaultAgent` 必须与某个 `agents/EMP_*.md` 中的 `name` 字段匹配。
+一个渠道绑定多个 Agent 时，每条消息按以下顺序选出接收者：
+
+1. 消息开头写 `@qa` 或 `/agent qa`：只对这一条生效；
+2. 渠道 `chats` 里固定给某个 Agent 的对话；
+3. 发过 `/use qa` 后，这个对话都交给 qa，`/use` 不带名字恢复默认；
+4. 渠道 `default`。
+
+`/who` 查看当前给谁。没有绑定任何 Agent 的渠道，`config check` 会报错。详见 [Routing](routing.md)。
 
 ### 4. 验证 Agent
 
@@ -564,14 +576,16 @@ curl -s http://127.0.0.1:18789/status | python3 -m json.tool
 | `/ping` | 健康检查 | 所有人 |
 | `/agents` | 列出可用 Agent | 所有人 |
 | `/agent <name> <task>` | 指定 Agent 执行任务 | 所有人 |
-| `/admin <text>` | 将恢复/管理指令路由到 `admin` Agent | 所有人（仍受渠道 allowlist 限制） |
+| `@<name> <text>` | 这条消息交给指定 Agent（共享渠道） | 所有人 |
+| `/use [name]` | 之后这个对话都交给该 Agent；不带名字恢复默认 | 所有人 |
+| `/who` | 查看当前对话交给谁、可选哪些 Agent | 所有人 |
 | `/monitor <name> [lines]` | 查看 Agent 最近输出（最多 200 行） | 所有人 |
 | `/startagent <name>` | 启动指定 Agent | 仅 Admin |
 | `/stopagent <name>` | 停止指定 Agent | 仅 Admin |
 | `/doctor` | 运行诊断检查 | 仅 Admin |
 | `tool echo <text>` | 内置 tool runtime 回声测试 | 所有人 |
 
-> 直接发普通消息（不带 `/` 前缀）会路由到 `defaultAgent`。
+> 普通消息交给渠道的默认 Agent；只绑定了一个 Agent 的渠道，默认就是它。`/monitor`、`/startagent`、`/stopagent` 只对 agentManager 运行时的 Agent 有效。
 
 ---
 
@@ -605,7 +619,7 @@ tmux attach -t agent-dev     # 查看 Agent 日志
 
 ### Q: Slack 报 `channel "slack" not found`
 
-Slack 渠道未在配置中启用。确认 `channels.slack.enabled: true`，且 `botToken` 和 `appToken` 均已填写。
+Slack 渠道没有启动。运行 `fractalbot config check`，确认三件事：`channels.slack.main` 已配置；它绑定到了某个 Agent；`slack-bot`、`slack-app` 两个密钥显示 set。`/status` 里 `channels[].unavailable` 会写明未启动的原因。
 
 ### Q: Slack 报 `missing_scope` / `not_authed`
 
@@ -623,7 +637,7 @@ Slack 渠道未在配置中启用。确认 `channels.slack.enabled: true`，且 
 
 ### Q: 飞书/Discord 配置后没反应
 
-1. 确认对应渠道 `enabled: true`
+1. 运行 `fractalbot config check`，确认渠道已绑定 Agent、密钥已设置
 2. 确认 `allowedUsers` 中包含你的用户 ID（用 `/whoami` 查询）
 3. 确认 Bot 已邀请到工作区/服务器
 4. 查看 FractalBot 终端日志排查

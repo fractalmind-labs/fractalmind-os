@@ -264,3 +264,19 @@ func TestCheckReportsSecretsWithoutValues(t *testing.T) {
 		t.Fatalf("expected OK, got %v", rep.Problems)
 	}
 }
+
+func TestExampleConfigParses(t *testing.T) {
+	data, err := os.ReadFile("../../config.example.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := Platform{GOOS: "darwin", Home: "/home/me", Getenv: func(string) string { return "" },
+		DirExists: func(string) bool { return true }, FileExists: func(string) bool { return true }}
+	cfg, err := Parse(data, p)
+	if err != nil {
+		t.Fatalf("config.example.yaml: %v", err)
+	}
+	if !strings.HasPrefix(cfg.DataDir, "/home/me/Library/Application Support") || len(cfg.Schedules.Jobs) != 2 {
+		t.Fatalf("example: %+v", cfg)
+	}
+}

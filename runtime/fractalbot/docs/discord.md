@@ -24,11 +24,17 @@ use the OAuth2 URL Generator:
 ```yaml
 channels:
   discord:
-    enabled: true
-    token: "your-bot-token"
-    allowedUsers:
-      - "123456789012345678" # your Discord user ID
+    main:
+      token: secret:discord
+      allowedUsers:
+        - "123456789012345678" # your Discord user ID
+
+agents:
+  assistant:
+    channels: [discord.main]  # plus workspace and runtime
 ```
+
+Store the token with `fractalbot secret set discord`.
 
 Notes:
 - DM-only: messages in servers are ignored.

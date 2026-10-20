@@ -48,68 +48,30 @@ journalctl --user -u fractalbot.service -n 200 --no-pager
 
 ---
 
-## 1) Config Errors (YAML, Required Fields, Invalid Agent Settings)
+## 1) Config Errors
 
 ### Symptoms
 
-Common startup errors:
+The gateway refuses to start with `failed to load config:` followed by one line per problem, for example:
 
-- `failed to load config: failed to read config: ...`
-- `failed to load config: failed to parse config: ...`
-- `channels.telegram.botToken is required when telegram is enabled`
-- `channels.slack.botToken and channels.slack.appToken are required when slack is enabled`
-- `channels.discord.token is required when discord is enabled`
-- `channels.imessage.recipient is required when imessage is enabled`
-- `agents.ohMyCode.defaultAgent: must be in agents.ohMyCode.allowedAgents`
-- `agents.ohMyCode.agentManagerScript: must be within agents.ohMyCode.workspace`
-
-### Likely Cause
-
-- Invalid YAML or missing required fields when a channel is enabled.
-- `agents.ohMyCode` validation failure (invalid agent name, allowlist mismatch, workspace/script path issues).
+- `this is a version 1 configuration (it has no version: 2)` followed by the rewrites it needs
+- `line 12: unknown field "text" (text is now prompt (or promptFile))`
+- `line 8: must be a secret reference (secret:<name>); plaintext values are not accepted`
+- `channels.telegram.main: no agent receives this channel`
+- `channels.telegram.main.default: required because burry, xiaoyi share this channel`
+- `agents.burry.workspace: /path is not a directory`
+- `agents.xiaoyi.session: codexApp agents need the Codex thread ID`
 
 ### Fix
 
 ```bash
-# Keep a backup before editing
 cp config.yaml config.yaml.bak.$(date +%Y%m%d%H%M%S)
-
-# Start from known-good schema
-cp config.example.yaml /tmp/config.example.yaml
-
-# Open and fix required fields for enabled channels
-# telegram: botToken
-# slack: botToken + appToken
-# discord: token
-# imessage: recipient
-# ohMyCode: workspace + valid defaultAgent/allowedAgents
+fractalbot --config config.yaml config check
 ```
 
-Quick checks:
+`config check` lists every problem at once and also checks this machine: whether each secret is set, whether `codex` and `tmux` exist, and whether each channel and runtime works on this OS. Rewrite a version 1 file with the table in [Configuration](config-v2.md#rewriting-a-version-1-file).
 
-```bash
-# Verify oh-my-code script path is inside workspace
-# (matches internal/config validation logic)
-python3 - <<'PY'
-import os
-workspace = "/path/to/oh-my-code"
-script = ".claude/skills/agent-manager/scripts/main.py"
-resolved = os.path.realpath(os.path.join(workspace, script))
-print("OK" if resolved.startswith(os.path.realpath(workspace)+os.sep) else "BAD", resolved)
-PY
-```
-
-### Rollback and Recovery
-
-```bash
-# Roll back to last known-good config
-cp config.yaml.bak.<timestamp> config.yaml
-
-# Restart gateway
-systemctl --user restart fractalbot.service || true
-# or
-fractalbot --config ./config.yaml
-```
+A channel whose secret is missing does not stop the gateway: that channel stays stopped and `/status` shows `"unavailable": "secret … is not set"`. Store it with `fractalbot secret set <name>`.
 
 ---
 
@@ -289,46 +251,20 @@ systemctl --user restart fractalbot.service
 
 ### Symptoms
 
-User-facing messages:
-
-- `❌ agent-manager error; please check server logs`
-- `❌ Default agent is missing or invalid...`
-- `❌ agent "..." is not allowed`
-
-Server logs/errors:
-
-- `oh-my-code agent-manager failed: ...`
-- `agents.ohMyCode is disabled`
-- `agents.ohMyCode.workspace is required`
-- assign timeout path via `assignTimeoutSeconds` / context deadline
-
-### Likely Cause
-
-- `agents.ohMyCode.enabled` is false or workspace/script path is wrong.
-- Agent name not in allowlist.
-- Agent manager process is unhealthy or too slow for current timeout.
+- `❌ … does not receive this channel; choose one of: …`: the message named an agent not bound to the channel.
+- A message is acknowledged but nothing happens: check the agent's `last_delivery` in `/status`.
+- `agent-manager assign failed: …`, `codex queue rejected the message (exit code N)` or `codex queue did not confirm the target thread`.
+- A Claude Desktop agent shows `"presence": "offline"`: no relay holds its inbox, so deliveries wait in `<dataDir>/inbox/<agent>/`.
 
 ### Fix
 
 ```bash
-# In your oh-my-code workspace
-python3 .claude/skills/agent-manager/scripts/main.py doctor
-python3 .claude/skills/agent-manager/scripts/main.py list
-python3 .claude/skills/agent-manager/scripts/main.py start qa-1
-python3 .claude/skills/agent-manager/scripts/main.py monitor qa-1 --lines 120
+curl -sS http://127.0.0.1:18789/status | python3 -m json.tool   # agents[].last_delivery, presence
 ```
 
-And in `config.yaml`:
-
-- `agents.ohMyCode.enabled: true`
-- `agents.ohMyCode.workspace: /absolute/path/to/oh-my-code`
-- `defaultAgent` exists and is allowlisted when `allowedAgents` is set
-- increase `assignTimeoutSeconds` if jobs are slow
-
-### Rollback and Recovery
-
-- Temporarily set `agents.ohMyCode.enabled: false` to keep gateway online (FractalBot falls back to echo behavior for inbound tasks).
-- Re-enable after `doctor` and per-agent checks pass.
+- **agent-manager:** in the workspace, run `python3 .claude/skills/agent-manager/scripts/main.py doctor`, then `status main` and `monitor main --lines 120`. Raise `runtimes.agentManager.assignTimeoutSeconds` for slow assigns.
+- **Codex App:** confirm the thread ID in the agent's `session` and that `runtimes.codexApp.codex` (or `codex` on PATH) is the CLI that owns that thread. Then run `codex queue --thread <id> --message test` from the workspace.
+- **Claude Desktop:** open the agent's session. Its start hook should run `fractalbot relay`, or run it in the session yourself. Envelopes the relay cannot read are in `failed/`.
 
 ---
 

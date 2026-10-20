@@ -12,7 +12,7 @@ import (
 var agentNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]*$`)
 
 var errDefaultAgentMissing = errors.New("default agent is not configured")
-var noAgentsConfiguredMessage = "⚠️ No agents configured.\nSet agents.ohMyCode.defaultAgent or agents.ohMyCode.allowedAgents.\nTry: /agent <name> <task> (or /to <name> <task>)."
+var noAgentsConfiguredMessage = "⚠️ No agent receives this channel.\nBind it in agents.<name>.channels.\nTry: /agent <name> <task> (or /to <name> <task>)."
 
 const AdminAgentName = "admin"
 
@@ -228,12 +228,12 @@ func filterOutAgentName(names []string, target string) []string {
 func agentNotAllowedMessage(err error, defaultAgent string, allowlist AgentAllowlist) string {
 	message := fmt.Sprintf("❌ %v", err)
 	if allowlist.configured {
-		return fmt.Sprintf("%s\nTip: add to agents.ohMyCode.allowedAgents or use /agents.", message)
+		return fmt.Sprintf("%s\nTip: bind the agent to this channel in agents.<name>.channels, or use /agents.", message)
 	}
 	if strings.TrimSpace(defaultAgent) != "" {
-		return fmt.Sprintf("%s\nOnly the default agent is enabled.\nTip: configure agents.ohMyCode.allowedAgents to allow others, or use /agents.", message)
+		return fmt.Sprintf("%s\nOnly the default agent receives this channel.\nTip: bind other agents to it in agents.<name>.channels, or use /agents.", message)
 	}
-	return fmt.Sprintf("%s\nTip: configure agents.ohMyCode.defaultAgent or agents.ohMyCode.allowedAgents.", message)
+	return fmt.Sprintf("%s\nTip: bind agents to this channel in agents.<name>.channels and set the channel default.", message)
 }
 
 // withAgentSpecified records whether the sender named the agent (/agent or

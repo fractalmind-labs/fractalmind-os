@@ -90,10 +90,10 @@ func TestTelegramAgentsEmptyConfigHint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(payload.Text, "agents.ohMyCode.defaultAgent") {
+	if !strings.Contains(payload.Text, "agents.<name>.channels") {
 		t.Fatalf("expected defaultAgent hint, got %q", payload.Text)
 	}
-	if !strings.Contains(payload.Text, "agents.ohMyCode.allowedAgents") {
+	if !strings.Contains(payload.Text, "agents.<name>.channels") {
 		t.Fatalf("expected allowedAgents hint, got %q", payload.Text)
 	}
 	if !strings.Contains(payload.Text, "/agent <name> <task>") {
@@ -123,7 +123,7 @@ func TestTelegramAgentSelectionErrorIncludesHint(t *testing.T) {
 
 		bot.handleIncomingMessage(msg)
 
-		if !strings.Contains(payload.Text, "agents.ohMyCode.allowedAgents") {
+		if !strings.Contains(payload.Text, "agents.<name>.channels") {
 			t.Fatalf("expected allowedAgents hint for %q, got %q", input, payload.Text)
 		}
 		if !strings.Contains(payload.Text, "/agents") {
@@ -151,10 +151,10 @@ func TestTelegramAgentNotAllowedDefaultOnly(t *testing.T) {
 
 		bot.handleIncomingMessage(msg)
 
-		if !strings.Contains(payload.Text, "Only the default agent is enabled") {
+		if !strings.Contains(payload.Text, "Only the default agent receives this channel") {
 			t.Fatalf("expected default-only hint for %q, got %q", input, payload.Text)
 		}
-		if !strings.Contains(payload.Text, "agents.ohMyCode.allowedAgents") {
+		if !strings.Contains(payload.Text, "agents.<name>.channels") {
 			t.Fatalf("expected allowedAgents hint for %q, got %q", input, payload.Text)
 		}
 		if !strings.Contains(payload.Text, "/agents") {

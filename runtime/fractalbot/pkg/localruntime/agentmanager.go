@@ -148,3 +148,18 @@ func statusRunning(out string) bool {
 	}
 	return false
 }
+
+// Monitor returns the agent's recent output.
+func (a AgentManager) Monitor(ctx context.Context, target Target, lines int) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultLifecycleTimeout)
+	defer cancel()
+	return a.run(ctx, target, "", "monitor", target.Session, "--lines", fmt.Sprint(lines))
+}
+
+// Stop stops the agent's tmux session.
+func (a AgentManager) Stop(ctx context.Context, target Target) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultLifecycleTimeout)
+	defer cancel()
+	_, err := a.run(ctx, target, "", "stop", target.Session)
+	return err
+}

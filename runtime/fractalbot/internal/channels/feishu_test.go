@@ -374,10 +374,10 @@ func TestFeishuAgentsEmptyConfigHint(t *testing.T) {
 
 	bot.handleMessageEvent(context.Background(), buildFeishuEvent("/agents", "p2p", "ou_me", "u_me", "chat1"))
 
-	if !strings.Contains(sent.text, "agents.ohMyCode.defaultAgent") {
+	if !strings.Contains(sent.text, "agents.<name>.channels") {
 		t.Fatalf("expected defaultAgent hint, got %q", sent.text)
 	}
-	if !strings.Contains(sent.text, "agents.ohMyCode.allowedAgents") {
+	if !strings.Contains(sent.text, "agents.<name>.channels") {
 		t.Fatalf("expected allowedAgents hint, got %q", sent.text)
 	}
 	if !strings.Contains(sent.text, "/agent <name> <task>") {
@@ -402,7 +402,7 @@ func TestFeishuAgentAllowlistHint(t *testing.T) {
 
 	bot.handleMessageEvent(context.Background(), buildFeishuEvent("/agent other test", "p2p", "ou_allowed", "u1", "chat1"))
 
-	if !strings.Contains(sent.text, "agents.ohMyCode.allowedAgents") {
+	if !strings.Contains(sent.text, "agents.<name>.channels") {
 		t.Fatalf("expected allowedAgents hint, got %q", sent.text)
 	}
 	if !strings.Contains(sent.text, "/agents") {
@@ -424,10 +424,10 @@ func TestFeishuAgentNotAllowedDefaultOnly(t *testing.T) {
 
 	bot.handleMessageEvent(context.Background(), buildFeishuEvent("/agent other test", "p2p", "ou_allowed", "u1", "chat1"))
 
-	if !strings.Contains(sent.text, "Only the default agent is enabled") {
+	if !strings.Contains(sent.text, "Only the default agent receives this channel") {
 		t.Fatalf("expected default-only hint, got %q", sent.text)
 	}
-	if !strings.Contains(sent.text, "agents.ohMyCode.allowedAgents") {
+	if !strings.Contains(sent.text, "agents.<name>.channels") {
 		t.Fatalf("expected allowedAgents hint, got %q", sent.text)
 	}
 	if !strings.Contains(sent.text, "/agents") {
@@ -449,7 +449,7 @@ func TestFeishuDefaultAgentMissingGuidance(t *testing.T) {
 
 	bot.handleMessageEvent(context.Background(), buildFeishuEvent("hello", "p2p", "ou_allowed", "u1", "chat1"))
 
-	if !strings.Contains(sent.text, "agents.ohMyCode.defaultAgent") {
+	if !strings.Contains(sent.text, "Set the channel default") {
 		t.Fatalf("expected config key hint, got %q", sent.text)
 	}
 	if !strings.Contains(sent.text, "/agent <name> <task>") {

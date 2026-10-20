@@ -4,7 +4,7 @@
 [![Go Version](https://img.shields.io/badge/go-%3E%201.23-00ADD8E.svg)](https://go.dev/)
 [![Stars](https://img.shields.io/github/stars/fractalmind-labs/fractalmind-os?style=social)](https://github.com/fractalmind-labs/fractalmind-os/stargazers)
 
-FractalBot is a local-first Go messaging gateway that connects chat channels to external agent runtimes through HTTP, CLI, and WebSocket interfaces.
+FractalBot is a local-first messaging gateway between people and agents. One gateway connects every chat channel and delivers each message, with its routing context, to the agent it is meant for. The agent can run in Claude Desktop, the Codex App or an agent-manager tmux session. FractalBot also wakes agents on schedules. It routes messages and does not process them. It runs on macOS, Linux and Windows.
 
 ## Capabilities
 
@@ -19,22 +19,23 @@ FractalBot is a local-first Go messaging gateway that connects chat channels to 
 | iMessage | Yes | Yes | macOS Messages database polling and AppleScript sending. |
 | Demail | Transport only | Yes | Encrypted on-chain agent mail on Sui; generic Agent Router ingress is not yet enabled. |
 
-### Routing targets
+### Agents and runtimes
 
-| Router | Target | Delivery model |
+Each agent is a workspace with one runtime and the channels it receives. A channel bound to one agent is dedicated to it. A channel bound to several agents is shared: a message goes to the agent it mentions, then to the agent its chat is pinned to, then to the conversation's `/use` choice, then to the channel's default. See [Routing](docs/routing.md).
+
+| Runtime | Target | Delivery |
 | --- | --- | --- |
-| `ohMyCode` | oh-my-code agent-manager | Invokes the manager script in an existing workspace. |
-| `codexAppCDP` | ChatGPT / Codex desktop app | Resolves a project session and calls the renderer's in-process app-server bridge through CDP. |
-| `claudeDesktop` | Claude Desktop | Uses authenticated CDP when available, or a session-started relay over Claude's local messaging socket. |
-| Legacy fallback | Echo | Echoes supported inbound text when no Agent Router is enabled. |
+| `claudeDesktop` | Claude Desktop | A durable per-agent inbox, moved into the session by `fractalbot relay` over Claude's authenticated messaging socket. |
+| `codexApp` | Codex App | `codex queue` into the agent's pinned thread; Codex's queue holds the message until the thread is free. |
+| `agentManager` | agent-manager (tmux) | `assign` to the agent-manager agent; can start a stopped agent and run its native heartbeat lifecycle. |
 
-Desktop routes support durable file-backed inbox fallback when direct delivery is unavailable. Channel allowlists use deny-by-default behavior where supported.
+Secrets are never stored in the configuration. Values live in the OS credential store, owner-only files, environment variables or a password manager, and are masked in every log line.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Channels[Channel adapters]
+    subgraph Channels[Channel instances]
         TG[Telegram]
         FS[Feishu / Lark]
         SL[Slack]
@@ -45,14 +46,14 @@ flowchart LR
 
     CM[Channel Manager]
     MB[Message Bus]
-    AR{Agent Router}
-    HB[Cron Heartbeat Scheduler]
+    RT{Router: agent selection}
+    SC[Schedules]
+    LR[localruntime adapters]
 
-    subgraph Targets[Routing targets]
-        OMC[oh-my-code]
-        CA[ChatGPT / Codex App]
-        CD[Claude Desktop]
-        Echo[Echo]
+    subgraph Runtimes
+        CD[Claude Desktop via inbox + relay]
+        CA[Codex App via codex queue]
+        AM[agent-manager]
     end
 
     TG --> CM
@@ -60,21 +61,17 @@ flowchart LR
     SL --> CM
     DC --> CM
     IM --> CM
-    DM -. Agent ingress pending .-> CM
+    DM --> CM
     CM <--> MB
-    MB -->|Supported ingress| AR
-    HB -->|Explicit runtime and agent| OMC
-    HB -->|Explicit runtime and agent| CA
-    HB -->|Explicit runtime and agent| CD
-    AR --> OMC
-    AR --> CA
-    AR --> CD
-    AR --> Echo
-    CA -. fallback .-> CI[(Durable inbox)]
-    CD -. fallback .-> DI[(Durable inbox)]
+    MB --> RT
+    SC -->|agent| RT
+    RT --> LR
+    LR --> CD
+    LR --> CA
+    LR --> AM
 ```
 
-The Gateway Server wires channel adapters, the buffered Message Bus, and the selected Agent Router. HTTP/CLI sends enter the outbound bus; normalized channel events enter the inbound bus. See [Architecture](docs/architecture.md) for component boundaries, message flows, and the current Demail ingress limitation.
+The gateway wires channel instances, the buffered Message Bus, the router and the schedules. HTTP/CLI sends enter the outbound bus; normalized channel events enter the inbound bus. See [Architecture](docs/architecture.md) for component boundaries, message flows, and the current Demail ingress limitation.
 
 ## Quick start
 
@@ -85,7 +82,9 @@ git clone https://github.com/fractalmind-labs/fractalmind-os.git
 cd fractalmind-os/runtime/fractalbot
 cp config.example.yaml config.yaml
 
-# Edit config.yaml to enable and configure a channel and router.
+# Edit config.yaml: channels, agents and schedules. Then store each secret.
+go run ./cmd/fractalbot --config ./config.yaml secret set telegram-main
+go run ./cmd/fractalbot --config ./config.yaml config check
 go run ./cmd/fractalbot --config ./config.yaml
 ```
 
@@ -113,13 +112,15 @@ go run ./cmd/fractalbot --config ./config.yaml \
 
 SVG is not accepted for image send — convert to PNG/JPEG first. Channels without image support return an explicit error instead of dropping the attachment.
 
-Start with [`config.example.yaml`](config.example.yaml), then read [Agent routing](docs/routing.md) for runtime-specific configuration.
+Start with [`config.example.yaml`](config.example.yaml). [Configuration](docs/config-v2.md) is the full reference.
 
 ## Documentation
 
 - [Architecture](docs/architecture.md)
-- [Agent routing](docs/routing.md)
-- [Agent heartbeats](docs/heartbeat.md)
+- [Configuration](docs/config-v2.md)
+- [Routing](docs/routing.md)
+- [Schedules](docs/heartbeat.md)
+- [Agent inbox protocol](docs/inbox-protocol.md)
 - [Development and local demo](docs/development.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Slack setup](docs/slack.md)

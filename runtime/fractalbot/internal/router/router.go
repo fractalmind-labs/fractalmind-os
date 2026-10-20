@@ -160,7 +160,9 @@ func (r *Router) HandleIncomingStream(ctx context.Context, msg *protocol.Message
 		return "", nil
 	}
 	text := strings.TrimSpace(value(data, "text"))
-	if text == "" {
+	// Demail carries agent-to-agent mail, which FractalBot transports but does
+	// not route to agents.
+	if text == "" || value(data, "channel") == configv2.ChannelDemail {
 		return "", nil
 	}
 	ref, ok := r.ChannelRef(data)
