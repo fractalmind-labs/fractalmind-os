@@ -219,6 +219,10 @@ func runCommand(ctx context.Context, cfg *configv2.Config, args []string, out io
 		return runHeartbeatCommand(ctx, cfg, args[1:], out, logger)
 	case "relay":
 		return runRelayCommand(ctx, cfg, args[1:], out, logger)
+	case "service":
+		return runServiceCommand(cfg, args[1:], out)
+	case "reload":
+		return runServiceCommand(cfg, []string{"restart"}, out)
 	default:
 		logger.Printf("unknown command: %s", args[0])
 		return 1

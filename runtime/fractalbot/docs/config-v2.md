@@ -237,6 +237,23 @@ It exits 1 on any problem. It checks that:
 - the `codex` and `tmux` executables exist;
 - every secret is set.
 
+## Running as a service
+
+```sh
+fractalbot service install   # macOS launchd agent, Linux systemd user unit, Windows logon task
+fractalbot service status
+fractalbot reload            # restart so the gateway reads the configuration and secrets again
+fractalbot service uninstall
+```
+
+The service starts this executable with this configuration file. It restarts the gateway when it exits and writes its log to `<dataDir>/logs/fractalbot.log`. The service definition holds no secrets.
+
+To rotate a secret:
+
+1. Generate a new value on the platform.
+2. Run `fractalbot secret set <name>`, then `fractalbot reload`.
+3. Confirm the channel in `/status`, then revoke the old value.
+
 ## Rewriting a version 1 file
 
 | Version 1 | Version 2 |
