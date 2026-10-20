@@ -270,6 +270,10 @@ func (b *FeishuBot) initClients() {
 	dispatcher.OnP2MessageReceiveV1(func(ctx context.Context, event *larkim.P2MessageReceiveV1) error {
 		return b.handleMessageEvent(ctx, event)
 	})
+	// Read receipts arrive on the same connection; without a handler the SDK logs each one as an error.
+	dispatcher.OnP2MessageReadV1(func(context.Context, *larkim.P2MessageReadV1) error {
+		return nil
+	})
 
 	b.wsClient = ws.NewClient(
 		b.appID,
