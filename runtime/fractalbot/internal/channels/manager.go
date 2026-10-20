@@ -10,14 +10,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/configv2"
 )
 
 // Manager starts and stops configured channels.
 type Manager struct {
-	cfg       *config.ChannelsConfig
-	agentsCfg *config.AgentsConfig
-	handler   IncomingMessageHandler
+	cfg     *configv2.Config
+	secrets map[string]string
+	handler IncomingMessageHandler
+	// unavailable records channel instances that cannot start, such as one
+	// whose secret is missing, with the reason. Other channels still start.
+	unavailable map[string]string
 
 	channels map[string]Channel
 	workers  map[string]*channelWorker
@@ -31,11 +34,14 @@ type Manager struct {
 	startCancels map[string]context.CancelFunc
 }
 
-// NewManager creates a new channel manager.
-func NewManager(cfg *config.ChannelsConfig, agentsCfg *config.AgentsConfig) *Manager {
+// NewManager creates a channel manager for a configuration's channel
+// instances. secrets holds the resolved values by secret name; an instance
+// whose secret is absent is reported as unavailable instead of started.
+func NewManager(cfg *configv2.Config, secrets map[string]string) *Manager {
 	return &Manager{
 		cfg:              cfg,
-		agentsCfg:        agentsCfg,
+		secrets:          secrets,
+		unavailable:      make(map[string]string),
 		channels:         make(map[string]Channel),
 		workers:          make(map[string]*channelWorker),
 		feishuByReceiver: make(map[string]string),
@@ -275,234 +281,123 @@ func (m *Manager) registerConfiguredChannels() error {
 	if m.cfg == nil {
 		return nil
 	}
-
-	if m.cfg.Telegram != nil && m.cfg.Telegram.Enabled {
-		if m.Get("telegram") != nil {
-			return nil
+	for _, inst := range m.cfg.ChannelList() {
+		if m.Get(channelNameFor(inst)) != nil {
+			continue
 		}
-		if m.cfg.Telegram.BotToken == "" {
-			return errors.New("channels.telegram.botToken is required when telegram is enabled")
+		missing := ""
+		for _, name := range inst.Secrets {
+			if m.secrets[name] == "" {
+				missing = name
+				break
+			}
 		}
-
-		defaultAgent, allowedAgents, agentConfigName := activeChannelAgentConfig(m.agentsCfg)
-		if err := validateOhMyCodeAgentConfig(defaultAgent, allowedAgents); err != nil {
-			return fmt.Errorf("invalid %s config: %w", agentConfigName, err)
+		if missing != "" {
+			m.unavailable[inst.Ref] = "secret " + missing + " is not set"
+			log.Printf("channel %s not started: secret %s is not set", inst.Ref, missing)
+			continue
 		}
-
-		bot, err := NewTelegramBot(m.cfg.Telegram.BotToken, m.cfg.Telegram.AllowedUsers, m.cfg.Telegram.AdminID, defaultAgent, allowedAgents)
+		channel, err := m.buildChannel(inst)
 		if err != nil {
-			return fmt.Errorf("failed to init telegram bot: %w", err)
+			m.unavailable[inst.Ref] = err.Error()
+			log.Printf("channel %s not started: %v", inst.Ref, err)
+			continue
 		}
-		bot.setAllowedChats(m.cfg.Telegram.AllowedChats)
-
-		bot.ConfigureMode(m.cfg.Telegram.Mode)
-		bot.ConfigurePolling(
-			m.cfg.Telegram.PollingTimeoutSeconds,
-			m.cfg.Telegram.PollingLimit,
-			m.cfg.Telegram.PollingOffsetFile,
-		)
-		bot.ConfigureWebhook(
-			m.cfg.Telegram.WebhookListenAddr,
-			m.cfg.Telegram.WebhookPath,
-			m.cfg.Telegram.WebhookPublicURL,
-			m.cfg.Telegram.WebhookSecretToken,
-		)
-		bot.ConfigureWebhookLifecycle(
-			m.cfg.Telegram.WebhookRegisterOnStart,
-			m.cfg.Telegram.WebhookDeleteOnStop,
-		)
-
-		if err := m.Register(bot); err != nil {
-			return fmt.Errorf("failed to register telegram bot: %w", err)
-		}
-	}
-
-	if m.cfg.Feishu != nil && m.cfg.Feishu.Enabled {
-		if err := m.registerConfiguredFeishuBots(); err != nil {
-			return err
-		}
-	}
-
-	if m.cfg.Slack != nil && m.cfg.Slack.Enabled {
-		if m.Get("slack") != nil {
-			return nil
-		}
-		if strings.TrimSpace(m.cfg.Slack.BotToken) == "" || strings.TrimSpace(m.cfg.Slack.AppToken) == "" {
-			return errors.New("channels.slack.botToken and channels.slack.appToken are required when slack is enabled")
-		}
-
-		defaultAgent, allowedAgents, agentConfigName := activeChannelAgentConfig(m.agentsCfg)
-		if err := validateOhMyCodeAgentConfig(defaultAgent, allowedAgents); err != nil {
-			return fmt.Errorf("invalid %s config: %w", agentConfigName, err)
-		}
-
-		bot, err := NewSlackBot(
-			m.cfg.Slack.BotToken,
-			m.cfg.Slack.AppToken,
-			m.cfg.Slack.AllowedUsers,
-			m.cfg.Slack.AllowedChannels,
-			defaultAgent,
-			allowedAgents,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to init slack bot: %w", err)
-		}
-
-		if err := m.Register(bot); err != nil {
-			return fmt.Errorf("failed to register slack bot: %w", err)
-		}
-	}
-
-	if m.cfg.Discord != nil && m.cfg.Discord.Enabled {
-		if m.Get("discord") != nil {
-			return nil
-		}
-		if strings.TrimSpace(m.cfg.Discord.Token) == "" {
-			return errors.New("channels.discord.token is required when discord is enabled")
-		}
-
-		defaultAgent, allowedAgents, agentConfigName := activeChannelAgentConfig(m.agentsCfg)
-		if err := validateOhMyCodeAgentConfig(defaultAgent, allowedAgents); err != nil {
-			return fmt.Errorf("invalid %s config: %w", agentConfigName, err)
-		}
-
-		bot, err := NewDiscordBot(
-			m.cfg.Discord.Token,
-			m.cfg.Discord.AllowedUsers,
-			defaultAgent,
-			allowedAgents,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to init discord bot: %w", err)
-		}
-
-		if err := m.Register(bot); err != nil {
-			return fmt.Errorf("failed to register discord bot: %w", err)
-		}
-	}
-
-	if m.cfg.IMessage != nil && m.cfg.IMessage.Enabled {
-		if m.Get("imessage") != nil {
-			return nil
-		}
-		if strings.TrimSpace(m.cfg.IMessage.Recipient) == "" {
-			return errors.New("channels.imessage.recipient is required when imessage is enabled")
-		}
-
-		bot, err := NewIMessageBot(
-			m.cfg.IMessage.Recipient,
-			m.cfg.IMessage.Message,
-			m.cfg.IMessage.Service,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to init imessage bot: %w", err)
-		}
-		bot.ConfigurePolling(
-			m.cfg.IMessage.PollingEnabled,
-			m.cfg.IMessage.PollingIntervalSeconds,
-			m.cfg.IMessage.PollingLimit,
-			m.cfg.IMessage.DatabasePath,
-		)
-
-		if err := m.Register(bot); err != nil {
-			return fmt.Errorf("failed to register imessage bot: %w", err)
-		}
-	}
-
-	if m.cfg.Demail != nil && m.cfg.Demail.Enabled {
-		if m.Get("demail") != nil {
-			return nil
-		}
-		if (strings.TrimSpace(m.cfg.Demail.GraphQLURL) == "" && strings.TrimSpace(m.cfg.Demail.RPCURL) == "") || strings.TrimSpace(m.cfg.Demail.PackageID) == "" || strings.TrimSpace(m.cfg.Demail.Address) == "" {
-			return errors.New("channels.demail.graphqlUrl (formerly rpcUrl), channels.demail.packageId and channels.demail.address are required when demail is enabled")
-		}
-
-		channel, err := NewDemailChannel(DemailOptions{
-			RPCURL:          m.cfg.Demail.RPCURL,
-			GraphQLURL:      m.cfg.Demail.GraphQLURL,
-			PackageID:       m.cfg.Demail.PackageID,
-			Address:         m.cfg.Demail.Address,
-			IdentityKeyFile: m.cfg.Demail.IdentityKeyFile,
-			SponsorAddress:  m.cfg.Demail.SponsorAddress,
-			GasCoin:         m.cfg.Demail.GasCoin,
-			PollInterval:    time.Duration(m.cfg.Demail.PollIntervalSeconds) * time.Second,
-			CursorFile:      m.cfg.Demail.CursorFile,
-			AllowedSenders:  m.cfg.Demail.AllowedSenders,
-			Peers:           m.cfg.Demail.Peers,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to init demail channel: %w", err)
-		}
-
 		if err := m.Register(channel); err != nil {
-			return fmt.Errorf("failed to register demail channel: %w", err)
+			return fmt.Errorf("register %s: %w", inst.Ref, err)
 		}
 	}
-
 	return nil
 }
 
-func (m *Manager) registerConfiguredFeishuBots() error {
-	feishu := m.cfg.Feishu
-	if feishu == nil {
-		return nil
+// Unavailable returns configured channel instances that could not start, with
+// the reason.
+func (m *Manager) Unavailable() map[string]string {
+	out := make(map[string]string, len(m.unavailable))
+	for k, v := range m.unavailable {
+		out[k] = v
 	}
+	return out
+}
 
-	legacyAppID := strings.TrimSpace(feishu.AppID)
-	legacySecret := strings.TrimSpace(feishu.AppSecret)
-	if (legacyAppID == "") != (legacySecret == "") {
-		return errors.New("channels.feishu.appId and channels.feishu.appSecret must be configured together")
+// channelNameFor is the registry name of an instance. Feishu supports several
+// applications; other types have one instance named by the type.
+func channelNameFor(inst configv2.ChannelInstance) string {
+	if inst.Type == configv2.ChannelFeishu {
+		return feishuInstanceChannelName(inst.Name)
 	}
-	if legacyAppID != "" && m.Get("feishu") == nil {
-		defaultAgent, allowedAgents, agentConfigName := feishuChannelAgentConfig(m.agentsCfg, legacyAppID)
-		if err := validateOhMyCodeAgentConfig(defaultAgent, allowedAgents); err != nil {
-			return fmt.Errorf("invalid %s config: %w", agentConfigName, err)
-		}
-		bot, err := NewFeishuBot(legacyAppID, legacySecret, feishu.Domain, feishu.AllowedUsers, defaultAgent, allowedAgents)
+	return inst.Type
+}
+
+// agentSelection is what a channel's /agent and /to accept: the agents bound
+// to the instance, with its default (or its only agent) when none is named.
+func (m *Manager) agentSelection(inst configv2.ChannelInstance) (string, []string) {
+	agents := m.cfg.AgentsFor(inst.Ref)
+	def := inst.Sharing.Default
+	if def == "" && len(agents) == 1 {
+		def = agents[0]
+	}
+	return def, agents
+}
+
+func (m *Manager) buildChannel(inst configv2.ChannelInstance) (Channel, error) {
+	def, agents := m.agentSelection(inst)
+	paths := m.cfg.Paths()
+	state := paths.ChannelState(inst.Type, inst.Name)
+	secret := func(r configv2.SecretRef) string { return m.secrets[r.Name()] }
+	switch inst.Type {
+	case configv2.ChannelFeishu:
+		c := m.cfg.Channels.Feishu[inst.Name]
+		bot, err := NewNamedFeishuBot(inst.Name, c.AppID, secret(c.AppSecret), c.Domain, c.AllowedUsers, def, agents)
 		if err != nil {
-			return fmt.Errorf("failed to init feishu bot: %w", err)
+			return nil, err
 		}
-		bot.ConfigureDedupe(feishu.DedupeFile)
-		if err := m.Register(bot); err != nil {
-			return fmt.Errorf("failed to register feishu bot: %w", err)
-		}
-	}
-
-	botNames := make([]string, 0, len(feishu.Bots))
-	for name := range feishu.Bots {
-		botNames = append(botNames, name)
-	}
-	sort.Strings(botNames)
-	for _, name := range botNames {
-		botConfig := feishu.Bots[name]
-		appID := strings.TrimSpace(botConfig.AppID)
-		appSecret := strings.TrimSpace(botConfig.AppSecret)
-		if appID == "" || appSecret == "" {
-			return fmt.Errorf("channels.feishu.bots[%q].appId and channels.feishu.bots[%q].appSecret are required", name, name)
-		}
-		channelName := feishuInstanceChannelName(name)
-		if m.Get(channelName) != nil {
-			continue
-		}
-
-		defaultAgent, allowedAgents, agentConfigName := feishuChannelAgentConfig(m.agentsCfg, appID)
-		if err := validateOhMyCodeAgentConfig(defaultAgent, allowedAgents); err != nil {
-			return fmt.Errorf("invalid %s config: %w", agentConfigName, err)
-		}
-		bot, err := NewNamedFeishuBot(name, appID, appSecret, botConfig.Domain, botConfig.AllowedUsers, defaultAgent, allowedAgents)
+		bot.ConfigureDedupe(state)
+		return bot, nil
+	case configv2.ChannelTelegram:
+		c := m.cfg.Channels.Telegram[inst.Name]
+		bot, err := NewTelegramBot(secret(c.BotToken), c.AllowedUsers, c.AdminID, def, agents)
 		if err != nil {
-			return fmt.Errorf("failed to init feishu bot %q: %w", name, err)
+			return nil, err
 		}
-		bot.ConfigureDedupe(botConfig.DedupeFile)
-		if err := m.Register(bot); err != nil {
-			return fmt.Errorf("failed to register feishu bot %q: %w", name, err)
+		bot.setAllowedChats(c.AllowedChats)
+		bot.ConfigureMode(c.Mode)
+		bot.ConfigurePolling(c.PollingTimeoutSeconds, c.PollingLimit, state)
+		if w := c.Webhook; w != nil {
+			bot.ConfigureWebhook(w.ListenAddr, w.Path, w.PublicURL, secret(w.SecretToken))
+			bot.ConfigureWebhookLifecycle(w.RegisterOnStart, w.DeleteOnStop)
 		}
+		return bot, nil
+	case configv2.ChannelSlack:
+		c := m.cfg.Channels.Slack[inst.Name]
+		return NewSlackBot(secret(c.BotToken), secret(c.AppToken), c.AllowedUsers, c.AllowedChannels, def, agents)
+	case configv2.ChannelDiscord:
+		c := m.cfg.Channels.Discord[inst.Name]
+		return NewDiscordBot(secret(c.Token), c.AllowedUsers, def, agents)
+	case configv2.ChannelIMessage:
+		c := m.cfg.Channels.IMessage[inst.Name]
+		bot, err := NewIMessageBot(c.Recipient, "", c.Service)
+		if err != nil {
+			return nil, err
+		}
+		bot.ConfigurePolling(true, c.PollIntervalSeconds, c.PollLimit, c.DatabasePath)
+		return bot, nil
+	case configv2.ChannelDemail:
+		c := m.cfg.Channels.Demail[inst.Name]
+		return NewDemailChannel(DemailOptions{
+			GraphQLURL:     c.GraphQLURL,
+			PackageID:      c.PackageID,
+			Address:        c.Address,
+			IdentityKey:    secret(c.IdentityKey),
+			SponsorAddress: c.SponsorAddress,
+			GasCoin:        c.GasCoin,
+			PollInterval:   time.Duration(c.PollIntervalSeconds) * time.Second,
+			CursorFile:     state,
+			AllowedSenders: c.AllowedSenders,
+			Peers:          c.Peers,
+		})
 	}
-
-	if m.Get("feishu") == nil && len(feishu.Bots) == 0 {
-		return errors.New("channels.feishu.appId and channels.feishu.appSecret are required when feishu is enabled unless channels.feishu.bots is configured")
-	}
-	return nil
+	return nil, fmt.Errorf("unsupported channel type %q", inst.Type)
 }
 
 func (m *Manager) registerFeishuReceiver(receiverID, channelName string) error {
@@ -516,72 +411,4 @@ func (m *Manager) registerFeishuReceiver(receiverID, channelName string) error {
 
 func feishuInstanceChannelName(name string) string {
 	return "feishu/" + strings.TrimSpace(name)
-}
-
-func activeChannelAgentConfig(cfg *config.AgentsConfig) (string, []string, string) {
-	if cfg == nil {
-		return "", nil, "agents.ohMyCode"
-	}
-	router := strings.TrimSpace(cfg.Router)
-	if router == "codexAppCDP" && cfg.CodexAppCDP != nil {
-		return cfg.CodexAppCDP.DefaultAgent, cfg.CodexAppCDP.AllowedAgents, "agents.codexAppCDP"
-	}
-	if router == "" && cfg.CodexAppCDP != nil && cfg.CodexAppCDP.Enabled && (cfg.OhMyCode == nil || !cfg.OhMyCode.Enabled) {
-		return cfg.CodexAppCDP.DefaultAgent, cfg.CodexAppCDP.AllowedAgents, "agents.codexAppCDP"
-	}
-	if cfg.OhMyCode != nil {
-		return cfg.OhMyCode.DefaultAgent, cfg.OhMyCode.AllowedAgents, "agents.ohMyCode"
-	}
-	return "", nil, "agents.ohMyCode"
-}
-
-// feishuChannelAgentConfig preserves explicit Feishu /agent selections until
-// the Agent Router performs the final, channel-agnostic receiver route. It is
-// deliberately limited to local command validation: the router itself never
-// branches on a channel name and remains reusable by every adapter that emits
-// receiver_id.
-func feishuChannelAgentConfig(cfg *config.AgentsConfig, appID string) (string, []string, string) {
-	defaultAgent, allowedAgents, configName := activeChannelAgentConfig(cfg)
-	if cfg == nil || cfg.OhMyCode == nil || !cfg.OhMyCode.Enabled {
-		return defaultAgent, allowedAgents, configName
-	}
-	if router := strings.TrimSpace(cfg.Router); router != "" && router != "ohMyCode" {
-		return defaultAgent, allowedAgents, configName
-	}
-
-	if name, target, matched := config.FindOhMyCodeTarget(cfg.OhMyCode, "feishu", appID); matched {
-		return target.DefaultAgent, target.AllowedAgents, fmt.Sprintf("agents.ohMyCode.targets[%q]", name)
-	}
-	return defaultAgent, allowedAgents, configName
-}
-
-func validateOhMyCodeAgentConfig(defaultAgent string, allowedAgents []string) error {
-	trimmedDefault := strings.TrimSpace(defaultAgent)
-	if trimmedDefault != "" {
-		if err := ValidateAgentName(trimmedDefault); err != nil {
-			return err
-		}
-	}
-
-	for _, agent := range allowedAgents {
-		trimmed := strings.TrimSpace(agent)
-		if trimmed == "" {
-			continue
-		}
-		if err := ValidateAgentName(trimmed); err != nil {
-			return err
-		}
-	}
-
-	allowlist := NewAgentAllowlist(allowedAgents)
-	if allowlist.configured {
-		if trimmedDefault == "" {
-			return fmt.Errorf("default agent is required when allowedAgents is configured")
-		}
-		if err := allowlist.Validate(trimmedDefault, trimmedDefault); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

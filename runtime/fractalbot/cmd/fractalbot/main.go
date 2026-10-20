@@ -20,9 +20,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agent"
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/configv2"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/gateway"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/secrets"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/localruntime"
 )
 
 var messageSendFn = sendMessageViaGatewayAPI
@@ -31,7 +32,7 @@ var fileDownloadFn = downloadFileViaHTTP
 var heartbeatCronSetFn = setHeartbeatCronViaGatewayAPI
 var heartbeatCronResetFn = resetHeartbeatCronViaGatewayAPI
 var heartbeatOutcomeFn = reportHeartbeatOutcomeViaGatewayAPI
-var claudeDesktopRelayFn = agent.RunClaudeDesktopRelay
+var relayFn = localruntime.RunRelay
 
 // stringSliceFlag implements flag.Value so a flag can be specified multiple
 // times (e.g. --image a.png --image b.png) and accumulate into a slice.
@@ -142,7 +143,12 @@ func runWithContext(ctx context.Context, args []string, out io.Writer) int {
 		return runV2Command(*configPath, fs.Args(), out)
 	}
 
-	cfg, err := config.LoadConfig(config.ResolveConfigPath(*configPath))
+	p := v2Platform()
+	path := strings.TrimSpace(*configPath)
+	if path == "" {
+		path = p.DefaultConfigPath()
+	}
+	cfg, err := configv2.Load(path, p)
 	if err != nil {
 		logger.Printf("failed to load config: %v", err)
 		return 1
@@ -152,20 +158,43 @@ func runWithContext(ctx context.Context, args []string, out io.Writer) int {
 	if len(remaining) > 0 {
 		return runCommand(ctx, cfg, remaining, out, logger)
 	}
-
-	if cfg.Gateway == nil {
-		cfg.Gateway = &config.GatewayConfig{Bind: "127.0.0.1", Port: 18789}
-	}
 	if *portOverride > 0 {
 		cfg.Gateway.Port = *portOverride
 	}
+	return runGateway(ctx, cfg, out, logger)
+}
 
-	server, err := gateway.NewServer(cfg)
+// runGateway resolves this machine's secrets, masks them in every log line
+// and runs the gateway. A channel whose secret is missing stays stopped; the
+// others run.
+func runGateway(ctx context.Context, cfg *configv2.Config, out io.Writer, logger *log.Logger) int {
+	redactor := secrets.NewRedactor()
+	logger.SetOutput(redactor.Writer(out))
+	log.SetOutput(redactor.Writer(log.Writer()))
+	resolver, err := secrets.NewResolver(cfg.Secrets, cfg.DataDir, v2CheckOptions().Secrets)
+	if err != nil {
+		logger.Printf("failed to load secrets: %v", err)
+		return 1
+	}
+	values := map[string]string{}
+	for _, res := range resolver.Resolve(cfg.SecretNames()) {
+		if res.Err != nil {
+			logger.Printf("secret %s (%s store): %v", res.Name, res.Store, res.Err)
+			continue
+		}
+		redactor.Add(res.Name, res.Value)
+		values[res.Name] = res.Value
+	}
+	if err := os.MkdirAll(cfg.DataDir, 0o700); err != nil {
+		logger.Printf("failed to create data directory: %v", err)
+		return 1
+	}
+
+	server, err := gateway.NewServer(cfg, gateway.Options{Secrets: values, Redactor: redactor})
 	if err != nil {
 		logger.Printf("failed to initialize gateway: %v", err)
 		return 1
 	}
-
 	if err := server.Start(ctx); err != nil {
 		logger.Printf("gateway error: %v", err)
 		if err := server.Stop(); err != nil {
@@ -173,16 +202,14 @@ func runWithContext(ctx context.Context, args []string, out io.Writer) int {
 		}
 		return 1
 	}
-
 	if err := server.Stop(); err != nil {
 		logger.Printf("gateway shutdown error: %v", err)
 		return 1
 	}
-
 	return 0
 }
 
-func runCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
+func runCommand(ctx context.Context, cfg *configv2.Config, args []string, out io.Writer, logger *log.Logger) int {
 	switch strings.ToLower(strings.TrimSpace(args[0])) {
 	case "message":
 		return runMessageCommand(ctx, cfg, args[1:], out, logger)
@@ -190,62 +217,85 @@ func runCommand(ctx context.Context, cfg *config.Config, args []string, out io.W
 		return runFileCommand(ctx, cfg, args[1:], out, logger)
 	case "heartbeat":
 		return runHeartbeatCommand(ctx, cfg, args[1:], out, logger)
-	case "claude-desktop":
-		return runClaudeDesktopCommand(ctx, cfg, args[1:], out, logger)
+	case "relay":
+		return runRelayCommand(ctx, cfg, args[1:], out, logger)
 	default:
 		logger.Printf("unknown command: %s", args[0])
 		return 1
 	}
 }
 
-func runClaudeDesktopCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
-	if len(args) == 0 || strings.ToLower(strings.TrimSpace(args[0])) != "relay" {
-		logger.Printf("claude-desktop command requires the relay subcommand")
-		return 1
-	}
-
-	relayFS := flag.NewFlagSet("claude-desktop relay", flag.ContinueOnError)
+// runRelayCommand moves a Claude Desktop agent's inbox into the session it
+// runs in. The agent is named with --agent, or found by the current directory
+// matching its workspace.
+func runRelayCommand(ctx context.Context, cfg *configv2.Config, args []string, out io.Writer, logger *log.Logger) int {
+	relayFS := flag.NewFlagSet("relay", flag.ContinueOnError)
 	relayFS.SetOutput(out)
-	inboxPath := relayFS.String("inbox-path", "", "Claude Desktop inbox path (defaults to agents.claudeDesktop.inboxPath)")
+	agentName := relayFS.String("agent", "", "claudeDesktop agent to relay for (default: the agent whose workspace is the current directory)")
 	pollInterval := relayFS.Duration("poll-interval", 500*time.Millisecond, "inbox polling interval")
 	once := relayFS.Bool("once", false, "process queued envelopes once and exit")
-	if err := relayFS.Parse(args[1:]); err != nil {
-		return 1
-	}
-
-	path := strings.TrimSpace(*inboxPath)
-	if path == "" && cfg != nil && cfg.Agents != nil && cfg.Agents.ClaudeDesktop != nil {
-		path = strings.TrimSpace(cfg.Agents.ClaudeDesktop.InboxPath)
-	}
-	if path == "" {
-		logger.Printf("--inbox-path or agents.claudeDesktop.inboxPath is required")
+	if err := relayFS.Parse(args); err != nil {
 		return 1
 	}
 	if *pollInterval <= 0 {
 		logger.Printf("--poll-interval must be greater than zero")
 		return 1
 	}
-
-	opts := agent.ClaudeDesktopRelayOptions{
-		InboxPath:    path,
+	name, err := relayAgent(cfg, strings.TrimSpace(*agentName))
+	if err != nil {
+		logger.Printf("%v", err)
+		return 1
+	}
+	opts := localruntime.RelayOptions{
+		Inbox:        cfg.Paths().Inbox(name),
 		SocketPath:   os.Getenv("CLAUDE_CODE_MESSAGING_SOCKET"),
 		Token:        os.Getenv("CLAUDE_CODE_MESSAGING_TOKEN"),
 		PollInterval: *pollInterval,
 		Once:         *once,
 		Logf:         logger.Printf,
 	}
-	if err := claudeDesktopRelayFn(ctx, opts); err != nil {
-		if errors.Is(err, agent.ErrClaudeDesktopRelayAlreadyRunning) {
+	if err := relayFn(ctx, opts); err != nil {
+		if errors.Is(err, localruntime.ErrRelayRunning) {
 			fmt.Fprintln(out, err)
 			return 0
 		}
-		logger.Printf("Claude Desktop relay failed: %v", err)
+		logger.Printf("relay failed: %v", err)
 		return 1
 	}
 	return 0
 }
 
-func runHeartbeatCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
+// relayAgent picks the claudeDesktop agent a relay serves.
+func relayAgent(cfg *configv2.Config, named string) (string, error) {
+	if named != "" {
+		if a, ok := cfg.Agents[named]; !ok || a.Runtime != configv2.RuntimeClaudeDesktop {
+			return "", fmt.Errorf("--agent %s is not a claudeDesktop agent", named)
+		}
+		return named, nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	cwd, _ = filepath.EvalSymlinks(cwd)
+	var matches []string
+	for name, a := range cfg.Agents {
+		ws, _ := filepath.EvalSymlinks(a.Workspace)
+		if a.Runtime == configv2.RuntimeClaudeDesktop && ws == cwd {
+			matches = append(matches, name)
+		}
+	}
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		return "", errors.New("no claudeDesktop agent uses this directory as its workspace; pass --agent")
+	default:
+		return "", fmt.Errorf("several claudeDesktop agents use this workspace (%s); pass --agent", strings.Join(matches, ", "))
+	}
+}
+
+func runHeartbeatCommand(ctx context.Context, cfg *configv2.Config, args []string, out io.Writer, logger *log.Logger) int {
 	if len(args) >= 1 && strings.ToLower(strings.TrimSpace(args[0])) == "outcome" {
 		return runHeartbeatOutcomeCommand(ctx, cfg, args[1:], out, logger)
 	}
@@ -312,7 +362,7 @@ func runHeartbeatCommand(ctx context.Context, cfg *config.Config, args []string,
 }
 
 // runHeartbeatOutcomeCommand reports what the Agent did with a heartbeat run.
-func runHeartbeatOutcomeCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
+func runHeartbeatOutcomeCommand(ctx context.Context, cfg *configv2.Config, args []string, out io.Writer, logger *log.Logger) int {
 	outcomeFS := flag.NewFlagSet("heartbeat outcome", flag.ContinueOnError)
 	outcomeFS.SetOutput(out)
 	job := outcomeFS.String("job", "", "heartbeat job ID")
@@ -335,7 +385,7 @@ func runHeartbeatOutcomeCommand(ctx context.Context, cfg *config.Config, args []
 	return 0
 }
 
-func runMessageCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
+func runMessageCommand(ctx context.Context, cfg *configv2.Config, args []string, out io.Writer, logger *log.Logger) int {
 	if len(args) == 0 {
 		logger.Printf("message command requires a subcommand (send)")
 		return 1
@@ -354,6 +404,7 @@ func runMessageCommand(ctx context.Context, cfg *config.Config, args []string, o
 	text := sendFS.String("text", "", "message text")
 	threadTS := sendFS.String("thread-ts", "", "optional Slack thread timestamp for threaded reply")
 	receiverID := sendFS.String("receiver-id", "", "receiving bot identity for multi-instance Feishu replies")
+	agentName := sendFS.String("agent", "", "sending agent; on a shared channel its name prefixes the message")
 	var imagePaths stringSliceFlag
 	sendFS.Var(&imagePaths, "image", "local image path to attach (repeatable; issue #374)")
 
@@ -390,8 +441,9 @@ func runMessageCommand(ctx context.Context, cfg *config.Config, args []string, o
 	receiverIDValue := strings.TrimSpace(*receiverID)
 
 	var err error
-	if receiverIDValue != "" {
-		err = messageSendWithReceiverFn(ctx, cfg, channelName, toValue, messageText, threadTSValue, imageValues, receiverIDValue)
+	agentValue := strings.TrimSpace(*agentName)
+	if receiverIDValue != "" || agentValue != "" {
+		err = messageSendWithReceiverFn(ctx, cfg, channelName, toValue, messageText, threadTSValue, imageValues, receiverIDValue, agentValue)
 	} else {
 		err = messageSendFn(ctx, cfg, channelName, toValue, messageText, threadTSValue, imageValues)
 	}
@@ -404,7 +456,7 @@ func runMessageCommand(ctx context.Context, cfg *config.Config, args []string, o
 	return 0
 }
 
-func runFileCommand(ctx context.Context, cfg *config.Config, args []string, out io.Writer, logger *log.Logger) int {
+func runFileCommand(ctx context.Context, cfg *configv2.Config, args []string, out io.Writer, logger *log.Logger) int {
 	if len(args) == 0 {
 		logger.Printf("file command requires a subcommand (download)")
 		return 1
@@ -451,11 +503,11 @@ func runFileCommand(ctx context.Context, cfg *config.Config, args []string, out 
 	return 0
 }
 
-func sendMessageViaGatewayAPI(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string) error {
-	return sendMessageWithReceiverViaGatewayAPI(ctx, cfg, channel, to, text, threadTS, images, "")
+func sendMessageViaGatewayAPI(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string) error {
+	return sendMessageWithReceiverViaGatewayAPI(ctx, cfg, channel, to, text, threadTS, images, "", "")
 }
 
-func sendMessageWithReceiverViaGatewayAPI(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string, receiverID string) error {
+func sendMessageWithReceiverViaGatewayAPI(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string, receiverID, agent string) error {
 	type requestPayload struct {
 		Channel    string   `json:"channel"`
 		To         string   `json:"to"`
@@ -463,6 +515,7 @@ func sendMessageWithReceiverViaGatewayAPI(ctx context.Context, cfg *config.Confi
 		ThreadTS   string   `json:"thread_ts,omitempty"`
 		Images     []string `json:"images,omitempty"`
 		ReceiverID string   `json:"receiver_id,omitempty"`
+		Agent      string   `json:"agent,omitempty"`
 	}
 
 	type responsePayload struct {
@@ -477,6 +530,7 @@ func sendMessageWithReceiverViaGatewayAPI(ctx context.Context, cfg *config.Confi
 		ThreadTS:   threadTS,
 		Images:     images,
 		ReceiverID: receiverID,
+		Agent:      agent,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal request: %w", err)
@@ -512,15 +566,15 @@ func sendMessageWithReceiverViaGatewayAPI(ctx context.Context, cfg *config.Confi
 	return nil
 }
 
-func gatewaySendEndpoint(cfg *config.Config) string {
+func gatewaySendEndpoint(cfg *configv2.Config) string {
 	return gatewayAPIEndpoint(cfg, "/api/v1/message/send")
 }
 
-func gatewayAPIEndpoint(cfg *config.Config, path string) string {
+func gatewayAPIEndpoint(cfg *configv2.Config, path string) string {
 	bind := "127.0.0.1"
 	port := 18789
 
-	if cfg != nil && cfg.Gateway != nil {
+	if cfg != nil {
 		if trimmedBind := strings.TrimSpace(cfg.Gateway.Bind); trimmedBind != "" {
 			bind = trimmedBind
 		}
@@ -536,7 +590,7 @@ func gatewayAPIEndpoint(cfg *config.Config, path string) string {
 	return fmt.Sprintf("http://%s%s", net.JoinHostPort(bind, strconv.Itoa(port)), path)
 }
 
-func setHeartbeatCronViaGatewayAPI(ctx context.Context, cfg *config.Config, jobID, profile, reason string) error {
+func setHeartbeatCronViaGatewayAPI(ctx context.Context, cfg *configv2.Config, jobID, profile, reason string) error {
 	payload, err := json.Marshal(heartbeatCronRequest{Profile: profile, Reason: reason})
 	if err != nil {
 		return fmt.Errorf("marshal request: %w", err)
@@ -544,11 +598,11 @@ func setHeartbeatCronViaGatewayAPI(ctx context.Context, cfg *config.Config, jobI
 	return callHeartbeatCronAPI(ctx, cfg, http.MethodPut, jobID, bytes.NewReader(payload))
 }
 
-func resetHeartbeatCronViaGatewayAPI(ctx context.Context, cfg *config.Config, jobID string) error {
+func resetHeartbeatCronViaGatewayAPI(ctx context.Context, cfg *configv2.Config, jobID string) error {
 	return callHeartbeatCronAPI(ctx, cfg, http.MethodDelete, jobID, nil)
 }
 
-func reportHeartbeatOutcomeViaGatewayAPI(ctx context.Context, cfg *config.Config, jobID, runID, result, summary string) error {
+func reportHeartbeatOutcomeViaGatewayAPI(ctx context.Context, cfg *configv2.Config, jobID, runID, result, summary string) error {
 	payload, err := json.Marshal(heartbeatOutcomeRequest{RunID: runID, Result: result, Summary: summary})
 	if err != nil {
 		return fmt.Errorf("marshal request: %w", err)
@@ -567,11 +621,11 @@ type heartbeatCronRequest struct {
 	Reason  string `json:"reason"`
 }
 
-func callHeartbeatCronAPI(ctx context.Context, cfg *config.Config, method, jobID string, body io.Reader) error {
+func callHeartbeatCronAPI(ctx context.Context, cfg *configv2.Config, method, jobID string, body io.Reader) error {
 	return callHeartbeatJobAPI(ctx, cfg, method, jobID, "cron", body)
 }
 
-func callHeartbeatJobAPI(ctx context.Context, cfg *config.Config, method, jobID, endpointName string, body io.Reader) error {
+func callHeartbeatJobAPI(ctx context.Context, cfg *configv2.Config, method, jobID, endpointName string, body io.Reader) error {
 	path := "/api/v1/heartbeat/jobs/" + url.PathEscape(strings.TrimSpace(jobID)) + "/" + endpointName
 	endpoint := gatewayAPIEndpoint(cfg, path)
 	request, err := http.NewRequestWithContext(ctx, method, endpoint, body)
@@ -605,7 +659,7 @@ func callHeartbeatJobAPI(ctx context.Context, cfg *config.Config, method, jobID,
 	return nil
 }
 
-func downloadFileViaHTTP(ctx context.Context, cfg *config.Config, channel, fileURL, outputPath string) error {
+func downloadFileViaHTTP(ctx context.Context, cfg *configv2.Config, channel, fileURL, outputPath string) error {
 	channelName := strings.ToLower(strings.TrimSpace(channel))
 	if channelName != "slack" && channelName != "telegram" {
 		return fmt.Errorf("unsupported channel %q (expected slack or telegram)", channel)
@@ -669,13 +723,20 @@ func downloadFileViaHTTP(ctx context.Context, cfg *config.Config, channel, fileU
 	return nil
 }
 
-func slackBotTokenFromConfig(cfg *config.Config) (string, error) {
-	if cfg == nil || cfg.Channels == nil || cfg.Channels.Slack == nil {
-		return "", fmt.Errorf("channels.slack.botToken is required for Slack file download")
+func slackBotTokenFromConfig(cfg *configv2.Config) (string, error) {
+	if cfg == nil {
+		return "", fmt.Errorf("a configured Slack channel is required for Slack file download")
 	}
-	token := strings.TrimSpace(cfg.Channels.Slack.BotToken)
-	if token == "" {
-		return "", fmt.Errorf("channels.slack.botToken is required for Slack file download")
+	for _, c := range cfg.Channels.Slack {
+		resolver, err := secrets.NewResolver(cfg.Secrets, cfg.DataDir, v2CheckOptions().Secrets)
+		if err != nil {
+			return "", err
+		}
+		res := resolver.Resolve([]string{c.BotToken.Name()})[0]
+		if res.Err != nil {
+			return "", fmt.Errorf("secret %s: %w", res.Name, res.Err)
+		}
+		return res.Value, nil
 	}
-	return token, nil
+	return "", fmt.Errorf("a configured Slack channel is required for Slack file download")
 }

@@ -10,72 +10,63 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agent"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/bus"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/channels"
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/configv2"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/heartbeat"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/router"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/secrets"
 	"github.com/gorilla/websocket"
 )
 
-// Server represents the gateway WebSocket server
+// Server is the gateway: it runs the channels, routes their messages and the
+// schedules to agents, and serves the local HTTP API.
 type Server struct {
-	config       *config.Config
+	config       *configv2.Config
 	upgrader     websocket.Upgrader
 	clients      map[string]*Client
 	clientsMutex sync.RWMutex
 	httpServer   *http.Server
-	agentManager *agent.Manager
+	channels     *channels.Manager
+	router       *router.Router
 	messageBus   *bus.MessageBus
 	heartbeat    *heartbeat.Scheduler
+	redactor     *secrets.Redactor
 	startTime    time.Time
 }
 
-// NewServer creates a new gateway server
-func NewServer(cfg *config.Config) (*Server, error) {
-	if cfg.Gateway == nil {
-		return nil, fmt.Errorf("gateway config is required")
-	}
+// Options are what a server needs beyond its configuration.
+type Options struct {
+	// Secrets are resolved values by secret name.
+	Secrets map[string]string
+	// Redactor masks secrets in status errors; nil masks token shapes only.
+	Redactor *secrets.Redactor
+	// Router replaces the default router, for tests.
+	Router *router.Router
+}
 
-	// Initialize channels
-	channelManager := channels.NewManager(cfg.Channels, cfg.Agents)
-
-	// Initialize agent manager
-	agentManager := agent.NewManager(cfg.Agents)
-	agentManager.ChannelManager = channelManager
-	// Wire the optional channels.inbound policy so the manager can acknowledge
-	// inbound messages before processing, when configured.
-	if cfg.Channels != nil {
-		agentManager.SetInboundConfig(cfg.Channels.Inbound)
+// NewServer creates a gateway for a validated configuration.
+func NewServer(cfg *configv2.Config, opts Options) (*Server, error) {
+	channelManager := channels.NewManager(cfg, opts.Secrets)
+	rt := opts.Router
+	if rt == nil {
+		rt = router.New(cfg, nil)
 	}
-
-	var heartbeatConfig *config.HeartbeatConfig
-	var workspace string
-	if cfg.Agents != nil {
-		heartbeatConfig = cfg.Agents.Heartbeat
-		workspace = cfg.Agents.Workspace
-	}
-	heartbeatScheduler, err := heartbeat.New(heartbeatConfig, workspace, agentManager)
+	scheduler, err := heartbeat.New(ScheduleConfig(cfg), rt)
 	if err != nil {
-		return nil, fmt.Errorf("initialize heartbeat scheduler: %w", err)
+		return nil, fmt.Errorf("initialize schedules: %w", err)
 	}
-	if heartbeatScheduler != nil {
-		agentManager.SetInboundRoutedHook(heartbeatScheduler.ResetForInbound)
+	if scheduler != nil {
+		rt.SetInboundHook(scheduler.ResetForInbound)
 	}
-
-	// Initialize message bus — decouples channels from agent router
-	messageBus := bus.New(agentManager, channelManager, 64, 64)
+	messageBus := bus.New(rt, channelManager, 64, 64)
 	messageBus.Start()
-
-	// Wire bus as the inbound handler (bus implements IncomingMessageHandler)
 	channelManager.SetHandler(messageBus)
-
 	return &Server{
 		config: cfg,
 		upgrader: websocket.Upgrader{
@@ -83,105 +74,112 @@ func NewServer(cfg *config.Config) (*Server, error) {
 			WriteBufferSize: 1024,
 			CheckOrigin:     buildOriginChecker(cfg.Gateway.AllowedOrigins),
 		},
-		clients:      make(map[string]*Client),
-		agentManager: agentManager,
-		messageBus:   messageBus,
-		heartbeat:    heartbeatScheduler,
+		clients:    make(map[string]*Client),
+		channels:   channelManager,
+		router:     rt,
+		messageBus: messageBus,
+		heartbeat:  scheduler,
+		redactor:   opts.Redactor,
 	}, nil
 }
 
-// Start starts the gateway server
+// ScheduleConfig turns the configuration's schedules into the scheduler's
+// jobs, each with its agent's runtime and time zone resolved.
+func ScheduleConfig(cfg *configv2.Config) *heartbeat.Config {
+	out := &heartbeat.Config{
+		Enabled:       len(cfg.Schedules.Jobs) > 0,
+		StatePath:     cfg.Paths().Schedules(),
+		MaxConcurrent: cfg.Schedules.MaxConcurrent,
+	}
+	for _, id := range sortedJobIDs(cfg) {
+		j := cfg.Schedules.Jobs[id]
+		agent := cfg.Agents[j.Agent]
+		job := heartbeat.JobConfig{
+			ID:                 id,
+			Runtime:            agent.Runtime,
+			Agent:              j.Agent,
+			Text:               j.Prompt,
+			DispatchMode:       j.Mode,
+			TimeoutSeconds:     j.TimeoutSeconds,
+			Cron:               j.Cron,
+			Timezone:           cfg.JobTimezone(j),
+			AgentCronProfiles:  j.Backoff,
+			ResetCronOnInbound: j.ResetOnInbound,
+			StartIfMissing:     agent.Runtime == configv2.RuntimeAgentManager && cfg.Runtimes.AgentManager.StartIfMissing,
+		}
+		if j.PromptFile != "" {
+			job.PromptFile = cfg.PromptFilePath(j)
+		}
+		out.Jobs = append(out.Jobs, job)
+	}
+	return out
+}
+
+func sortedJobIDs(cfg *configv2.Config) []string {
+	ids := make([]string, 0, len(cfg.Schedules.Jobs))
+	for id := range cfg.Schedules.Jobs {
+		ids = append(ids, id)
+	}
+	sortStrings(ids)
+	return ids
+}
+
+// Start runs the gateway until ctx ends.
 func (s *Server) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
-
-	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
-
-	// Health check endpoint
 	mux.HandleFunc("/health", s.handleHealth)
-
-	// Status endpoint
 	mux.HandleFunc("/status", s.handleStatus)
 	mux.HandleFunc("/api/v1/message/send", s.handleMessageSend)
 	mux.HandleFunc("/api/v1/heartbeat/jobs/", s.handleHeartbeatJob)
-
 	if s.startTime.IsZero() {
 		s.startTime = time.Now()
 	}
-
-	// Start HTTP server
 	s.httpServer = &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", s.config.Gateway.Bind, s.config.Gateway.Port),
+		Addr:              net.JoinHostPort(s.config.Gateway.Bind, strconv.Itoa(s.config.Gateway.Port)),
 		Handler:           mux,
 		ErrorLog:          log.New(os.Stderr, "HTTP: ", log.LstdFlags),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-
-	// Start channels
-	if s.agentManager.ChannelManager != nil {
-		if err := s.agentManager.ChannelManager.Start(ctx); err != nil {
-			return fmt.Errorf("failed to start channels: %w", err)
-		}
-	}
-
-	// Start agent manager
-	if err := s.agentManager.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start agent manager: %w", err)
+	if err := s.channels.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start channels: %w", err)
 	}
 	if err := s.heartbeat.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start heartbeat scheduler: %w", err)
+		return fmt.Errorf("failed to start schedules: %w", err)
 	}
-
 	go func() {
 		log.Printf("🌐 HTTP server listening on %s", s.httpServer.Addr)
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("HTTP server error: %v", err)
 		}
 	}()
-
 	<-ctx.Done()
 	return nil
 }
 
-// Stop gracefully shuts down the server
+// Stop shuts the gateway down.
 func (s *Server) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	if err := s.heartbeat.Stop(ctx); err != nil {
-		return fmt.Errorf("failed to stop heartbeat scheduler: %w", err)
+		return fmt.Errorf("failed to stop schedules: %w", err)
 	}
-
-	// Close bus first — drain pending messages while channels still run
 	if s.messageBus != nil {
 		s.messageBus.Close()
 		s.messageBus.Wait()
 	}
-
-	if s.agentManager != nil {
-		if s.agentManager.ChannelManager != nil {
-			if err := s.agentManager.ChannelManager.Stop(); err != nil {
-				return fmt.Errorf("failed to stop channels: %w", err)
-			}
-		}
-		if err := s.agentManager.Stop(ctx); err != nil {
-			return fmt.Errorf("failed to stop agent manager: %w", err)
-		}
+	if err := s.channels.Stop(); err != nil {
+		return fmt.Errorf("failed to stop channels: %w", err)
 	}
-
-	// Disconnect all clients
-	clients := s.snapshotClients()
-	for _, client := range clients {
+	for _, client := range s.snapshotClients() {
 		client.Close()
 	}
-
 	if s.httpServer != nil {
 		if err := s.httpServer.Shutdown(ctx); err != nil {
 			return fmt.Errorf("server shutdown error: %w", err)
 		}
 	}
-
 	return nil
 }
 
@@ -262,10 +260,6 @@ func generateClientID() string {
 }
 
 // GetAgentManager returns the agent manager
-func (s *Server) GetAgentManager() *agent.Manager {
-	return s.agentManager
-}
-
 type healthResponse struct {
 	Status            string               `json:"status"`
 	Uptime            string               `json:"uptime"`
@@ -278,62 +272,113 @@ type healthChannelEntry struct {
 	Running bool   `json:"running"`
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	uptime := time.Duration(0)
-	if !s.startTime.IsZero() {
-		uptime = time.Since(s.startTime)
+func (s *Server) uptime() time.Duration {
+	if s.startTime.IsZero() {
+		return 0
 	}
+	return time.Since(s.startTime)
+}
 
-	var messagesProcessed int64
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	var processed int64
 	if s.messageBus != nil {
 		stats := s.messageBus.Stats()
-		messagesProcessed = stats.InboundProcessed + stats.OutboundProcessed
+		processed = stats.InboundProcessed + stats.OutboundProcessed
 	}
-
-	chEntries := make([]healthChannelEntry, 0)
-	if s.agentManager != nil && s.agentManager.ChannelManager != nil {
-		for _, ch := range s.agentManager.ChannelManager.List() {
-			chEntries = append(chEntries, healthChannelEntry{
-				Name:    ch.Name(),
-				Running: ch.IsRunning(),
-			})
-		}
+	entries := make([]healthChannelEntry, 0)
+	for _, ch := range s.channels.List() {
+		entries = append(entries, healthChannelEntry{Name: ch.Name(), Running: ch.IsRunning()})
 	}
-
-	writeJSON(w, http.StatusOK, healthResponse{
-		Status:            "ok",
-		Uptime:            uptime.String(),
-		Channels:          chEntries,
-		MessagesProcessed: messagesProcessed,
-	})
+	writeJSON(w, http.StatusOK, healthResponse{Status: "ok", Uptime: s.uptime().String(), Channels: entries, MessagesProcessed: processed})
 }
 
 type statusResponse struct {
 	Status        string            `json:"status"`
 	ActiveClients int               `json:"active_clients"`
 	Uptime        string            `json:"uptime"`
-	Channels      []channelStatus   `json:"channels,omitempty"`
-	Agents        *agentStatus      `json:"agents,omitempty"`
+	Agents        []agentStatus     `json:"agents"`
+	Channels      []channelStatus   `json:"channels"`
 	Heartbeat     *heartbeat.Status `json:"heartbeat,omitempty"`
 }
 
-func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	uptime := time.Duration(0)
-	if !s.startTime.IsZero() {
-		uptime = time.Since(s.startTime)
-	}
+// agentStatus is one agent with its channels, runtime presence, last delivery
+// and schedules.
+type agentStatus struct {
+	router.AgentStatus
+	Schedules []heartbeat.JobStatus `json:"schedules,omitempty"`
+}
 
+type channelStatus struct {
+	Ref          string                          `json:"ref"`
+	Agents       []string                        `json:"agents"`
+	Default      string                          `json:"default,omitempty"`
+	Running      bool                            `json:"running"`
+	Unavailable  string                          `json:"unavailable,omitempty"`
+	Mode         string                          `json:"mode,omitempty"`
+	Webhook      *channels.TelegramWebhookStatus `json:"webhook,omitempty"`
+	LastError    string                          `json:"last_error,omitempty"`
+	LastActivity string                          `json:"last_activity,omitempty"`
+}
+
+func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
+	hb := s.heartbeat.Status()
 	resp := statusResponse{
 		Status:        "ok",
 		ActiveClients: s.activeClients(),
-		Uptime:        uptime.String(),
+		Uptime:        s.uptime().String(),
 		Channels:      s.channelStatus(),
-		Agents:        s.agentStatus(),
-		Heartbeat:     s.heartbeat.Status(),
+		Heartbeat:     hb,
 	}
+	for _, a := range s.router.Status(r.Context()) {
+		entry := agentStatus{AgentStatus: a}
+		if a.LastDelivery != nil {
+			last := *a.LastDelivery
+			last.Error = s.redact(last.Error)
+			entry.LastDelivery = &last
+		}
+		if hb != nil {
+			for _, job := range hb.Jobs {
+				if job.Agent == a.Name {
+					entry.Schedules = append(entry.Schedules, job)
+				}
+			}
+		}
+		resp.Agents = append(resp.Agents, entry)
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+func (s *Server) redact(text string) string {
+	if text == "" {
+		return ""
+	}
+	return s.redactor.Redact(text)
+}
+
+func (s *Server) channelStatus() []channelStatus {
+	unavailable := s.channels.Unavailable()
+	out := make([]channelStatus, 0)
+	for _, inst := range s.config.ChannelList() {
+		name := inst.Type
+		if inst.Type == configv2.ChannelFeishu {
+			name = "feishu/" + inst.Name
+		}
+		st := channelStatus{Ref: inst.Ref, Agents: s.config.AgentsFor(inst.Ref), Default: inst.Sharing.Default, Unavailable: unavailable[inst.Ref]}
+		if ch := s.channels.Get(name); ch != nil {
+			st.Running = ch.IsRunning()
+			if provider, ok := ch.(channels.TelemetryProvider); ok {
+				st.LastError = formatStatusTime(provider.LastError())
+				st.LastActivity = formatStatusTime(provider.LastActivity())
+			}
+			if bot, ok := ch.(*channels.TelegramBot); ok {
+				st.Mode = bot.Mode()
+				webhook := bot.WebhookStatus()
+				st.Webhook = &webhook
+			}
+		}
+		out = append(out, st)
+	}
+	return out
 }
 
 type messageSendRequest struct {
@@ -343,6 +388,9 @@ type messageSendRequest struct {
 	ThreadTS   string   `json:"thread_ts,omitempty"`
 	Images     []string `json:"images,omitempty"`
 	ReceiverID string   `json:"receiver_id,omitempty"`
+	// Agent is the sending agent. On a channel several agents share, its name
+	// prefixes the text so people can tell who replied.
+	Agent string `json:"agent,omitempty"`
 }
 
 type messageSendResponse struct {
@@ -362,7 +410,6 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, messageSendResponse{Status: "error", Error: "method not allowed"})
 		return
 	}
-
 	var request messageSendRequest
 	decoder := json.NewDecoder(io.LimitReader(r.Body, 64*1024))
 	decoder.DisallowUnknownFields()
@@ -370,45 +417,57 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, messageSendResponse{Status: "error", Error: "invalid JSON payload"})
 		return
 	}
-
 	request.Channel = strings.ToLower(strings.TrimSpace(request.Channel))
 	request.To = strings.TrimSpace(request.To)
 	request.Text = strings.TrimSpace(request.Text)
 	request.ThreadTS = strings.TrimSpace(request.ThreadTS)
 	request.ReceiverID = strings.TrimSpace(request.ReceiverID)
-	trimmedImages := make([]string, 0, len(request.Images))
+	request.Agent = strings.TrimSpace(request.Agent)
+	images := make([]string, 0, len(request.Images))
 	for _, path := range request.Images {
 		if trimmed := strings.TrimSpace(path); trimmed != "" {
-			trimmedImages = append(trimmedImages, trimmed)
+			images = append(images, trimmed)
 		}
 	}
-	request.Images = trimmedImages
+	request.Images = images
 
-	if request.Channel == "" {
+	switch {
+	case request.Channel == "":
 		writeJSON(w, http.StatusBadRequest, messageSendResponse{Status: "error", Error: "channel is required"})
 		return
-	}
-	if request.To == "" {
+	case request.To == "":
 		writeJSON(w, http.StatusBadRequest, messageSendResponse{Status: "error", Error: "to is required"})
 		return
-	}
-	if request.Text == "" && len(request.Images) == 0 {
+	case request.Text == "" && len(request.Images) == 0:
 		writeJSON(w, http.StatusBadRequest, messageSendResponse{Status: "error", Error: "text or images is required"})
 		return
-	}
-	if len(request.Images) > 0 && !imageSendChannelSupported(request.Channel) {
-		writeJSON(w, http.StatusBadRequest, messageSendResponse{
-			Status: "error",
-			Error:  fmt.Sprintf("channel %q does not support image attachment yet (issue #374); currently supported: feishu", request.Channel),
-		})
+	case len(request.Images) > 0 && !imageSendChannelSupported(request.Channel):
+		writeJSON(w, http.StatusBadRequest, messageSendResponse{Status: "error", Error: fmt.Sprintf("channel %q does not support image attachment yet (issue #374); currently supported: feishu", request.Channel)})
 		return
 	}
-
+	if request.Agent != "" && request.Text != "" {
+		kind, _, _ := strings.Cut(request.Channel, "/")
+		ref, ok := s.router.ChannelRef(map[string]interface{}{"channel": kind, "receiver_id": request.ReceiverID})
+		if !ok {
+			writeJSON(w, http.StatusNotFound, messageSendResponse{Status: "error", Error: "channel is not configured"})
+			return
+		}
+		bound := false
+		for _, a := range s.config.AgentsFor(ref) {
+			bound = bound || a == request.Agent
+		}
+		if !bound {
+			writeJSON(w, http.StatusBadRequest, messageSendResponse{Status: "error", Error: fmt.Sprintf("agent %q does not use channel %s", request.Agent, ref)})
+			return
+		}
+		if s.router.Shared(ref) {
+			request.Text = "[" + request.Agent + "] " + request.Text
+		}
+	}
 	if s.messageBus == nil {
 		writeJSON(w, http.StatusServiceUnavailable, messageSendResponse{Status: "error", Error: "message bus unavailable"})
 		return
 	}
-
 	result, err := s.messageBus.PublishOutbound(r.Context(), request.Channel, channels.OutboundMessage{
 		To:         request.To,
 		Text:       request.Text,
@@ -421,16 +480,10 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "not found") {
 			status = http.StatusNotFound
 		}
-		writeJSON(w, status, messageSendResponse{Status: "error", Error: err.Error()})
+		writeJSON(w, status, messageSendResponse{Status: "error", Error: s.redact(err.Error())})
 		return
 	}
-
-	resp := messageSendResponse{
-		Status:   "ok",
-		Channel:  request.Channel,
-		To:       request.To,
-		ThreadTS: request.ThreadTS,
-	}
+	resp := messageSendResponse{Status: "ok", Channel: request.Channel, To: request.To, ThreadTS: request.ThreadTS}
 	if result != nil {
 		resp.ChannelID = result.ChannelID
 		resp.ChannelName = result.ChannelName
@@ -610,451 +663,12 @@ func (s *Server) activeClients() int {
 	return len(s.clients)
 }
 
-type channelStatus struct {
-	Name         string                          `json:"name"`
-	Enabled      bool                            `json:"enabled"`
-	Running      bool                            `json:"running"`
-	Mode         string                          `json:"mode,omitempty"`
-	Webhook      *channels.TelegramWebhookStatus `json:"webhook,omitempty"`
-	LastError    string                          `json:"last_error"`
-	LastActivity string                          `json:"last_activity"`
-}
-
-type agentStatus struct {
-	WorkspaceConfigured bool                 `json:"workspace_configured"`
-	MaxConcurrent       int                  `json:"max_concurrent,omitempty"`
-	Router              string               `json:"router,omitempty"`
-	LastRouting         *agentRoutingStatus  `json:"last_routing,omitempty"`
-	OhMyCode            *ohMyCodeStatus      `json:"oh_my_code,omitempty"`
-	CodexAppCDP         *codexAppCDPStatus   `json:"codex_app_cdp,omitempty"`
-	ClaudeDesktop       *claudeDesktopStatus `json:"claude_desktop,omitempty"`
-}
-
-type agentRoutingStatus struct {
-	Backend       string `json:"backend,omitempty"`
-	Target        string `json:"target,omitempty"`
-	SelectedAgent string `json:"selected_agent,omitempty"`
-	Channel       string `json:"channel,omitempty"`
-	ChatID        string `json:"chat_id,omitempty"`
-	UserID        string `json:"user_id,omitempty"`
-	Username      string `json:"username,omitempty"`
-	Status        string `json:"status,omitempty"`
-	Error         string `json:"error,omitempty"`
-	EnvelopeID    string `json:"envelope_id,omitempty"`
-	InboxPath     string `json:"inbox_path,omitempty"`
-	RecordedAt    string `json:"recorded_at,omitempty"`
-}
-
-type ohMyCodeRoutingStatus = agentRoutingStatus
-
-type ohMyCodeStatus struct {
-	Enabled             bool                   `json:"enabled"`
-	WorkspaceConfigured bool                   `json:"workspace_configured"`
-	DefaultAgent        string                 `json:"default_agent,omitempty"`
-	AllowedAgents       []string               `json:"allowed_agents,omitempty"`
-	LastRouting         *ohMyCodeRoutingStatus `json:"last_routing,omitempty"`
-}
-
-type codexAppCDPStatus struct {
-	Enabled              bool                       `json:"enabled"`
-	CDPEndpoint          string                     `json:"cdp_endpoint,omitempty"`
-	TargetSelector       string                     `json:"target_selector,omitempty"`
-	HostID               string                     `json:"host_id,omitempty"`
-	ConversationID       string                     `json:"conversation_id,omitempty"`
-	TargetProject        *codexAppCDPTargetProject  `json:"target_project,omitempty"`
-	ResolvedConversation *codexAppCDPResolvedTarget `json:"resolved_conversation,omitempty"`
-	InboxConfigured      bool                       `json:"inbox_configured"`
-	FallbackToInbox      bool                       `json:"fallback_to_inbox"`
-	RepairPolicy         string                     `json:"repair_policy,omitempty"`
-	CheckOnIncoming      bool                       `json:"check_on_incoming_message"`
-	Watch                codexAppCDPWatch           `json:"watch"`
-	Readiness            *codexAppCDPReady          `json:"readiness,omitempty"`
-	DefaultAgent         string                     `json:"default_agent,omitempty"`
-	AllowedAgents        []string                   `json:"allowed_agents,omitempty"`
-	LastRouting          *agentRoutingStatus        `json:"last_routing,omitempty"`
-}
-
-type claudeDesktopStatus struct {
-	Enabled          bool     `json:"enabled"`
-	CDPEndpoint      string   `json:"cdp_endpoint,omitempty"`
-	TargetSelector   string   `json:"target_selector,omitempty"`
-	InboxConfigured  bool     `json:"inbox_configured"`
-	FallbackToInbox  bool     `json:"fallback_to_inbox"`
-	DefaultAgent     string   `json:"default_agent,omitempty"`
-	AllowedAgents    []string `json:"allowed_agents,omitempty"`
-	DeliveryTimeoutS int      `json:"delivery_timeout_seconds,omitempty"`
-}
-
-type codexAppCDPTargetProject struct {
-	Name    string `json:"name,omitempty"`
-	CWD     string `json:"cwd,omitempty"`
-	Session string `json:"session,omitempty"`
-	StateDB string `json:"state_db,omitempty"`
-}
-
-type codexAppCDPResolvedTarget struct {
-	Configured     bool   `json:"configured"`
-	ID             string `json:"id,omitempty"`
-	Title          string `json:"title,omitempty"`
-	CWD            string `json:"cwd,omitempty"`
-	UpdatedAt      string `json:"updated_at,omitempty"`
-	Source         string `json:"source,omitempty"`
-	LastResolvedAt string `json:"last_resolved_at,omitempty"`
-	LastError      string `json:"last_error,omitempty"`
-}
-
-type codexAppCDPWatch struct {
-	Enabled         bool `json:"enabled"`
-	Running         bool `json:"running"`
-	IntervalSeconds int  `json:"interval_seconds,omitempty"`
-	CooldownSeconds int  `json:"cooldown_seconds,omitempty"`
-}
-
-type codexAppCDPReady struct {
-	Available        bool   `json:"available"`
-	TargetCount      int    `json:"target_count"`
-	LastCheckedAt    string `json:"last_checked_at,omitempty"`
-	LastError        string `json:"last_error,omitempty"`
-	LastRepairAt     string `json:"last_repair_at,omitempty"`
-	LastRepairAction string `json:"last_repair_action,omitempty"`
-	LastRepairError  string `json:"last_repair_error,omitempty"`
-}
-
-func (s *Server) channelStatus() []channelStatus {
-	if s.config == nil || s.config.Channels == nil {
-		return nil
-	}
-
-	statuses := make([]channelStatus, 0, 5)
-	getChannel := func(name string) channels.Channel {
-		if s.agentManager == nil || s.agentManager.ChannelManager == nil {
-			return nil
-		}
-		return s.agentManager.ChannelManager.Get(name)
-	}
-	isRunning := func(ch channels.Channel) bool {
-		if ch == nil {
-			return false
-		}
-		return ch.IsRunning()
-	}
-	telemetry := func(ch channels.Channel) (string, string) {
-		if ch == nil {
-			return "", ""
-		}
-		if provider, ok := ch.(channels.TelemetryProvider); ok {
-			return formatStatusTime(provider.LastError()), formatStatusTime(provider.LastActivity())
-		}
-		return "", ""
-	}
-
-	if s.config.Channels.Telegram != nil {
-		mode := telegramModeFromConfig(s.config.Channels.Telegram)
-		webhookStatus := telegramWebhookStatusFromConfig(s.config.Channels.Telegram)
-		ch := getChannel("telegram")
-		lastError, lastActivity := telemetry(ch)
-		if bot, ok := ch.(*channels.TelegramBot); ok {
-			if bot.Mode() != "" {
-				mode = bot.Mode()
-			}
-			status := bot.WebhookStatus()
-			webhookStatus = &status
-		}
-		statuses = append(statuses, channelStatus{
-			Name:         "telegram",
-			Enabled:      s.config.Channels.Telegram.Enabled,
-			Running:      isRunning(ch),
-			Mode:         mode,
-			Webhook:      webhookStatus,
-			LastError:    lastError,
-			LastActivity: lastActivity,
-		})
-	}
-	if s.config.Channels.Slack != nil {
-		ch := getChannel("slack")
-		lastError, lastActivity := telemetry(ch)
-		statuses = append(statuses, channelStatus{
-			Name:         "slack",
-			Enabled:      s.config.Channels.Slack.Enabled,
-			Running:      isRunning(ch),
-			LastError:    lastError,
-			LastActivity: lastActivity,
-		})
-	}
-	if s.config.Channels.Feishu != nil {
-		feishu := s.config.Channels.Feishu
-		if strings.TrimSpace(feishu.AppID) != "" || len(feishu.Bots) == 0 {
-			ch := getChannel("feishu")
-			lastError, lastActivity := telemetry(ch)
-			statuses = append(statuses, channelStatus{
-				Name: "feishu", Enabled: feishu.Enabled, Running: isRunning(ch), LastError: lastError, LastActivity: lastActivity,
-			})
-		}
-		botNames := make([]string, 0, len(feishu.Bots))
-		for name := range feishu.Bots {
-			botNames = append(botNames, name)
-		}
-		sort.Strings(botNames)
-		for _, name := range botNames {
-			channelName := "feishu/" + name
-			ch := getChannel(channelName)
-			lastError, lastActivity := telemetry(ch)
-			statuses = append(statuses, channelStatus{
-				Name: channelName, Enabled: feishu.Enabled, Running: isRunning(ch), LastError: lastError, LastActivity: lastActivity,
-			})
-		}
-	}
-	if s.config.Channels.Discord != nil {
-		ch := getChannel("discord")
-		lastError, lastActivity := telemetry(ch)
-		statuses = append(statuses, channelStatus{
-			Name:         "discord",
-			Enabled:      s.config.Channels.Discord.Enabled,
-			Running:      isRunning(ch),
-			LastError:    lastError,
-			LastActivity: lastActivity,
-		})
-	}
-	if s.config.Channels.IMessage != nil {
-		ch := getChannel("imessage")
-		lastError, lastActivity := telemetry(ch)
-		statuses = append(statuses, channelStatus{
-			Name:         "imessage",
-			Enabled:      s.config.Channels.IMessage.Enabled,
-			Running:      isRunning(ch),
-			LastError:    lastError,
-			LastActivity: lastActivity,
-		})
-	}
-
-	return statuses
-}
-
-func telegramModeFromConfig(cfg *config.TelegramConfig) string {
-	if cfg == nil {
-		return ""
-	}
-	mode := strings.ToLower(strings.TrimSpace(cfg.Mode))
-	if mode == "" || mode == "auto" {
-		if strings.TrimSpace(cfg.WebhookListenAddr) != "" || strings.TrimSpace(cfg.WebhookPublicURL) != "" {
-			return "webhook"
-		}
-		return "polling"
-	}
-	return mode
-}
-
-func telegramWebhookStatusFromConfig(cfg *config.TelegramConfig) *channels.TelegramWebhookStatus {
-	if cfg == nil {
-		return nil
-	}
-	return &channels.TelegramWebhookStatus{
-		RegisterOnStart:      cfg.WebhookRegisterOnStart,
-		DeleteOnStop:         cfg.WebhookDeleteOnStop,
-		PublicURLConfigured:  strings.TrimSpace(cfg.WebhookPublicURL) != "",
-		ListenAddrConfigured: strings.TrimSpace(cfg.WebhookListenAddr) != "",
-	}
-}
-
 func formatStatusTime(value time.Time) string {
 	if value.IsZero() {
 		return ""
 	}
 	return value.UTC().Format(time.RFC3339)
 }
-func (s *Server) agentStatus() *agentStatus {
-	if s.config == nil || s.config.Agents == nil {
-		return nil
-	}
-
-	status := &agentStatus{
-		WorkspaceConfigured: strings.TrimSpace(s.config.Agents.Workspace) != "",
-		MaxConcurrent:       s.config.Agents.MaxConcurrent,
-		Router:              activeAgentRouterName(s.config.Agents),
-	}
-	if s.agentManager != nil {
-		if routing := s.agentManager.LastRoutingOutcome(); routing != nil {
-			status.LastRouting = routingStatusFromOutcome(routing)
-		}
-	}
-
-	if s.config.Agents.OhMyCode != nil {
-		ohMyCode := s.config.Agents.OhMyCode
-		status.OhMyCode = &ohMyCodeStatus{
-			Enabled:             ohMyCode.Enabled,
-			WorkspaceConfigured: strings.TrimSpace(ohMyCode.Workspace) != "",
-			DefaultAgent:        strings.TrimSpace(ohMyCode.DefaultAgent),
-		}
-		if len(ohMyCode.AllowedAgents) > 0 {
-			status.OhMyCode.AllowedAgents = append([]string{}, ohMyCode.AllowedAgents...)
-		}
-		if status.LastRouting != nil && status.LastRouting.Backend == "ohMyCode" {
-			status.OhMyCode.LastRouting = status.LastRouting
-		}
-	}
-
-	if s.config.Agents.CodexAppCDP != nil {
-		codex := s.config.Agents.CodexAppCDP
-		status.CodexAppCDP = &codexAppCDPStatus{
-			Enabled:         codex.Enabled,
-			CDPEndpoint:     strings.TrimSpace(codex.CDPEndpoint),
-			TargetSelector:  strings.TrimSpace(codex.TargetSelector),
-			HostID:          strings.TrimSpace(codex.HostID),
-			ConversationID:  strings.TrimSpace(codex.ConversationID),
-			InboxConfigured: strings.TrimSpace(codex.InboxPath) != "",
-			FallbackToInbox: codex.FallbackToInbox,
-			RepairPolicy:    codexRepairPolicy(codex),
-			CheckOnIncoming: codexCheckOnIncoming(codex),
-			Watch: codexAppCDPWatch{
-				Enabled:         codexWatchEnabled(codex),
-				IntervalSeconds: codexWatchIntervalSeconds(codex),
-				CooldownSeconds: codexCooldownSeconds(codex),
-			},
-			DefaultAgent: strings.TrimSpace(codex.DefaultAgent),
-		}
-		if codexTargetProjectConfigured(codex) {
-			status.CodexAppCDP.TargetProject = &codexAppCDPTargetProject{
-				Name:    strings.TrimSpace(codex.TargetProject.Name),
-				CWD:     strings.TrimSpace(codex.TargetProject.CWD),
-				Session: strings.TrimSpace(codex.TargetProject.Session),
-				StateDB: strings.TrimSpace(codex.TargetProject.StateDB),
-			}
-		}
-		if s.agentManager != nil {
-			if readiness := s.agentManager.CodexAppCDPReadinessStatus(); readiness != nil {
-				status.CodexAppCDP.Watch.Running = readiness.WatchRunning
-				status.CodexAppCDP.Readiness = &codexAppCDPReady{
-					Available:        readiness.Available,
-					TargetCount:      readiness.TargetCount,
-					LastCheckedAt:    formatStatusTime(readiness.LastCheckedAt),
-					LastError:        readiness.LastError,
-					LastRepairAt:     formatStatusTime(readiness.LastRepairAt),
-					LastRepairAction: readiness.LastRepairAction,
-					LastRepairError:  readiness.LastRepairError,
-				}
-			}
-			if resolved := s.agentManager.CodexAppCDPResolvedConversationStatus(); resolved != nil {
-				status.CodexAppCDP.ResolvedConversation = &codexAppCDPResolvedTarget{
-					Configured:     resolved.Configured,
-					ID:             resolved.ID,
-					Title:          resolved.Title,
-					CWD:            resolved.ThreadCWD,
-					UpdatedAt:      formatStatusTime(resolved.UpdatedAt),
-					Source:         resolved.Source,
-					LastResolvedAt: formatStatusTime(resolved.LastResolvedAt),
-					LastError:      resolved.LastError,
-				}
-			}
-		}
-		if len(codex.AllowedAgents) > 0 {
-			status.CodexAppCDP.AllowedAgents = append([]string{}, codex.AllowedAgents...)
-		}
-		if status.LastRouting != nil && status.LastRouting.Backend == "codexAppCDP" {
-			status.CodexAppCDP.LastRouting = status.LastRouting
-		}
-	}
-
-	if s.config.Agents.ClaudeDesktop != nil {
-		claude := s.config.Agents.ClaudeDesktop
-		status.ClaudeDesktop = &claudeDesktopStatus{
-			Enabled:          claude.Enabled,
-			CDPEndpoint:      strings.TrimSpace(claude.CDPEndpoint),
-			TargetSelector:   strings.TrimSpace(claude.TargetSelector),
-			InboxConfigured:  strings.TrimSpace(claude.InboxPath) != "",
-			FallbackToInbox:  claude.FallbackToInbox,
-			DefaultAgent:     strings.TrimSpace(claude.DefaultAgent),
-			DeliveryTimeoutS: claude.DeliveryTimeoutSeconds,
-		}
-		if len(claude.AllowedAgents) > 0 {
-			status.ClaudeDesktop.AllowedAgents = append([]string{}, claude.AllowedAgents...)
-		}
-	}
-
-	return status
-}
-
-func activeAgentRouterName(cfg *config.AgentsConfig) string {
-	if cfg == nil {
-		return ""
-	}
-	if router := strings.TrimSpace(cfg.Router); router != "" {
-		return router
-	}
-	if cfg.OhMyCode != nil && cfg.OhMyCode.Enabled {
-		return "ohMyCode"
-	}
-	if cfg.CodexAppCDP != nil && cfg.CodexAppCDP.Enabled {
-		return "codexAppCDP"
-	}
-	if cfg.ClaudeDesktop != nil && cfg.ClaudeDesktop.Enabled {
-		return "claudeDesktop"
-	}
-	return ""
-}
-
-func codexRepairPolicy(cfg *config.CodexAppCDPConfig) string {
-	if cfg == nil || strings.TrimSpace(cfg.RepairPolicy) == "" {
-		return "relaunch"
-	}
-	return strings.TrimSpace(cfg.RepairPolicy)
-}
-
-func codexCheckOnIncoming(cfg *config.CodexAppCDPConfig) bool {
-	return cfg == nil || cfg.CheckOnIncomingMessage == nil || *cfg.CheckOnIncomingMessage
-}
-
-func codexWatchEnabled(cfg *config.CodexAppCDPConfig) bool {
-	if cfg == nil || !cfg.Enabled {
-		return false
-	}
-	if cfg.Watch.Enabled == nil {
-		return true
-	}
-	return *cfg.Watch.Enabled
-}
-
-func codexTargetProjectConfigured(cfg *config.CodexAppCDPConfig) bool {
-	if cfg == nil {
-		return false
-	}
-	target := cfg.TargetProject
-	return strings.TrimSpace(target.Name) != "" || strings.TrimSpace(target.CWD) != "" || strings.TrimSpace(target.Session) != "" || strings.TrimSpace(target.StateDB) != ""
-}
-
-func codexWatchIntervalSeconds(cfg *config.CodexAppCDPConfig) int {
-	if cfg != nil && cfg.Watch.IntervalSeconds > 0 {
-		return cfg.Watch.IntervalSeconds
-	}
-	return 60
-}
-
-func codexCooldownSeconds(cfg *config.CodexAppCDPConfig) int {
-	if cfg != nil && cfg.Watch.CooldownSeconds > 0 {
-		return cfg.Watch.CooldownSeconds
-	}
-	return 90
-}
-
-func routingStatusFromOutcome(routing *agent.RoutingOutcome) *agentRoutingStatus {
-	if routing == nil {
-		return nil
-	}
-	return &agentRoutingStatus{
-		Backend:       routing.Backend,
-		Target:        routing.Target,
-		SelectedAgent: routing.SelectedAgent,
-		Channel:       routing.Channel,
-		ChatID:        routing.ChatID,
-		UserID:        routing.UserID,
-		Username:      routing.Username,
-		Status:        routing.Status,
-		Error:         routing.Error,
-		EnvelopeID:    routing.EnvelopeID,
-		InboxPath:     routing.InboxPath,
-		RecordedAt:    formatStatusTime(routing.RecordedAt),
-	}
-}
-
 func (s *Server) snapshotClients() []*Client {
 	s.clientsMutex.RLock()
 	defer s.clientsMutex.RUnlock()
@@ -1070,4 +684,12 @@ func (s *Server) removeClient(id string) {
 	s.clientsMutex.Lock()
 	defer s.clientsMutex.Unlock()
 	delete(s.clients, id)
+}
+
+func sortStrings(values []string) {
+	for i := 1; i < len(values); i++ {
+		for j := i; j > 0 && values[j] < values[j-1]; j-- {
+			values[j], values[j-1] = values[j-1], values[j]
+		}
+	}
 }

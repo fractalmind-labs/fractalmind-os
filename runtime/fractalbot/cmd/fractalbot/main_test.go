@@ -16,8 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agent"
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/configv2"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/secrets"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/localruntime"
 )
 
 func TestRunMissingConfig(t *testing.T) {
@@ -33,14 +34,8 @@ func TestRunMissingConfig(t *testing.T) {
 }
 
 func TestRunMinimalConfigExitsOnCancel(t *testing.T) {
-	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.yaml")
-
-	configContents := []byte("gateway:\n  bind: 127.0.0.1\n  port: 0\n")
-	if err := os.WriteFile(configPath, configContents, 0644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-
+	configPath := writeMinimalConfig(t)
+	useV2Host(t, "")
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		time.Sleep(20 * time.Millisecond)
@@ -48,24 +43,38 @@ func TestRunMinimalConfigExitsOnCancel(t *testing.T) {
 	}()
 
 	var buf bytes.Buffer
-	code := runWithContext(ctx, []string{"--config", configPath}, &buf)
+	code := runWithContext(ctx, []string{"--config", configPath, "--port", strconv.Itoa(freePort(t))}, &buf)
 	if code != 0 {
 		t.Fatalf("expected exit code 0, got %d output=%q", code, buf.String())
 	}
 }
 
-func TestRunClaudeDesktopRelay(t *testing.T) {
+func freePort(t *testing.T) int {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	return ln.Addr().(*net.TCPAddr).Port
+}
+
+func TestRunRelay(t *testing.T) {
 	configPath := writeMinimalConfig(t)
-	original := claudeDesktopRelayFn
-	t.Cleanup(func() { claudeDesktopRelayFn = original })
+	useV2Host(t, "")
+	cfg, err := configv2.Load(configPath, v2Platform())
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := relayFn
+	t.Cleanup(func() { relayFn = original })
 	t.Setenv("CLAUDE_CODE_MESSAGING_SOCKET", "/tmp/cc-socks/test.sock")
 	t.Setenv("CLAUDE_CODE_MESSAGING_TOKEN", "session-secret")
 
 	called := false
-	claudeDesktopRelayFn = func(ctx context.Context, opts agent.ClaudeDesktopRelayOptions) error {
-		_ = ctx
+	relayFn = func(ctx context.Context, opts localruntime.RelayOptions) error {
 		called = true
-		if opts.InboxPath != "/tmp/claude-inbox" || opts.SocketPath != "/tmp/cc-socks/test.sock" || opts.Token != "session-secret" {
+		if opts.Inbox != cfg.Paths().Inbox("desk") || opts.SocketPath != "/tmp/cc-socks/test.sock" || opts.Token != "session-secret" {
 			t.Fatalf("unexpected relay options: %#v", opts)
 		}
 		if opts.PollInterval != 250*time.Millisecond || !opts.Once {
@@ -73,38 +82,41 @@ func TestRunClaudeDesktopRelay(t *testing.T) {
 		}
 		return nil
 	}
-
 	var buf bytes.Buffer
-	code := runWithContext(context.Background(), []string{
-		"--config", configPath,
-		"claude-desktop", "relay",
-		"--inbox-path", "/tmp/claude-inbox",
-		"--poll-interval", "250ms",
-		"--once",
-	}, &buf)
+	code := runWithContext(context.Background(), []string{"--config", configPath, "relay", "--agent", "desk", "--poll-interval", "250ms", "--once"}, &buf)
 	if code != 0 || !called {
 		t.Fatalf("code=%d called=%t output=%q", code, called, buf.String())
 	}
 	if strings.Contains(buf.String(), "session-secret") {
 		t.Fatal("CLI output exposed the session token")
 	}
+
+	// From inside the agent's workspace, --agent is not needed.
+	wd, _ := os.Getwd()
+	t.Cleanup(func() { os.Chdir(wd) })
+	if err := os.Chdir(cfg.Agents["desk"].Workspace); err != nil {
+		t.Fatal(err)
+	}
+	called = false
+	if code := runWithContext(context.Background(), []string{"--config", configPath, "relay", "--poll-interval", "250ms", "--once"}, &buf); code != 0 || !called {
+		t.Fatalf("workspace match: code=%d output=%q", code, buf.String())
+	}
+	if code := runWithContext(context.Background(), []string{"--config", configPath, "relay", "--agent", "bot"}, &buf); code != 1 {
+		t.Fatalf("a non-claudeDesktop agent must be refused, got %d", code)
+	}
 }
 
-func TestRunClaudeDesktopRelayAlreadyRunningIsSuccess(t *testing.T) {
+func TestRunRelayAlreadyRunningIsSuccess(t *testing.T) {
 	configPath := writeMinimalConfig(t)
-	original := claudeDesktopRelayFn
-	t.Cleanup(func() { claudeDesktopRelayFn = original })
-	claudeDesktopRelayFn = func(context.Context, agent.ClaudeDesktopRelayOptions) error {
-		return fmt.Errorf("%w (pid 123)", agent.ErrClaudeDesktopRelayAlreadyRunning)
+	useV2Host(t, "")
+	original := relayFn
+	t.Cleanup(func() { relayFn = original })
+	relayFn = func(context.Context, localruntime.RelayOptions) error {
+		return fmt.Errorf("%w (pid 123)", localruntime.ErrRelayRunning)
 	}
-
 	var buf bytes.Buffer
-	code := runWithContext(context.Background(), []string{
-		"--config", configPath,
-		"claude-desktop", "relay",
-		"--inbox-path", "/tmp/claude-inbox",
-	}, &buf)
-	if code != 0 || !strings.Contains(buf.String(), "already running") {
+	code := runWithContext(context.Background(), []string{"--config", configPath, "relay", "--agent", "desk"}, &buf)
+	if code != 0 || !strings.Contains(buf.String(), "already consumes") {
 		t.Fatalf("code=%d output=%q", code, buf.String())
 	}
 }
@@ -120,7 +132,7 @@ func TestRunMessageSend(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		called := false
-		messageSendFn = func(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string) error {
+		messageSendFn = func(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string) error {
 			_ = ctx
 			_ = cfg
 			called = true
@@ -161,7 +173,7 @@ func TestRunMessageSend(t *testing.T) {
 
 	t.Run("success with thread ts", func(t *testing.T) {
 		called := false
-		messageSendFn = func(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string) error {
+		messageSendFn = func(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string) error {
 			_ = ctx
 			_ = cfg
 			called = true
@@ -200,7 +212,7 @@ func TestRunMessageSend(t *testing.T) {
 
 	t.Run("success with Feishu receiver identity", func(t *testing.T) {
 		called := false
-		messageSendWithReceiverFn = func(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string, receiverID string) error {
+		messageSendWithReceiverFn = func(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string, receiverID, agent string) error {
 			_ = ctx
 			_ = cfg
 			called = true
@@ -229,7 +241,7 @@ func TestRunMessageSend(t *testing.T) {
 
 	t.Run("success with repeatable images and text caption", func(t *testing.T) {
 		var gotImages []string
-		messageSendFn = func(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string) error {
+		messageSendFn = func(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string) error {
 			_ = ctx
 			_ = cfg
 			gotImages = images
@@ -269,7 +281,7 @@ func TestRunMessageSend(t *testing.T) {
 
 	t.Run("images only (no text)", func(t *testing.T) {
 		called := false
-		messageSendFn = func(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string) error {
+		messageSendFn = func(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string) error {
 			_ = ctx
 			_ = cfg
 			called = true
@@ -324,7 +336,7 @@ func TestRunMessageSend(t *testing.T) {
 
 		for _, testCase := range cases {
 			t.Run(testCase.name, func(t *testing.T) {
-				messageSendFn = func(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string) error {
+				messageSendFn = func(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string) error {
 					_ = ctx
 					_ = cfg
 					_ = channel
@@ -349,7 +361,7 @@ func TestRunMessageSend(t *testing.T) {
 	})
 
 	t.Run("unknown subcommand", func(t *testing.T) {
-		messageSendFn = func(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string) error {
+		messageSendFn = func(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string) error {
 			_ = ctx
 			_ = cfg
 			_ = channel
@@ -374,7 +386,7 @@ func TestRunMessageSend(t *testing.T) {
 	})
 
 	t.Run("send failure", func(t *testing.T) {
-		messageSendFn = func(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string) error {
+		messageSendFn = func(ctx context.Context, cfg *configv2.Config, channel string, to string, text string, threadTS string, images []string) error {
 			_ = ctx
 			_ = cfg
 			_ = channel
@@ -430,8 +442,8 @@ func TestSendMessageWithReceiverViaGatewayAPIForwardsReceiverIdentity(t *testing
 	if err != nil {
 		t.Fatalf("parse test server port: %v", err)
 	}
-	cfg := &config.Config{Gateway: &config.GatewayConfig{Bind: host, Port: port}}
-	if err := sendMessageWithReceiverViaGatewayAPI(context.Background(), cfg, "feishu", "oc_shared", "reply", "", nil, "cli_support"); err != nil {
+	cfg := &configv2.Config{Gateway: configv2.Gateway{Bind: host, Port: port}}
+	if err := sendMessageWithReceiverViaGatewayAPI(context.Background(), cfg, "feishu", "oc_shared", "reply", "", nil, "cli_support", ""); err != nil {
 		t.Fatalf("sendMessageWithReceiverViaGatewayAPI: %v", err)
 	}
 	if seen.Channel != "feishu" || seen.To != "oc_shared" || seen.Text != "reply" || seen.ReceiverID != "cli_support" {
@@ -446,7 +458,7 @@ func TestRunFileDownload(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		called := false
-		fileDownloadFn = func(ctx context.Context, cfg *config.Config, channel string, fileURL string, output string) error {
+		fileDownloadFn = func(ctx context.Context, cfg *configv2.Config, channel string, fileURL string, output string) error {
 			_ = ctx
 			_ = cfg
 			called = true
@@ -506,7 +518,7 @@ func TestRunFileDownload(t *testing.T) {
 
 		for _, testCase := range cases {
 			t.Run(testCase.name, func(t *testing.T) {
-				fileDownloadFn = func(ctx context.Context, cfg *config.Config, channel string, fileURL string, output string) error {
+				fileDownloadFn = func(ctx context.Context, cfg *configv2.Config, channel string, fileURL string, output string) error {
 					_ = ctx
 					_ = cfg
 					_ = channel
@@ -555,7 +567,7 @@ func TestRunHeartbeatCronCommands(t *testing.T) {
 
 	t.Run("set", func(t *testing.T) {
 		called := false
-		heartbeatCronSetFn = func(ctx context.Context, cfg *config.Config, jobID, profile, reason string) error {
+		heartbeatCronSetFn = func(ctx context.Context, cfg *configv2.Config, jobID, profile, reason string) error {
 			called = true
 			if jobID != "cloudbank-main" || profile != "idle" || reason != "no actionable tasks" {
 				t.Fatalf("unexpected set arguments: job=%q profile=%q reason=%q", jobID, profile, reason)
@@ -580,7 +592,7 @@ func TestRunHeartbeatCronCommands(t *testing.T) {
 
 	t.Run("reset", func(t *testing.T) {
 		called := false
-		heartbeatCronResetFn = func(ctx context.Context, cfg *config.Config, jobID string) error {
+		heartbeatCronResetFn = func(ctx context.Context, cfg *configv2.Config, jobID string) error {
 			called = true
 			if jobID != "cloudbank-main" {
 				t.Fatalf("jobID=%q", jobID)
@@ -655,7 +667,7 @@ func TestHeartbeatCronGatewayAPIRequests(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := &config.Config{Gateway: &config.GatewayConfig{Bind: host, Port: port}}
+	cfg := &configv2.Config{Gateway: configv2.Gateway{Bind: host, Port: port}}
 	if err := setHeartbeatCronViaGatewayAPI(context.Background(), cfg, "cloudbank-main", "idle", "no actionable tasks"); err != nil {
 		t.Fatalf("setHeartbeatCronViaGatewayAPI: %v", err)
 	}
@@ -678,7 +690,7 @@ func TestRunHeartbeatOutcomeCommand(t *testing.T) {
 	t.Cleanup(func() { heartbeatOutcomeFn = original })
 
 	called := false
-	heartbeatOutcomeFn = func(ctx context.Context, cfg *config.Config, jobID, runID, result, summary string) error {
+	heartbeatOutcomeFn = func(ctx context.Context, cfg *configv2.Config, jobID, runID, result, summary string) error {
 		called = true
 		if jobID != "xiaoyi-heartbeat" || runID != "run-1" || result != "noop" || summary != "nothing changed" {
 			t.Fatalf("unexpected arguments: %q %q %q %q", jobID, runID, result, summary)
@@ -728,7 +740,7 @@ func TestHeartbeatOutcomeGatewayAPIRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := &config.Config{Gateway: &config.GatewayConfig{Bind: host, Port: port}}
+	cfg := &configv2.Config{Gateway: configv2.Gateway{Bind: host, Port: port}}
 	if err := reportHeartbeatOutcomeViaGatewayAPI(context.Background(), cfg, "xiaoyi-heartbeat", "run-1", "notified", "sent the report"); err != nil {
 		t.Fatalf("reportHeartbeatOutcomeViaGatewayAPI: %v", err)
 	}
@@ -746,24 +758,24 @@ func TestDownloadFileViaHTTPSlackAuth(t *testing.T) {
 	}))
 	defer server.Close()
 
-	outputPath := filepath.Join(t.TempDir(), "downloads", "file.bin")
-	cfg := &config.Config{
-		Channels: &config.ChannelsConfig{
-			Slack: &config.SlackConfig{BotToken: "xoxb-secret"},
-		},
+	useV2Host(t, "")
+	cfg := &configv2.Config{
+		DataDir:  t.TempDir(),
+		Secrets:  secrets.Config{Store: "file"},
+		Channels: configv2.Channels{Slack: map[string]configv2.Slack{"main": {BotToken: "secret:slack-bot"}}},
 	}
-
+	resolver, _ := secrets.NewResolver(cfg.Secrets, cfg.DataDir, v2CheckOptions().Secrets)
+	if err := resolver.StoreFor("slack-bot").Set("slack-bot", "xoxb-secret"); err != nil {
+		t.Fatal(err)
+	}
+	outputPath := filepath.Join(t.TempDir(), "downloads", "file.bin")
 	if err := downloadFileViaHTTP(context.Background(), cfg, "slack", server.URL+"/private/file", outputPath); err != nil {
 		t.Fatalf("downloadFileViaHTTP: %v", err)
 	}
 	if gotAuth != "Bearer xoxb-secret" {
 		t.Fatalf("authorization=%q", gotAuth)
 	}
-	data, err := os.ReadFile(outputPath)
-	if err != nil {
-		t.Fatalf("read output: %v", err)
-	}
-	if string(data) != "slack-file-data" {
+	if data, _ := os.ReadFile(outputPath); string(data) != "slack-file-data" {
 		t.Fatalf("output data=%q", string(data))
 	}
 }
@@ -777,7 +789,7 @@ func TestDownloadFileViaHTTPTelegramNoAuthHeader(t *testing.T) {
 	defer server.Close()
 
 	outputPath := filepath.Join(t.TempDir(), "tg.bin")
-	if err := downloadFileViaHTTP(context.Background(), &config.Config{}, "telegram", server.URL+"/bot123/file", outputPath); err != nil {
+	if err := downloadFileViaHTTP(context.Background(), &configv2.Config{}, "telegram", server.URL+"/bot123/file", outputPath); err != nil {
 		t.Fatalf("downloadFileViaHTTP: %v", err)
 	}
 	if gotAuth != "" {
@@ -795,7 +807,7 @@ func TestDownloadFileViaHTTPTelegramNoAuthHeader(t *testing.T) {
 func TestDownloadFileViaHTTPSlackMissingToken(t *testing.T) {
 	err := downloadFileViaHTTP(
 		context.Background(),
-		&config.Config{},
+		&configv2.Config{},
 		"slack",
 		"https://files.slack.com/files-pri/T/F",
 		filepath.Join(t.TempDir(), "x.bin"),
@@ -803,22 +815,28 @@ func TestDownloadFileViaHTTPSlackMissingToken(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected missing token error")
 	}
-	if !strings.Contains(err.Error(), "channels.slack.botToken") {
+	if !strings.Contains(err.Error(), "Slack channel is required") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
+// writeMinimalConfig writes a version 2 configuration with an agentManager
+// agent "bot" and a claudeDesktop agent "desk", and no channels.
 func writeMinimalConfig(t *testing.T) string {
 	t.Helper()
-
 	dir := t.TempDir()
+	for _, ws := range []string{"bot", "desk"} {
+		if err := os.MkdirAll(filepath.Join(dir, ws), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	contents := "version: 2\ndataDir: " + filepath.Join(dir, "data") + "\ngateway: {bind: 127.0.0.1, port: 18789}\nagents:\n" +
+		"  bot: {workspace: " + filepath.Join(dir, "bot") + ", runtime: agentManager}\n" +
+		"  desk: {workspace: " + filepath.Join(dir, "desk") + ", runtime: claudeDesktop}\n"
 	configPath := filepath.Join(dir, "config.yaml")
-	configContents := []byte("gateway:\n  bind: 127.0.0.1\n  port: 18789\n")
-
-	if err := os.WriteFile(configPath, configContents, 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(contents), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
-
 	return configPath
 }
 
@@ -847,4 +865,15 @@ func containsSignal(signals []os.Signal, target os.Signal) bool {
 		}
 	}
 	return false
+}
+
+// TestMain checks configurations as macOS would, so test configurations with
+// desktop runtimes load on every CI platform.
+func TestMain(m *testing.M) {
+	v2Platform = func() configv2.Platform {
+		p := configv2.HostPlatform()
+		p.GOOS = "darwin"
+		return p
+	}
+	os.Exit(m.Run())
 }

@@ -334,10 +334,10 @@ func TestDemailStartRequiresIdentityKey(t *testing.T) {
 	channel := newTestDemailChannel(t, DemailOptions{})
 	err := channel.Start(context.Background())
 	if err == nil {
-		t.Fatal("expected Start to fail without identityKeyFile")
+		t.Fatal("expected Start to fail without identityKey")
 	}
-	if !strings.Contains(err.Error(), "identityKeyFile") {
-		t.Fatalf("expected identityKeyFile error, got %v", err)
+	if !strings.Contains(err.Error(), "identityKey") {
+		t.Fatalf("expected identityKey error, got %v", err)
 	}
 	if channel.IsRunning() {
 		t.Fatal("channel must not report running after failed Start")
@@ -350,15 +350,6 @@ func TestLoadDemailIdentityKey(t *testing.T) {
 		seed[i] = byte(i)
 	}
 	fullKey := ed25519.NewKeyFromSeed(seed)
-
-	writeKey := func(t *testing.T, content string) string {
-		t.Helper()
-		path := filepath.Join(t.TempDir(), "identity.key")
-		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
-			t.Fatalf("write key: %v", err)
-		}
-		return path
-	}
 
 	tests := []struct {
 		name    string
@@ -374,7 +365,7 @@ func TestLoadDemailIdentityKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			key, err := loadDemailIdentityKey(writeKey(t, tt.content))
+			key, err := loadDemailIdentityKey(tt.content)
 			if tt.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 					t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
@@ -391,10 +382,7 @@ func TestLoadDemailIdentityKey(t *testing.T) {
 	}
 
 	if _, err := loadDemailIdentityKey(""); err == nil {
-		t.Fatal("expected error for empty path")
-	}
-	if _, err := loadDemailIdentityKey(filepath.Join(t.TempDir(), "missing.key")); err == nil {
-		t.Fatal("expected error for missing file")
+		t.Fatal("expected error for an empty key")
 	}
 }
 

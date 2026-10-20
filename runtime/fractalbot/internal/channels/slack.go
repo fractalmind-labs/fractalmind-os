@@ -469,7 +469,7 @@ func (b *SlackBot) slashCommandReply(ctx context.Context, msg *slackInboundMessa
 
 	if b.handler != nil {
 		recentMessages := b.fetchRecentMessages(ctx, msg.channelID, 5)
-		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, selection.Task, selection.Agent, trustLevel, recentMessages))
+		replyText, err := b.handler.HandleIncoming(ctx, withAgentSpecified(b.toProtocolMessage(msg, selection.Task, selection.Agent, trustLevel, recentMessages), selection.Specified))
 		if err != nil {
 			log.Printf("slack handler error: %v", err)
 			replyText = "❌ Something went wrong. Please try again."
@@ -575,7 +575,7 @@ func (b *SlackBot) handleMessageEvent(ctx context.Context, msg *slackInboundMess
 
 	if b.handler != nil {
 		recentMessages := b.fetchRecentMessages(ctx, msg.channelID, 5)
-		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, selection.Task, selection.Agent, trustLevel, recentMessages))
+		replyText, err := b.handler.HandleIncoming(ctx, withAgentSpecified(b.toProtocolMessage(msg, selection.Task, selection.Agent, trustLevel, recentMessages), selection.Specified))
 		if err != nil {
 			log.Printf("slack handler error: %v", err)
 			replyText = "❌ Something went wrong. Please try again."

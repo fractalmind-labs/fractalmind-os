@@ -709,7 +709,7 @@ func (b *TelegramBot) handleIncomingMessage(message *TelegramMessage) {
 	}
 
 	attachments := b.extractTelegramAttachments(b.ctx, message)
-	msg := b.convertToProtocolMessage(message, selection.Task, selection.Agent, attachments)
+	msg := withAgentSpecified(b.convertToProtocolMessage(message, selection.Task, selection.Agent, attachments), selection.Specified)
 
 	if b.handler != nil {
 		replyText, err := b.handler.HandleIncoming(b.ctx, msg)

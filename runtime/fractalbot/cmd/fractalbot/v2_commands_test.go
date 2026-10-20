@@ -35,7 +35,7 @@ func useV2Host(t *testing.T, stdin string) {
 	t.Cleanup(func() { v2Platform, v2CheckOptions, v2Stdin = oldPlatform, oldOpts, oldStdin })
 	v2Platform = func() configv2.Platform {
 		p := configv2.HostPlatform()
-		p.GOOS = "linux"
+		p.GOOS = "darwin"
 		return p
 	}
 	v2CheckOptions = func() configv2.CheckOptions {

@@ -224,6 +224,19 @@ func (c *Config) validateChannels(ps *problems, p Platform, bound map[string][]s
 	if len(c.Channels.IMessage) > 1 {
 		ps.add("channels.imessage: a Mac has one iMessage account; configure one instance and share it")
 	}
+	for kind, n := range map[string]int{ChannelTelegram: len(c.Channels.Telegram), ChannelSlack: len(c.Channels.Slack), ChannelDiscord: len(c.Channels.Discord), ChannelDemail: len(c.Channels.Demail)} {
+		if n > 1 {
+			ps.add("channels.%s: only one instance is supported for now; share it between agents", kind)
+		}
+	}
+	apps := map[string]string{}
+	for _, name := range sortedKeys(c.Channels.Feishu) {
+		id := c.Channels.Feishu[name].AppID
+		if other, ok := apps[id]; ok && id != "" {
+			ps.add("channels.feishu.%s: appId is also used by channels.feishu.%s", name, other)
+		}
+		apps[id] = name
+	}
 	for _, name := range sortedKeys(c.Channels.Feishu) {
 		f := c.Channels.Feishu[name]
 		if f.AppID == "" || f.AppSecret == "" {

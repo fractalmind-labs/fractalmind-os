@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"log"
 	"sync"
 	"time"
@@ -124,27 +125,19 @@ func (c *Client) handleEventMessage(msg *protocol.Message) {
 	}
 }
 
-// handleAgentMessage processes agent-related messages
+// handleAgentMessage answers agent list requests with the configured agents
+// and their status. Other agent actions are not supported over WebSocket.
 func (c *Client) handleAgentMessage(msg *protocol.Message) {
-	agentMgr := c.Server.GetAgentManager()
-
 	switch msg.Action {
-	case protocol.ActionCreate:
-		// Create new agent session
-	case protocol.ActionStart:
-		// Start agent
-	case protocol.ActionStop:
-		// Stop agent
 	case protocol.ActionList:
-		// List agents
 		resp := protocol.Message{
 			Kind:   protocol.MessageKindAgent,
 			Action: protocol.ActionList,
-			Data:   agentMgr.List(),
+			Data:   c.Server.router.Status(context.Background()),
 		}
 		c.Send(&resp)
 	default:
-		log.Printf("Unknown agent action: %s", msg.Action)
+		log.Printf("Unsupported agent action: %s", msg.Action)
 	}
 }
 

@@ -285,7 +285,7 @@ func (b *DiscordBot) handleMessageEvent(ctx context.Context, msg *discordInbound
 	}
 
 	if b.handler != nil {
-		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, selection.Task, selection.Agent))
+		replyText, err := b.handler.HandleIncoming(ctx, withAgentSpecified(b.toProtocolMessage(msg, selection.Task, selection.Agent), selection.Specified))
 		if err != nil {
 			log.Printf("discord handler error: %v", err)
 			replyText = "❌ Something went wrong. Please try again."

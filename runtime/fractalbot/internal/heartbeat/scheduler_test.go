@@ -3,13 +3,13 @@ package heartbeat
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agentruntime"
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 )
 
 type testClock struct {
@@ -63,12 +63,20 @@ func (d *recordingDispatcher) Requests() []agentruntime.DispatchRequest {
 	return append([]agentruntime.DispatchRequest(nil), d.requests...)
 }
 
-func heartbeatTestConfig(statePath string) *config.HeartbeatConfig {
-	return &config.HeartbeatConfig{
+// newTestScheduler keeps state in dir unless the config names a path.
+func newTestScheduler(cfg *Config, dir string, dispatcher agentruntime.Dispatcher, now func() time.Time, tick time.Duration) (*Scheduler, error) {
+	if cfg != nil && cfg.StatePath == "" && dir != "" {
+		cfg.StatePath = filepath.Join(dir, "heartbeat-state.json")
+	}
+	return newScheduler(cfg, dispatcher, now, tick)
+}
+
+func heartbeatTestConfig(statePath string) *Config {
+	return &Config{
 		Enabled:       true,
 		StatePath:     statePath,
 		MaxConcurrent: 2,
-		Jobs: []config.HeartbeatJobConfig{{
+		Jobs: []JobConfig{{
 			ID:       "cloudbank-main",
 			Runtime:  agentruntime.CodexAppCDP,
 			Agent:    "main",
@@ -91,7 +99,7 @@ func TestSchedulerCalculatesTimezoneAndDispatchesRuntimeEnvelope(t *testing.T) {
 		EnvelopeID: "env-1",
 		InboxPath:  "/tmp/inbox/heartbeat.json",
 	}}
-	scheduler, err := newScheduler(heartbeatTestConfig(""), t.TempDir(), dispatcher, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(heartbeatTestConfig(""), t.TempDir(), dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -134,7 +142,7 @@ func TestSchedulerRecordsAgentReportedOutcomes(t *testing.T) {
 	dispatcher := &recordingDispatcher{result: agentruntime.DispatchResult{Status: "queued"}}
 	stateDir := t.TempDir()
 	cfg := heartbeatTestConfig("")
-	scheduler, err := newScheduler(cfg, stateDir, dispatcher, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(cfg, stateDir, dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -183,7 +191,7 @@ func TestSchedulerRecordsAgentReportedOutcomes(t *testing.T) {
 	}
 
 	// The record survives a restart.
-	restarted, err := newScheduler(cfg, stateDir, dispatcher, clock.Now, time.Hour)
+	restarted, err := newTestScheduler(cfg, stateDir, dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("restart: %v", err)
 	}
@@ -200,7 +208,7 @@ func TestSchedulerPassesStartIfMissingToDispatchRequest(t *testing.T) {
 	cfg := heartbeatTestConfig("")
 	cfg.Jobs[0].Runtime = agentruntime.OhMyCode
 	cfg.Jobs[0].StartIfMissing = true
-	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -218,14 +226,14 @@ func TestSchedulerPassesStartIfMissingToDispatchRequest(t *testing.T) {
 	}
 }
 
-func TestSchedulerPassesReceiverTargetToDispatchRequest(t *testing.T) {
+func TestSchedulerPassesPromptFileToDispatchRequest(t *testing.T) {
 	base := time.Date(2026, 7, 26, 1, 55, 0, 0, time.UTC)
 	clock := &testClock{now: base}
 	dispatcher := &recordingDispatcher{result: agentruntime.DispatchResult{Status: "queued"}}
 	cfg := heartbeatTestConfig("")
-	cfg.Jobs[0].Runtime = agentruntime.ClaudeDesktop
-	cfg.Jobs[0].Target = "burry"
-	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	cfg.Jobs[0].Text = ""
+	cfg.Jobs[0].PromptFile = "/work/tasks/radar.md"
+	scheduler, err := newTestScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -233,8 +241,8 @@ func TestSchedulerPassesReceiverTargetToDispatchRequest(t *testing.T) {
 	clock.Set(due)
 	scheduler.runDue(due)
 	waitForScheduler(t, scheduler, func(job JobStatus) bool { return job.LastDispatchStatus == "queued" })
-	if requests := dispatcher.Requests(); len(requests) != 1 || requests[0].Target != "burry" {
-		t.Fatalf("expected the burry target, got %#v", requests)
+	if requests := dispatcher.Requests(); len(requests) != 1 || requests[0].PromptFile != "/work/tasks/radar.md" {
+		t.Fatalf("expected the prompt file, got %#v", requests)
 	}
 }
 
@@ -247,7 +255,7 @@ func TestSchedulerPassesCompletionAwareDispatchSettings(t *testing.T) {
 	cfg.Jobs[0].DispatchMode = agentruntime.DispatchModeHeartbeatRun
 	cfg.Jobs[0].TimeoutSeconds = 480
 	cfg.Jobs[0].Text = ""
-	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -273,7 +281,7 @@ func TestSchedulerProfileIsIdempotentPersistsAndSkipsMissedRuns(t *testing.T) {
 	base := time.Date(2026, 7, 26, 0, 5, 0, 0, time.UTC)
 	clock := &testClock{now: base}
 	cfg := heartbeatTestConfig(statePath)
-	scheduler, err := newScheduler(cfg, "", &recordingDispatcher{}, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(cfg, "", &recordingDispatcher{}, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -297,7 +305,7 @@ func TestSchedulerProfileIsIdempotentPersistsAndSkipsMissedRuns(t *testing.T) {
 
 	restartTime := time.Date(2026, 7, 26, 4, 12, 0, 0, time.UTC)
 	clock.Set(restartTime)
-	restarted, err := newScheduler(cfg, "", &recordingDispatcher{}, clock.Now, time.Hour)
+	restarted, err := newTestScheduler(cfg, "", &recordingDispatcher{}, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("restart scheduler: %v", err)
 	}
@@ -314,9 +322,9 @@ func TestSchedulerProfileIsIdempotentPersistsAndSkipsMissedRuns(t *testing.T) {
 	}
 }
 
-func TestSchedulerInboundResetRequiresMatchingTarget(t *testing.T) {
+func TestSchedulerInboundResetOnlyAffectsTheAgent(t *testing.T) {
 	clock := &testClock{now: time.Date(2026, 7, 26, 0, 5, 0, 0, time.UTC)}
-	scheduler, err := newScheduler(heartbeatTestConfig(""), t.TempDir(), &recordingDispatcher{}, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(heartbeatTestConfig(""), t.TempDir(), &recordingDispatcher{}, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -324,17 +332,13 @@ func TestSchedulerInboundResetRequiresMatchingTarget(t *testing.T) {
 		t.Fatalf("SetProfile: %v", err)
 	}
 
-	scheduler.ResetForInbound(agentruntime.ClaudeDesktop, "main")
+	scheduler.ResetForInbound("other")
 	if got := scheduler.Status().Jobs[0].EffectiveProfile; got != "idle" {
-		t.Fatalf("mismatched runtime reset profile=%q", got)
-	}
-	scheduler.ResetForInbound(agentruntime.CodexAppCDP, "other")
-	if got := scheduler.Status().Jobs[0].EffectiveProfile; got != "idle" {
-		t.Fatalf("mismatched agent reset profile=%q", got)
+		t.Fatalf("another agent's message reset profile=%q", got)
 	}
 
 	clock.Set(time.Date(2026, 7, 26, 0, 7, 0, 0, time.UTC))
-	scheduler.ResetForInbound(agentruntime.CodexAppCDP, "main")
+	scheduler.ResetForInbound("main")
 	job := scheduler.Status().Jobs[0]
 	if job.EffectiveProfile != "" || job.EffectiveCron != "*/10 * * * *" || job.NextRunAt != "2026-07-26T00:10:00Z" {
 		t.Fatalf("matching inbound did not restore default cron: %#v", job)
@@ -356,7 +360,7 @@ func TestSchedulerSkipsOverlappingRun(t *testing.T) {
 	}
 	cfg := heartbeatTestConfig("")
 	cfg.Jobs[0].Cron = "* * * * *"
-	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -399,7 +403,7 @@ func TestSchedulerEnforcesGlobalCapacityAndRecordsFailure(t *testing.T) {
 	second := cfg.Jobs[0]
 	second.ID = "cloudbank-secondary"
 	cfg.Jobs = append(cfg.Jobs, second)
-	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -447,7 +451,7 @@ func TestSchedulerDoesNotRetryTerminalHeartbeatFailure(t *testing.T) {
 	}}
 	cfg := heartbeatTestConfig("")
 	cfg.Jobs[0].Cron = "* * * * *"
-	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -465,7 +469,7 @@ func TestSchedulerDoesNotRetryTerminalHeartbeatFailure(t *testing.T) {
 
 func TestSchedulerStatusDoesNotExposeInstruction(t *testing.T) {
 	clock := &testClock{now: time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)}
-	scheduler, err := newScheduler(heartbeatTestConfig(""), t.TempDir(), &recordingDispatcher{}, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(heartbeatTestConfig(""), t.TempDir(), &recordingDispatcher{}, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}
@@ -488,7 +492,7 @@ func TestSchedulerStopCancelsRetryBackoff(t *testing.T) {
 	}
 	cfg := heartbeatTestConfig("")
 	cfg.Jobs[0].Cron = "* * * * *"
-	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	scheduler, err := newTestScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
 	if err != nil {
 		t.Fatalf("newScheduler: %v", err)
 	}

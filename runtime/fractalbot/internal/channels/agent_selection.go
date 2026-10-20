@@ -3,6 +3,7 @@ package channels
 import (
 	"errors"
 	"fmt"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/protocol"
 	"regexp"
 	"sort"
 	"strings"
@@ -233,4 +234,17 @@ func agentNotAllowedMessage(err error, defaultAgent string, allowlist AgentAllow
 		return fmt.Sprintf("%s\nOnly the default agent is enabled.\nTip: configure agents.ohMyCode.allowedAgents to allow others, or use /agents.", message)
 	}
 	return fmt.Sprintf("%s\nTip: configure agents.ohMyCode.defaultAgent or agents.ohMyCode.allowedAgents.", message)
+}
+
+// withAgentSpecified records whether the sender named the agent (/agent or
+// /to), so the router applies pinned chats, /use and defaults only when they
+// did not.
+func withAgentSpecified(msg *protocol.Message, specified bool) *protocol.Message {
+	if msg == nil {
+		return nil
+	}
+	if data, ok := msg.Data.(map[string]interface{}); ok {
+		data["agent_specified"] = specified
+	}
+	return msg
 }
