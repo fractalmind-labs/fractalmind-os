@@ -1,113 +1,78 @@
 # FractalBot configuration (version 2). Reference: docs/config-v2.md
-#
-# Copy to ~/.config/fractalbot/config.yaml (Linux: $XDG_CONFIG_HOME/fractalbot,
-# Windows: %APPDATA%\FractalBot), store each secret with
-# `fractalbot secret set <name>`, then run `fractalbot config check`.
+# Secrets are not written here: store each one with `fractalbot secret set <name>`.
+# After editing, run `fractalbot config check`, then `fractalbot reload`.
 
 version: 2
-
-# Runtime data (inboxes, deduplication, polling offsets, schedule state).
-# Default: ~/Library/Application Support/FractalBot on macOS,
-# $XDG_STATE_HOME/fractalbot on Linux, %LOCALAPPDATA%\FractalBot on Windows.
-# dataDir: ~/.fractalbot
-
-# Default time zone for schedules (IANA name). Default: the system's.
+dataDir: ~/.fractalbot          # inboxes, dedupe, polling offsets, schedule state
 timezone: Asia/Shanghai
 
-gateway:
-  bind: 127.0.0.1
-  port: 18789
-  # allowedOrigins: ["http://localhost:3000"]
-
-# inbound:
-#   ackEnabled: true       # reply on the channel before delivering
-#   ackMessage: "处理中…"
-
-# Channels: how to reach each chat platform. A configured instance is enabled
-# and is referenced as type.name. Secret fields take secret:<name> only.
+# ── Channels: how to reach each chat platform ───────────────
 channels:
   feishu:
     assistant:
       appId: cli_xxxxxxxxxxxxxxxx
       appSecret: secret:feishu-assistant
-      # domain: lark           # Lark (international); default feishu
       allowedUsers: [ou_xxxxxxxxxxxxxxxx]
+    # domain: lark              # Lark (international); default feishu
 
+  # Shared by the agents below: messages that name no one go to `default`.
+  # Start a message with @researcher to pick an agent, /use researcher to
+  # switch the conversation, /who to see who receives it.
   telegram:
     main:
       botToken: secret:telegram-main
       allowedUsers: [123456789]
-      adminId: 123456789       # may use /adduser, /removeuser, /listusers
-      # mode: webhook          # default polling
-      # webhook:
-      #   listenAddr: 127.0.0.1:18790
-      #   publicUrl: https://bot.example.com/telegram/webhook
-      #   secretToken: secret:telegram-webhook
-      # Shared by two agents below: messages that pick no one go to default.
+      adminId: 123456789        # may run /adduser, /removeuser, /listusers
       default: assistant
-      # chats:
-      #   "-100123456789": researcher   # this group always goes to researcher
+      # chats: {"-100123456789": researcher}   # pin a group to one agent
 
-  # imessage:                  # macOS only; one account per Mac
+  # imessage:                   # macOS only; one account per Mac
   #   main:
   #     recipient: "+8600000000000"
-  #     pollIntervalSeconds: 5
+  #     default: assistant
 
   # slack:
-  #   main:
-  #     botToken: secret:slack-bot
-  #     appToken: secret:slack-app
-
+  #   main: {botToken: secret:slack-bot, appToken: secret:slack-app}
   # discord:
-  #   main:
-  #     token: secret:discord
+  #   main: {token: secret:discord}
 
-# Where this machine keeps secret values. Default store: auto (the OS
-# credential store; files on Linux without a session bus; environment
-# variables in containers).
-# secrets:
-#   store: auto
-#   overrides:
-#     telegram-main:
-#       command: [op, read, "op://Private/FractalBot Telegram/token"]
-
-# Runtimes: only tuning. A runtime is used when an agent names it.
+# Only needed when `codex` is not on the gateway's PATH.
 # runtimes:
-#   claudeDesktop: {deliveryTimeoutSeconds: 20}
-#   codexApp: {codex: ~/.local/bin/codex, deliveryTimeoutSeconds: 30}
-#   agentManager: {assignTimeoutSeconds: 90, startIfMissing: true}
+#   codexApp: {codex: ~/.local/bin/codex}
 
-# Agents: who receives. One runtime each.
+# ── Agents: who receives messages and schedules ─────────────
 agents:
-  assistant:
+  assistant:                    # a pinned Codex App thread
     workspace: ~/workspace/assistant
     runtime: codexApp
-    session: 00000000-0000-4000-8000-000000000000   # the Codex thread ID
+    session: 00000000-0000-4000-8000-000000000000
     channels: [feishu.assistant, telegram.main]
 
-  researcher:
+  researcher:                   # a Claude Desktop session (its start hook runs `fractalbot relay`)
     workspace: ~/workspace/researcher
-    runtime: claudeDesktop     # start `fractalbot relay` in its session
+    runtime: claudeDesktop
     channels: [telegram.main]
 
-  # builder:
+  # builder:                    # a tmux agent run by agent-manager
   #   workspace: ~/workspace/builder
   #   runtime: agentManager
-  #   session: main            # the agent-manager agent; default main
+  #   session: main
 
-# Schedules: when to wake an agent. The agent decides how it is delivered.
+# ── Schedules: when to wake which agent ─────────────────────
+# The gateway appends the commands for reporting the outcome and for
+# lowering or restoring the frequency; prompts describe only the task.
+# backoff lists the lower-frequency levels an agent may switch to when idle.
 schedules:
   maxConcurrent: 2
   jobs:
     assistant-heartbeat:
       agent: assistant
       cron: "0 * * * *"
-      # Levels the agent may switch to when there is nothing to do.
-      backoff:
-        idle: "0 */3 * * *"
-        deep-idle: "0 9 * * *"
-      resetOnInbound: true     # a message to this agent restores the cron
-      prompt: Read HEARTBEAT.md and follow it. If nothing needs attention, reply HEARTBEAT_OK.
+      backoff: {idle: "0 */3 * * *", deep-idle: "0 9 * * *"}
+      resetOnInbound: true      # a message to this agent restores hourly runs
+      prompt: |
+        Read HEARTBEAT.md and follow it.
+        If nothing needs attention, reply HEARTBEAT_OK.
 
     researcher-morning-report:
       agent: researcher
