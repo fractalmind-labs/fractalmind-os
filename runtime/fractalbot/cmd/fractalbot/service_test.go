@@ -10,12 +10,12 @@ import (
 )
 
 func TestServiceDefinitions(t *testing.T) {
-	s := serviceSpec{GOOS: "darwin", Home: "/Users/me", Executable: "/Users/me/bin/fractal bot", ConfigPath: "/Users/me/.config/fractalbot/config.yaml", LogDir: "/Users/me/data/logs"}
+	s := serviceSpec{GOOS: "darwin", Home: "/Users/me", Executable: "/Users/me/bin/fractal bot", ConfigPath: "/Users/me/.config/fractalbot/config.yaml", LogDir: "/Users/me/data/logs", Path: "/opt/homebrew/bin:/usr/bin"}
 	plist := s.definition()
 	if err := xml.Unmarshal([]byte(plist), new(struct{})); err != nil {
 		t.Fatalf("plist is not XML: %v", err)
 	}
-	if !strings.Contains(plist, "<string>/Users/me/bin/fractal bot</string>") || !strings.Contains(plist, "/Users/me/data/logs/fractalbot.log") {
+	if !strings.Contains(plist, "<string>/Users/me/bin/fractal bot</string>") || !strings.Contains(plist, "/Users/me/data/logs/fractalbot.log") || !strings.Contains(plist, "<string>/opt/homebrew/bin:/usr/bin</string>") {
 		t.Fatalf("plist: %s", plist)
 	}
 	if s.definitionPath() != "/Users/me/Library/LaunchAgents/ai.fractalmind.fractalbot.plist" {

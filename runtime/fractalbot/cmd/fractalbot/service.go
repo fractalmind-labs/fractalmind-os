@@ -35,6 +35,9 @@ type serviceSpec struct {
 	Executable string
 	ConfigPath string
 	LogDir     string
+	// Path is the PATH the gateway runs with, so runtimes find python3,
+	// tmux, codex and imsg as they do in the installing shell.
+	Path string
 }
 
 // definitionPath is where the current user's service definition lives.
@@ -66,6 +69,11 @@ func (s serviceSpec) definition() string {
     <string>--config</string>
     <string>` + x(s.ConfigPath) + `</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>` + x(s.Path) + `</string>
+  </dict>
+  <key>ProcessType</key><string>Background</string>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>10</integer>
@@ -80,6 +88,7 @@ Description=FractalBot gateway
 After=network-online.target
 
 [Service]
+Environment=` + strconv.Quote("PATH="+s.Path) + `
 ExecStart=` + strconv.Quote(s.Executable) + ` --config ` + strconv.Quote(s.ConfigPath) + `
 Restart=always
 RestartSec=10
@@ -110,7 +119,7 @@ func runServiceCommand(cfg *configv2.Config, args []string, out io.Writer) int {
 		return 1
 	}
 	home, _ := os.UserHomeDir()
-	spec := serviceSpec{GOOS: runtime.GOOS, Home: home, Executable: exe, ConfigPath: configPath, LogDir: filepath.Join(cfg.DataDir, "logs")}
+	spec := serviceSpec{GOOS: runtime.GOOS, Home: home, Executable: exe, ConfigPath: configPath, LogDir: filepath.Join(cfg.DataDir, "logs"), Path: os.Getenv("PATH")}
 	var cmdErr error
 	switch args[0] {
 	case "install":
