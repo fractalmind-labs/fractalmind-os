@@ -635,24 +635,51 @@ func (b *IMessageBot) initializeLastSeenMessageID(ctx context.Context) error {
 	return nil
 }
 
+// maxPollBackoff bounds the wait between failing history polls.
+const maxPollBackoff = 5 * time.Minute
+
 func (b *IMessageBot) pollLoop(ctx context.Context) {
 	defer b.wg.Done()
 
+	failures := 0
+	lastErr := ""
 	for {
+		delay := b.pollingInterval
 		if err := b.pollOnce(ctx); err != nil {
 			if ctx.Err() != nil {
 				return
 			}
-			log.Printf("imessage: history poll failed: %v", err)
+			// A persistent failure, such as Messages history without Full
+			// Disk Access, backs off and is logged once per distinct error
+			// instead of on every poll.
+			failures++
+			if msg := err.Error(); msg != lastErr {
+				log.Printf("imessage: history poll failed: %v (backing off)", err)
+				lastErr = msg
+			}
 			b.markError()
+			delay = pollBackoff(b.pollingInterval, failures)
+		} else if failures > 0 {
+			log.Printf("imessage: history poll recovered after %d failed attempt(s)", failures)
+			failures, lastErr = 0, ""
 		}
 
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(b.pollingInterval):
+		case <-time.After(delay):
 		}
 	}
+}
+
+// pollBackoff doubles the interval for each consecutive failure, up to
+// maxPollBackoff.
+func pollBackoff(interval time.Duration, failures int) time.Duration {
+	delay := interval
+	for i := 1; i < failures && delay < maxPollBackoff; i++ {
+		delay *= 2
+	}
+	return min(delay, maxPollBackoff)
 }
 
 func (b *IMessageBot) pollOnce(ctx context.Context) error {
