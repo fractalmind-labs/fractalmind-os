@@ -81,8 +81,39 @@ Requires Go 1.23 or newer.
 git clone https://github.com/fractalmind-labs/fractalmind-os.git
 cd fractalmind-os/runtime/fractalbot
 cp config.example.yaml config.yaml
+```
 
-# Edit config.yaml: channels, agents and schedules. Then store each secret.
+A minimal `config.yaml`: one Telegram bot delivering to a Claude Desktop session, woken every hour.
+
+```yaml
+version: 2
+
+# ── Channels: how to reach each chat platform ───────────────
+channels:
+  telegram:
+    main:
+      botToken: secret:telegram-main     # the value lives in this machine's keychain
+      allowedUsers: [123456789]
+
+# ── Agents: who receives messages and schedules ─────────────
+agents:
+  assistant:                    # a Claude Desktop session (its start hook runs `fractalbot relay`)
+    workspace: ~/workspace/assistant
+    runtime: claudeDesktop
+    channels: [telegram.main]
+
+# ── Schedules: when to wake which agent ─────────────────────
+schedules:
+  jobs:
+    assistant-heartbeat:
+      agent: assistant
+      cron: "0 * * * *"
+      prompt: Read HEARTBEAT.md and follow it.
+```
+
+Store the secret, check the configuration and start the gateway:
+
+```bash
 go run ./cmd/fractalbot --config ./config.yaml secret set telegram-main
 go run ./cmd/fractalbot --config ./config.yaml config check
 go run ./cmd/fractalbot --config ./config.yaml
