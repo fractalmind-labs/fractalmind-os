@@ -14,6 +14,9 @@ var tokenShapes = []*regexp.Regexp{
 	regexp.MustCompile(`\d{6,12}:[A-Za-z0-9_-]{30,}`),    // Telegram bot token, also inside ".../bot<token>/"
 	regexp.MustCompile(`\bxox[abprs]-[A-Za-z0-9-]{10,}`), // Slack token
 	regexp.MustCompile(`\bxapp-[A-Za-z0-9-]{10,}`),       // Slack app token
+	// Connection URLs that carry a short-lived credential, such as the
+	// Feishu SDK's websocket endpoint in its connect log.
+	regexp.MustCompile(`\b(access_key|ticket|token)=[A-Za-z0-9_.%-]{8,}`),
 }
 
 // minRegistered is the shortest value redacted by exact match; shorter values

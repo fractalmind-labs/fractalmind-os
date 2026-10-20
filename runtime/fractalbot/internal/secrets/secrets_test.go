@@ -185,3 +185,10 @@ func TestRedactor(t *testing.T) {
 		t.Fatalf("unexpected redaction: %s", got)
 	}
 }
+
+func TestRedactorMasksURLCredentials(t *testing.T) {
+	got := NewRedactor().Redact("connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&access_key=c7c9371af34e1adf47bd05bed627e020&service_id=1&ticket=0f3a9c2e-1b2d")
+	if strings.Contains(got, "c7c9371af34e1adf") || strings.Contains(got, "0f3a9c2e") || !strings.Contains(got, "fpid=493") {
+		t.Fatalf("redacted: %s", got)
+	}
+}

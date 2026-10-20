@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -171,6 +172,8 @@ func runGateway(ctx context.Context, cfg *configv2.Config, out io.Writer, logger
 	redactor := secrets.NewRedactor()
 	logger.SetOutput(redactor.Writer(out))
 	log.SetOutput(redactor.Writer(log.Writer()))
+	// Channel SDKs log to standard output with their own loggers.
+	defer redactStdout(redactor)()
 	resolver, err := secrets.NewResolver(cfg.Secrets, cfg.DataDir, v2CheckOptions().Secrets)
 	if err != nil {
 		logger.Printf("failed to load secrets: %v", err)
@@ -743,4 +746,31 @@ func slackBotTokenFromConfig(cfg *configv2.Config) (string, error) {
 		return res.Value, nil
 	}
 	return "", fmt.Errorf("a configured Slack channel is required for Slack file download")
+}
+
+// redactStdout routes standard output through the redactor line by line and
+// returns a function that restores it.
+func redactStdout(redactor *secrets.Redactor) func() {
+	original := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		return func() {}
+	}
+	os.Stdout = w
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		out := redactor.Writer(original)
+		scanner := bufio.NewScanner(r)
+		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+		for scanner.Scan() {
+			_, _ = out.Write(append(scanner.Bytes(), '\n'))
+		}
+	}()
+	return func() {
+		os.Stdout = original
+		_ = w.Close()
+		<-done
+		_ = r.Close()
+	}
 }
