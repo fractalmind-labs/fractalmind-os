@@ -138,6 +138,10 @@ func runWithContext(ctx context.Context, args []string, out io.Writer) int {
 		logger.SetFlags(log.LstdFlags | log.Lshortfile)
 	}
 
+	if isV2Command(fs.Args()) {
+		return runV2Command(*configPath, fs.Args(), out)
+	}
+
 	cfg, err := config.LoadConfig(config.ResolveConfigPath(*configPath))
 	if err != nil {
 		logger.Printf("failed to load config: %v", err)

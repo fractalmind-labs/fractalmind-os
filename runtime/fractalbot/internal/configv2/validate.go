@@ -58,8 +58,16 @@ func (c *Config) normalize(p Platform) error {
 	if c.Gateway.Port == 0 {
 		c.Gateway.Port = defaultPort
 	}
-	if c.Runtimes.CodexApp.Codex == "" {
+	switch codex := c.Runtimes.CodexApp.Codex; {
+	case codex == "":
 		c.Runtimes.CodexApp.Codex = "codex"
+	case strings.ContainsAny(codex, `/\~`):
+		// A path rather than a name to look up on PATH.
+		if expanded, err := p.ExpandPath(codex); err != nil {
+			ps.add("runtimes.codexApp.codex: %v", err)
+		} else {
+			c.Runtimes.CodexApp.Codex = expanded
+		}
 	}
 	if c.Runtimes.AgentManager.Script == "" {
 		c.Runtimes.AgentManager.Script = DefaultAgentManagerScript
