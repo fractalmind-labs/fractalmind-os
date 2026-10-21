@@ -33,6 +33,12 @@ contacts the configured Sui RPC directly. That RPC must support browser
 gRPC-Web requests and permit the preview origin. The production bundle has a
 CSP restricting scripts and styles to this origin; development uses Vite HMR.
 
+For an isolated Host-access UI preview, run `npm run dev` and open
+`http://127.0.0.1:4189/tests/fixtures/host-access.html`. Its success, fee-review,
+network-failure and unknown-outcome scenarios use simulated chain/native
+operations and never sign or broadcast. The fixture is excluded from the
+production build.
+
 ## New device setup
 
 The native App sets up a new device instead of browsing read-only: without

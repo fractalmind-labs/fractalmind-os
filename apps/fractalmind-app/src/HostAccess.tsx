@@ -6,7 +6,7 @@ import {
   type SelfPayFeeQuote,
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
-import { ChainReadSession } from "./chain";
+import { ChainReadSession, ChainReadError } from "./chain";
 import {
   queryDeviceTransactionHistory,
   TransactionHistoryError,
@@ -30,8 +30,10 @@ import {
   HostAdmission,
   HostAdmissionError,
   hostDirectory,
+  hostEntries,
   coordinatorInput,
   type HostDirectory,
+  type HostEntries,
   type HostOperation,
   type HostInvite,
 } from "./host-admission";
@@ -63,7 +65,9 @@ export default function HostAccess({
   request?: { kind: HostOperation["kind"]; target?: string; n: number } | null;
 }) {
   const [open, setOpen] = useState(false),
-    [directory, setDirectory] = useState<HostDirectory | null>(null);
+    [directory, setDirectory] = useState<HostEntries | null>(null);
+  const [management, setManagement] = useState<HostDirectory | null>(null);
+  const [phase, setPhase] = useState("loading");
   const [operation, setOperation] = useState<HostOperation["kind"]>("invite"),
     [targetId, setTargetId] = useState("");
   const [endpoint, setEndpoint] = useState(""),
@@ -152,7 +156,8 @@ export default function HostAccess({
   }, [code, invite?.id, directory?.chainIdentifier]);
   function issue(e: unknown) {
     setError(
-      e instanceof HostAdmissionError ||
+      e instanceof ChainReadError ||
+        e instanceof HostAdmissionError ||
         e instanceof TransactionHistoryError ||
         e instanceof NativeDeviceError ||
         e instanceof DeviceIdentityError ||
@@ -161,9 +166,10 @@ export default function HostAccess({
         : "operation_failed",
     );
   }
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<void>, nextPhase = "loading") {
     if (flight.current) return;
     flight.current = true;
+    setPhase(nextPhase);
     setBusy(true);
     setError(null);
     try {
@@ -175,21 +181,25 @@ export default function HostAccess({
       if (mounted.current) setBusy(false);
     }
   }
-  async function refresh() {
-    // Hide the prior directory first: stale invite status must not appear usable.
-    if (mounted.current) setDirectory(null);
-    const value = await hostDirectory(
-      new ChainReadSession(profile),
-      organizationId,
-    );
+  async function refresh(includeHistory = advanced || !!invite) {
+    // A fresh entry check is enough for discovery. History is loaded only for
+    // management; submission always rechecks current authority and its target.
+    setDirectory(null);
+    setManagement(null);
+    const chain = new ChainReadSession(profile);
+    const full = includeHistory
+      ? await hostDirectory(chain, organizationId)
+      : null;
+    const value = full ?? (await hostEntries(chain, organizationId));
     if (!mounted.current) return;
     setDirectory(value);
+    if (full) setManagement(full);
     const usable = value.bindings.filter((b) => !b.revoked);
     setBindingId((current) =>
       usable.some((b) => b.id === current) ? current : (usable[0]?.id ?? ""),
     );
-    if (invite) {
-      const current = value.invitations.find((i) => i.id === invite.id);
+    if (invite && full) {
+      const current = full.invitations.find((i) => i.id === invite.id);
       setInvite(current ?? null);
       if (
         !current ||
@@ -200,30 +210,51 @@ export default function HostAccess({
         setCode(null);
     }
   }
+  useEffect(() => {
+    if (open && advanced && !management && !busy && !error)
+      void run(() => refresh(true));
+  }, [open, advanced, !!management, busy, error]);
   function start(kind?: HostOperation["kind"], target = "") {
     setOpen(true);
     setError(null);
-    try {
-      const stored = JSON.parse(localStorage.getItem(attemptKey) ?? "null");
-      if (
-        stored &&
-        uuid.test(stored.id) &&
-        id.test(stored.grantId) &&
-        typeof stored.deviceProfile === "string" &&
-        kinds.includes(stored.kind)
-      ) {
-        setAttempt(stored);
-        setDeviceProfile(stored.deviceProfile);
-        setOperation(stored.kind);
-      } else if (kind) edit(kind, target);
-      setAdvanced(!!kind && kind !== "invite");
-    } catch {
-      setError("journal_unavailable");
-    }
+    setDirectory(null);
+    setManagement(null);
     void run(async () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem(attemptKey) ?? "null");
+        if (
+          stored &&
+          uuid.test(stored.id) &&
+          id.test(stored.grantId) &&
+          typeof stored.deviceProfile === "string" &&
+          kinds.includes(stored.kind)
+        ) {
+          setAttempt(stored);
+          setDeviceProfile(stored.deviceProfile);
+          setOperation(stored.kind);
+        } else if (kind) edit(kind, target);
+        setAdvanced(!!kind && kind !== "invite");
+      } catch (cause) {
+        throw new TransactionPreflightError(
+          "journal_unavailable",
+          "Cannot read the current Host attempt.",
+          { cause },
+        );
+      }
       setHistory(readHostTransactionHistory(localStorage, attemptKey));
-      await refresh();
+      await refresh(!!kind && kind !== "invite");
     });
+  }
+  function transactionJournal() {
+    try {
+      return (journal.current ??= new IndexedDbTransactionJournal());
+    } catch (cause) {
+      throw new TransactionPreflightError(
+        "journal_unavailable",
+        "Cannot open the local transaction journal.",
+        { cause },
+      );
+    }
   }
   async function load(value: Attempt) {
     if (session.current) return session.current;
@@ -232,13 +263,13 @@ export default function HostAccess({
       transport,
       value.deviceProfile,
     );
-    journal.current ??= new IndexedDbTransactionJournal();
+    const deviceJournal = transactionJournal();
     session.current = new HostAdmission(
       new ChainReadSession(profile),
       device,
       value.grantId,
       organizationId,
-      journal.current,
+      deviceJournal,
     );
     return session.current;
   }
@@ -268,15 +299,23 @@ export default function HostAccess({
     };
     // Only technical correlation and public identifiers. Never the invite code,
     // entropy, public-key private counterpart or transaction payload.
-    localStorage.setItem(attemptKey, JSON.stringify(value));
+    try {
+      localStorage.setItem(attemptKey, JSON.stringify(value));
+    } catch (cause) {
+      throw new TransactionPreflightError(
+        "journal_unavailable",
+        "Cannot save the current Host attempt.",
+        { cause },
+      );
+    }
     setAttempt(value);
-    journal.current ??= new IndexedDbTransactionJournal();
+    const deviceJournal = transactionJournal();
     session.current = new HostAdmission(
       chain,
       device,
       value.grantId,
       organizationId,
-      journal.current,
+      deviceJournal,
     );
     return value;
   }
@@ -302,23 +341,30 @@ export default function HostAccess({
     setOutcome(value);
     setQuote(null);
     if (value.status !== "confirmed") return;
+    setPhase("confirming");
     if (kind === "invite") {
       const result = await controller.createdInvite(value);
       if (mounted.current) {
+        setDirectory(result.directory);
+        setManagement(result.directory);
         setInvite(result.invite);
         setCode(result.code);
       }
-    } else if (!(await controller.awaitVisible(value)))
-      throw new HostAdmissionError("sync_pending");
-    await refresh();
+    } else {
+      if (!(await controller.awaitVisible(value)))
+        throw new HostAdmissionError("sync_pending");
+      await refresh();
+    }
     onChanged();
   }
   async function prepare(quick?: HostOperation) {
+    setPhase("device");
     const op = quick ?? input();
     const value = attempt ?? (await newAttempt(op.kind)),
       controller = await load(value);
     if (value.kind !== op.kind) throw new HostAdmissionError("invalid_input");
     // The one-click invitation's button is its confirmation.
+    setPhase("authority");
     const result = await controller.prepare(
       op,
       value.id,
@@ -326,9 +372,10 @@ export default function HostAccess({
     );
     if (!mounted.current) return;
     if ("status" in result) await receive(result, controller, value.kind);
-    else if (quick && quickInviteWithinLimits(result))
+    else if (quick && quickInviteWithinLimits(result)) {
+      setPhase("submitting");
       await receive(await controller.submit(result), controller, value.kind);
-    else setQuote(result);
+    } else setQuote(result);
   }
   /** Defaults for a remote Host: 1-hour code, 90-day membership with matching
    * observation, and join Gas placed on the invitation key. */
@@ -346,13 +393,13 @@ export default function HostAccess({
     if (!attempt) return;
     setHistoricalResult(null);
     const chain = new ChainReadSession(profile);
-    journal.current ??= new IndexedDbTransactionJournal();
+    const deviceJournal = transactionJournal();
     const result = await queryDeviceTransactionHistory(
       chain,
       organizationId,
       attempt.grantId,
       `host:${attempt.id}`,
-      journal.current,
+      deviceJournal,
     );
     if (!mounted.current) return;
     if (result) {
@@ -408,13 +455,13 @@ export default function HostAccess({
     if (!attempt || !historicalResult?.historicalTerminal) return;
     // Recheck the original technical row and exact notFound response at the
     // explicit action. Unknown/pending/error paths cannot release the form.
-    journal.current ??= new IndexedDbTransactionJournal();
+    const deviceJournal = transactionJournal();
     const result = await queryDeviceTransactionHistory(
       new ChainReadSession(profile),
       organizationId,
       attempt.grantId,
       `host:${attempt.id}`,
-      journal.current,
+      deviceJournal,
     );
     if (!mounted.current) return;
     if (!result?.historicalTerminal || result.outcome.status !== "unknown") {
@@ -441,13 +488,13 @@ export default function HostAccess({
       delete next[value.attempt.id];
       return next;
     });
-    journal.current ??= new IndexedDbTransactionJournal();
+    const deviceJournal = transactionJournal();
     const result = await queryDeviceTransactionHistory(
       new ChainReadSession(profile),
       organizationId,
       value.attempt.grantId,
       `host:${value.attempt.id}`,
-      journal.current,
+      deviceJournal,
     );
     if (!mounted.current) return;
     if (!result || result.outcome.digest !== value.digest)
@@ -478,10 +525,61 @@ export default function HostAccess({
   }
   const locked = busy || !!quote || !!outcome || !!attempt;
   const ready = isTauri();
+  const phases: Record<string, [string, string]> = {
+    loading: ["正在读取组织入口…", "Loading organization entries…"],
+    device: [
+      "正在检查本机设备和管理权限…",
+      "Checking this device and its management grant…",
+    ],
+    authority: [
+      "正在核验权限并估算费用…",
+      "Verifying authority and estimating fees…",
+    ],
+    submitting: [
+      "正在签名并提交，请留意系统授权提示…",
+      "Signing and submitting; check for a system authorization prompt…",
+    ],
+    confirming: [
+      "交易已确认，正在读取接入串…",
+      "Transaction confirmed; reading the access string…",
+    ],
+    querying: [
+      "正在查询上次操作的提交状态…",
+      "Checking whether the previous operation was submitted…",
+    ],
+  };
   const messages: Record<string, [string, string]> = {
     historical_invite_code: [
       "原交易已确认。此历史查询不恢复一次性邀请码；请在当前公开邀请列表核对状态，遗失的未使用邀请可撤销。",
       "The original transaction is confirmed. This historical query cannot recover the one-use code. Review the public invitation list and revoke any unused invitation whose code was lost.",
+    ],
+    clipboard_unavailable: [
+      "复制失败，请手动选中并复制接入串。",
+      "Copy failed. Select and copy the access string manually.",
+    ],
+    locked: [
+      "本机设备已锁定，请先解锁 App，再查询上次操作状态。",
+      "This device is locked. Unlock the App, then check the previous operation.",
+    ],
+    rpc_unavailable: [
+      "网络读取失败，请检查连接后重试；已有操作请先查询提交状态。",
+      "Network read failed. Check the connection and retry; check any existing operation before starting another.",
+    ],
+    simulation_failed: [
+      "交易预演未通过，尚未提交。请核对管理权限和余额。",
+      "Transaction simulation failed; nothing was submitted. Check management authority and funds.",
+    ],
+    stale_quote: [
+      "费用报价已过期，请取消后重新报价。",
+      "The fee quote expired. Cancel it and request a fresh quote.",
+    ],
+    signature_not_obtained: [
+      "未取得签名，尚未发送。请检查设备解锁或系统授权，再查询原交易。",
+      "No signature was obtained. Check device unlock or system authorization, then query the original transaction.",
+    ],
+    journal_unavailable: [
+      "无法读取本机交易记录，请先恢复本机存储；不要重复生成。",
+      "Local transaction history is unavailable. Restore local storage before generating again.",
     ],
     needs_funds: [
       "管理设备的 SUI 不足，请先充值后重新报价。",
@@ -559,61 +657,71 @@ export default function HostAccess({
               ×
             </button>
           </header>
-          <ol className="creation-steps">
-            <li>{t("生成接入串", "Create an access string")}</li>
-            <li>{t("在新主机粘贴", "Paste it on the new Host")}</li>
-            <li>{t("核对指纹并入组", "Compare fingerprint & join")}</li>
-          </ol>
-          <p>
-            {t("当前组织", "Organization")}:{" "}
-            <code className="long-id">{organizationId}</code>
+          <p className="muted">
+            {t(
+              "生成接入串，在新主机上粘贴即可。仅可使用一次，1 小时内有效。",
+              "Create an access string and paste it on the new Host. Use once within 1 hour.",
+            )}
           </p>
           {!ready && (
             <p className="warn">
               {t(
-                "请在原生 App 中使用已授权的管理设备创建邀请码。网页可以读取链上状态。",
-                "Use an authorized management device in the native App to create invitations. The browser can read chain state.",
+                "请在原生 App 中使用已授权的管理设备生成。",
+                "Use an authorized management device in the native App to generate an access string.",
               )}
             </p>
           )}
-          <p>
-            {t(
-              "入口绑定与成员资格由 Sui 校验；Coordinator 负责路由，envd 保存独立 Host 密钥并执行。资格有效不代表在线。",
-              "Sui validates entry bindings and membership. The Coordinator routes; envd holds independent Host keys and executes. Membership does not prove connectivity.",
-            )}
-          </p>
-          {ready && directory && !attempt && !quote && !outcome && (
-            <section className="panel" aria-labelledby="host-quick-title">
-              <h3 id="host-quick-title">
-                {t("接入新主机", "Connect a new Host")}
-              </h3>
-              <p>
-                {t(
-                  "生成一个接入串，在新主机上运行 fractalmind-envd join 并粘贴即可。接入串 1 小时内有效，只能用一次。",
-                  "Create an access string, then run fractalmind-envd join on the new Host and paste it. It works once, within 1 hour.",
-                )}
-              </p>
+          {busy && (
+            <p role="status" className="host-progress" aria-live="polite">
+              {t(...phases[phase])}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="warn">
+              {messages[error]
+                ? t(...messages[error])
+                : `${t("操作未完成，请查询上次操作状态后重试", "Operation incomplete. Check the previous operation before retrying")} (${error})`}
+            </p>
+          )}
+          {ready && !quote && !outcome && (
+            <section
+              className="host-quick"
+              aria-label={t("生成接入串", "Create access string")}
+            >
               <p className="muted">
                 {t(
                   "本设备支付 0.05 SUI 给新主机作入组 Gas，外加少量链上手续费；手续费超过 0.01 SUI 时会先让你确认。新主机获得成员资格和有限观察权限，不含执行权限。",
                   "This device pays 0.05 SUI of join Gas for the new Host plus a small network fee; fees above 0.01 SUI ask you first. The Host gets membership and limited observation, not execution.",
                 )}
               </p>
-              {bindingId ? (
-                <button
-                  disabled={busy}
-                  onClick={() => {
-                    edit("invite");
-                    void run(() => prepare(quickInvite()));
-                  }}
-                >
-                  {t("生成接入串", "Create access string")}
+              <button
+                className="host-primary primary"
+                disabled={busy || (!attempt && !bindingId)}
+                onClick={() => {
+                  if (attempt) {
+                    void run(query, "querying");
+                    return;
+                  }
+                  edit("invite");
+                  void run(() => prepare(quickInvite()), "device");
+                }}
+              >
+                {busy
+                  ? t("正在处理…", "Working…")
+                  : attempt
+                    ? t("查询上次操作", "Check previous operation")
+                    : t("生成接入串", "Create access string")}
+              </button>
+              {!busy && !directory && (
+                <button onClick={() => void run(() => refresh())}>
+                  {t("重新加载", "Retry loading")}
                 </button>
-              ) : (
+              )}
+              {!busy && directory && !bindingId && (
                 <p className="warn">
                   {t(
-                    "组织还没有可用入口，请先在“高级”里登记 Coordinator。",
-                    "The organization has no usable entry yet. Register a Coordinator under Advanced first.",
+                    "尚无可用入口，请在高级设置中登记 Coordinator。",
+                    "No usable entry. Register a Coordinator in Advanced settings.",
                   )}
                 </p>
               )}
@@ -637,6 +745,7 @@ export default function HostAccess({
                     void navigator.clipboard
                       .writeText(access)
                       .then(() => setCopied(true))
+                      .catch(() => setError("clipboard_unavailable"))
                   }
                 >
                   {copied ? t("已复制", "Copied") : t("复制", "Copy")}
@@ -678,17 +787,154 @@ export default function HostAccess({
               </p>
             </section>
           )}
+          {quote && (
+            <section
+              className="panel"
+              aria-label={t("费用确认", "Fee confirmation")}
+            >
+              <h3>{t("确认链上交易费用", "Confirm transaction fee")}</h3>
+              <p>
+                {t(
+                  "核对费用，确认后才会提交。",
+                  "Review the fee and confirm before submission.",
+                )}
+              </p>
+              <p>
+                {t("付款地址", "Payer")}:{" "}
+                <code className="long-id">{quote.sender}</code>
+              </p>
+              <p>
+                {t("当前余额", "Balance")}: {quote.balance} MIST
+              </p>
+              <p>
+                {t("预计费用", "Estimated Gas")}: {quote.estimatedGas} MIST ·{" "}
+                {t("Gas 上限", "Gas limit")}: {quote.gasBudget} MIST
+              </p>
+              <p>
+                {t("报价到期", "Quote expiry")}:{" "}
+                {new Date(quote.expiresAtMs).toLocaleTimeString()}
+              </p>
+              <div className="host-actions">
+                <button
+                  disabled={busy || now >= quote.expiresAtMs}
+                  onClick={() =>
+                    void run(async () => {
+                      setPhase("submitting");
+                      if (session.current && attempt)
+                        await receive(
+                          await session.current.submit(quote),
+                          session.current,
+                          attempt.kind,
+                        );
+                    })
+                  }
+                >
+                  {t("确认支付并提交", "Confirm payment & submit")}
+                </button>
+                <button disabled={busy} onClick={cancelQuote}>
+                  {t("取消报价", "Cancel quote")}
+                </button>
+              </div>
+            </section>
+          )}
+          {attempt && !busy && !quote && (
+            <section className="panel">
+              {!outcome && !quote && !busy && (
+                <p>
+                  {t(
+                    "上次操作尚待核对。先查询是否已提交，再开始新操作。",
+                    "A previous operation needs checking. Verify whether it was submitted before starting another.",
+                  )}
+                </p>
+              )}
+              <details>
+                <summary>{t("交易详情", "Transaction details")}</summary>
+                <code className="long-id">{attempt.id}</code>
+              </details>
+              {outcome && (
+                <>
+                  <p>
+                    {t("交易结果", "Transaction result")}:{" "}
+                    {outcome.status === "confirmed"
+                      ? t("已成功", "Confirmed")
+                      : outcome.status === "failed"
+                        ? t("已失败", "Failed")
+                        : t(
+                            "结果未知，仅查询原交易",
+                            "Unknown; query the original transaction",
+                          )}
+                    <br />
+                    <code className="long-id">{outcome.digest}</code>
+                  </p>
+                  {outcome.actualGas !== undefined && (
+                    <p>
+                      {t("实际费用", "Actual Gas")}: {outcome.actualGas} MIST
+                    </p>
+                  )}
+                </>
+              )}
+              <div className="host-actions">
+                <button
+                  disabled={busy}
+                  onClick={() => void run(query, "querying")}
+                >
+                  {t("查询原交易", "Query original transaction")}
+                </button>
+                <button
+                  disabled={
+                    busy ||
+                    outcome?.status === "unknown" ||
+                    (!outcome && error !== "not_submitted")
+                  }
+                  onClick={reset}
+                >
+                  {t("开始新操作", "Start new operation")}
+                </button>
+              </div>
+              {outcome?.status === "unknown" &&
+                historicalResult?.historicalTerminal && (
+                  <>
+                    <p className="warn">
+                      {t(
+                        "技术日志此前记录",
+                        "Previously recorded in the technical journal",
+                      )}
+                      :{" "}
+                      {historicalResult.historicalTerminal.status ===
+                      "confirmed"
+                        ? t("已成功", "Confirmed")
+                        : t("已失败", "Failed")}
+                      .
+                      {t(
+                        "当前节点无法返回原始回执，当前查询仍为未知。可保留这条历史后明确开始独立新操作，不会重发原交易。",
+                        "The current node cannot return the original receipt; this query remains unknown. Keep this history before explicitly starting an independent operation. The original transaction will not be resent.",
+                      )}
+                    </p>
+                    <button
+                      disabled={busy}
+                      onClick={() => void run(startIndependent)}
+                    >
+                      {t(
+                        "保留历史并开始独立操作",
+                        "Keep history & start independent operation",
+                      )}
+                    </button>
+                  </>
+                )}
+            </section>
+          )}
           <details
             className="panel"
             open={advanced}
             onToggle={(e) => setAdvanced(e.currentTarget.open)}
           >
             <summary>
-              {t(
-                "高级：登记入口、自定义邀请、撤销",
-                "Advanced: entries, custom invitations, revocation",
-              )}
+              {t("高级设置与历史记录", "Advanced settings & history")}
             </summary>
+            <p className="muted">
+              {t("当前组织", "Organization")}:{" "}
+              <code className="long-id">{organizationId}</code>
+            </p>
             {directory && (
               <section className="panel">
                 <h3>{t("组织入口", "Organization entries")}</h3>
@@ -725,7 +971,10 @@ export default function HostAccess({
                   >
                     {t("创建单次邀请", "Create one-use invite")}
                   </button>
-                  <button disabled={busy} onClick={() => void run(refresh)}>
+                  <button
+                    disabled={busy}
+                    onClick={() => void run(() => refresh(true))}
+                  >
                     {t("刷新链上状态", "Refresh chain state")}
                   </button>
                 </div>
@@ -929,329 +1178,201 @@ export default function HostAccess({
                   !!quote ||
                   (operation === "invite" && !bindingId)
                 }
-                onClick={() => void run(prepare)}
+                onClick={() => void run(() => prepare())}
               >
                 {t("核验管理权限并报价", "Verify management authority & quote")}
               </button>
             )}
-          </details>
-          {quote && (
-            <section
-              className="panel"
-              aria-label={t("费用确认", "Fee confirmation")}
-            >
-              <h3>{t("确认链上交易费用", "Confirm transaction fee")}</h3>
-              <p>
-                {t("付款地址", "Payer")}:{" "}
-                <code className="long-id">{quote.sender}</code>
-              </p>
-              <p>
-                {t("当前余额", "Balance")}: {quote.balance} MIST
-              </p>
-              <p>
-                {t("预计费用", "Estimated Gas")}: {quote.estimatedGas} MIST ·{" "}
-                {t("Gas 上限", "Gas limit")}: {quote.gasBudget} MIST
-              </p>
-              <p>
-                {t("报价到期", "Quote expiry")}:{" "}
-                {new Date(quote.expiresAtMs).toLocaleTimeString()}
-              </p>
-              <div className="host-actions">
-                <button
-                  disabled={busy || now >= quote.expiresAtMs}
-                  onClick={() =>
-                    void run(async () => {
-                      if (session.current && attempt)
-                        await receive(
-                          await session.current.submit(quote),
-                          session.current,
-                          attempt.kind,
-                        );
-                    })
-                  }
-                >
-                  {t("确认支付并提交", "Confirm payment & submit")}
-                </button>
-                <button disabled={busy} onClick={cancelQuote}>
-                  {t("取消报价", "Cancel quote")}
-                </button>
-              </div>
-            </section>
-          )}
-          {attempt && (
-            <section className="panel">
-              <p>
-                {t("当前尝试", "Current attempt")}: <code>{attempt.id}</code>
-              </p>
-              {outcome && (
-                <>
-                  <p>
-                    {t("交易结果", "Transaction result")}:{" "}
-                    {outcome.status === "confirmed"
-                      ? t("已成功", "Confirmed")
-                      : outcome.status === "failed"
-                        ? t("已失败", "Failed")
-                        : t(
-                            "结果未知，仅查询原交易",
-                            "Unknown; query the original transaction",
-                          )}
-                    <br />
-                    <code className="long-id">{outcome.digest}</code>
-                  </p>
-                  {outcome.actualGas !== undefined && (
-                    <p>
-                      {t("实际费用", "Actual Gas")}: {outcome.actualGas} MIST
-                    </p>
+            {history.length > 0 && (
+              <details className="panel">
+                <summary>
+                  {t("历史 Host 操作", "Historical Host operations")} ·{" "}
+                  {history.length}
+                </summary>
+                <p>
+                  {t(
+                    "这里只保留公开交易追踪；当前操作使用新的请求与明确授权。",
+                    "These are public transaction references. Current operations use new requests and explicit authorization.",
                   )}
-                </>
-              )}
-              <div className="host-actions">
-                <button disabled={busy} onClick={() => void run(query)}>
-                  {t("查询原交易", "Query original transaction")}
-                </button>
-                <button
-                  disabled={
-                    busy ||
-                    outcome?.status === "unknown" ||
-                    (!outcome && error !== "not_submitted")
-                  }
-                  onClick={reset}
-                >
-                  {t("开始新操作", "Start new operation")}
-                </button>
-              </div>
-              {outcome?.status === "unknown" &&
-                historicalResult?.historicalTerminal && (
-                  <>
-                    <p className="warn">
+                </p>
+                {history.map((value) => (
+                  <section key={value.attempt.id}>
+                    <p>
+                      {value.attempt.kind} · <code>{value.attempt.id}</code>
+                    </p>
+                    <code className="long-id">{value.digest}</code>
+                    <p>
                       {t(
                         "技术日志此前记录",
                         "Previously recorded in the technical journal",
                       )}
                       :{" "}
-                      {historicalResult.historicalTerminal.status ===
-                      "confirmed"
+                      {value.previousStatus === "confirmed"
                         ? t("已成功", "Confirmed")
-                        : t("已失败", "Failed")}
-                      .
-                      {t(
-                        "当前节点无法返回原始回执，当前查询仍为未知。可保留这条历史后明确开始独立新操作，不会重发原交易。",
-                        "The current node cannot return the original receipt; this query remains unknown. Keep this history before explicitly starting an independent operation. The original transaction will not be resent.",
-                      )}
+                        : t("已失败", "Failed")}{" "}
+                      · {value.actualGas} MIST
+                    </p>
+                    <p>
+                      {t("当前回执查询", "Current receipt query")}:{" "}
+                      {historyResults[value.attempt.id]?.status ??
+                        t("未查询", "Not queried")}
                     </p>
                     <button
                       disabled={busy}
-                      onClick={() => void run(startIndependent)}
+                      onClick={() => void run(() => queryHistory(value))}
                     >
-                      {t(
-                        "保留历史并开始独立操作",
-                        "Keep history & start independent operation",
-                      )}
+                      {t("只读查询此原交易", "Query this original transaction")}
                     </button>
-                  </>
-                )}
-            </section>
-          )}
-          {history.length > 0 && (
-            <details className="panel">
-              <summary>
-                {t("历史 Host 操作", "Historical Host operations")} ·{" "}
-                {history.length}
-              </summary>
-              <p>
-                {t(
-                  "这里只保留公开交易追踪；当前操作使用新的请求与明确授权。",
-                  "These are public transaction references. Current operations use new requests and explicit authorization.",
-                )}
-              </p>
-              {history.map((value) => (
-                <section key={value.attempt.id}>
-                  <p>
-                    {value.attempt.kind} · <code>{value.attempt.id}</code>
-                  </p>
-                  <code className="long-id">{value.digest}</code>
-                  <p>
-                    {t(
-                      "技术日志此前记录",
-                      "Previously recorded in the technical journal",
-                    )}
-                    :{" "}
-                    {value.previousStatus === "confirmed"
-                      ? t("已成功", "Confirmed")
-                      : t("已失败", "Failed")}{" "}
-                    · {value.actualGas} MIST
-                  </p>
-                  <p>
-                    {t("当前回执查询", "Current receipt query")}:{" "}
-                    {historyResults[value.attempt.id]?.status ??
-                      t("未查询", "Not queried")}
-                  </p>
-                  <button
-                    disabled={busy}
-                    onClick={() => void run(() => queryHistory(value))}
-                  >
-                    {t("只读查询此原交易", "Query this original transaction")}
-                  </button>
-                </section>
-              ))}
-            </details>
-          )}
-          {invite && (
-            <section className="panel">
-              <h3>{t("Host 接入指导", "Host onboarding guide")}</h3>
-              <p>
-                {t("链上邀请", "On-chain invitation")}:{" "}
-                <code className="long-id">{invite.id}</code> · {status(invite)}
-              </p>
-              {code && inviteUsable ? (
-                <>
-                  <label>
-                    {t(
-                      "仅本次窗口可用的一次性邀请码",
-                      "One-use invitation available only in this session",
-                    )}
-                    <textarea
-                      readOnly
-                      value={code}
-                      spellCheck={false}
-                      autoComplete="off"
-                      aria-label={t(
-                        "Host 一次性邀请码",
-                        "One-use Host invitation",
-                      )}
-                    />
-                  </label>
-                  <p>
-                    {t(
-                      "关闭、刷新或重启后无法找回此码；链上只保存证明公钥。遗失后撤销未使用邀请，再生成新的。",
-                      "Closing, reloading or restarting loses this code. Only the proof public key is on chain. Revoke an unused invitation before creating a replacement.",
-                    )}
-                  </p>
-                </>
-              ) : (
-                <p className="warn">
-                  {t(
-                    "本窗口无可用邀请码。未使用邀请可以撤销后重新生成。",
-                    "No usable invitation code is available in this session. Revoke an unused invitation and create a replacement.",
-                  )}
+                  </section>
+                ))}
+              </details>
+            )}
+            {invite && !access && (
+              <section className="panel">
+                <h3>{t("Host 接入指导", "Host onboarding guide")}</h3>
+                <p>
+                  {t("链上邀请", "On-chain invitation")}:{" "}
+                  <code className="long-id">{invite.id}</code> ·{" "}
+                  {status(invite)}
                 </p>
-              )}
-            </section>
-          )}
-          {directory && (
-            <details className="panel">
-              <summary>
-                {t(
-                  "手动接入指导（不使用接入串时）",
-                  "Manual admission guide (without an access string)",
-                )}
-              </summary>
-              <ol>
-                <li>
-                  {t(
-                    "将以下公开连接项合并进新主机的 sentinel.yaml。这里不包含邀请码或私钥。",
-                    "Merge these public connection fields into sentinel.yaml on the new Host. They contain no invitation or private key.",
-                  )}
-                  <pre>{`sui:\n  host_connection_enabled: true\n  network: ${JSON.stringify(profile.network)}\n  rpc: ${JSON.stringify(profile.rpcUrl)}\n  chain_identifier: ${JSON.stringify(directory?.chainIdentifier ?? profile.chainIdentifier ?? "")}\n  protocol_package_id: ${JSON.stringify(profile.packageId)}\n  protocol_original_package_id: ${JSON.stringify(profile.originalPackageId ?? profile.packageId)}\n  okr_package_id: ${JSON.stringify(profile.okrPackageId ?? profile.packageId)}\n  okr_original_package_id: ${JSON.stringify(profile.originalOkrPackageId ?? profile.okrPackageId ?? profile.originalPackageId ?? profile.packageId)}\n  direct_package_id: ${JSON.stringify(profile.directPackageId ?? profile.packageId)}\n  direct_original_package_id: ${JSON.stringify(profile.originalDirectPackageId ?? profile.directPackageId ?? profile.originalPackageId ?? profile.packageId)}\n  protocol_registry_id: ${JSON.stringify(profile.registryId)}\n  org_id: ${JSON.stringify(organizationId)}\n  host_join_gas_budget: 200000000`}</pre>
-                </li>
-                <li>
-                  {t(
-                    "在新主机安装 envd，明确初始化独立 Host 密钥。",
-                    "Install envd on the new Host and explicitly initialize independent Host keys.",
-                  )}
-                  <pre>envd --config sentinel.yaml --init-host</pre>
-                </li>
-                <li>
-                  {t(
-                    "向输出的 Host 地址充值交易 Gas；它与管理设备使用不同地址。",
-                    "Fund the Host address printed by initialization for transaction Gas. It differs from the management device address.",
-                  )}
-                </li>
-                <li>
-                  {t(
-                    "运行接入命令，在终端隐藏输入邀请码。核对组织、Coordinator 公钥、有限观察权限和 Gas，再输入 JOIN 与完整组织 ID 确认。启动 envd 不会自动入组。",
-                    "Run admission and enter the invitation through hidden terminal input. Verify the organization, Coordinator key, finite observation authority and Gas, then confirm with JOIN and the full organization ID. Starting envd does not automatically join.",
-                  )}
-                  <pre>envd --config sentinel.yaml --join-host</pre>
-                </li>
-                <li>
-                  {t(
-                    "结果未知时查询原交易，无需邀请码或私钥。接入成功表示链上成员资格。再启动 envd，按链上当前入口和公钥认证连接；主机在线、运行发现和 Agent 导入仍单独核验。",
-                    "Query an uncertain original transaction without the invitation or private keys. Admission confirms on-chain membership. Then start envd to connect using the current chain endpoint and key; online state, discovery and Agent import are verified separately.",
-                  )}
-                  <pre>envd --config sentinel.yaml</pre>
-                  <pre>
-                    envd --config sentinel.yaml --host-join-status
-                    --host-address 0xYOUR_HOST_ADDRESS
-                  </pre>
-                </li>
-              </ol>
-            </details>
-          )}
-          {directory && (
-            <>
-              <section className="panel">
-                <h3>{t("组织邀请", "Organization invitations")}</h3>
-                {!directory.invitations.length && (
-                  <p>{t("尚无邀请", "No invitations")}</p>
-                )}
-                {directory.invitations.map((i) => (
-                  <div key={i.id} className="host-row">
-                    <code className="long-id">{i.id}</code>
+                {code && inviteUsable ? (
+                  <>
+                    <label>
+                      {t(
+                        "仅本次窗口可用的一次性邀请码",
+                        "One-use invitation available only in this session",
+                      )}
+                      <textarea
+                        readOnly
+                        value={code}
+                        spellCheck={false}
+                        autoComplete="off"
+                        aria-label={t(
+                          "Host 一次性邀请码",
+                          "One-use Host invitation",
+                        )}
+                      />
+                    </label>
                     <p>
-                      {status(i)} ·{" "}
-                      {new Date(Number(i.expires_at_ms)).toLocaleString()}
+                      {t(
+                        "关闭、刷新或重启后无法找回此码；链上只保存证明公钥。遗失后撤销未使用邀请，再生成新的。",
+                        "Closing, reloading or restarting loses this code. Only the proof public key is on chain. Revoke an unused invitation before creating a replacement.",
+                      )}
                     </p>
-                    <button
-                      disabled={locked || i.revoked || i.uses !== 0}
-                      onClick={() => edit("revoke-invite", i.id)}
-                    >
-                      {t("撤销此邀请", "Revoke invitation")}
-                    </button>
-                  </div>
-                ))}
-              </section>
-              <section className="panel">
-                <h3>{t("主机成员", "Host memberships")}</h3>
-                {!directory.memberships.length && (
-                  <p>{t("尚无成员", "No memberships")}</p>
+                  </>
+                ) : (
+                  <p className="warn">
+                    {t(
+                      "本窗口无可用邀请码。未使用邀请可以撤销后重新生成。",
+                      "No usable invitation code is available in this session. Revoke an unused invitation and create a replacement.",
+                    )}
+                  </p>
                 )}
-                {directory.memberships.map((m) => (
-                  <div key={m.id} className="host-row">
-                    <strong>{m.name}</strong> ·{" "}
-                    {m.revoked
-                      ? t("已撤销", "Revoked")
-                      : BigInt(m.expires_at_ms) <= clockMs
-                        ? t("已过期", "Expired")
-                        : t(
-                            "资格有效，在线未知",
-                            "Membership valid; connectivity unknown",
-                          )}
-                    <br />
-                    <code className="long-id">{m.id}</code>
-                    <button
-                      disabled={locked || m.revoked}
-                      onClick={() => edit("revoke-member", m.id)}
-                    >
-                      {t("撤销成员资格", "Revoke membership")}
-                    </button>
-                  </div>
-                ))}
               </section>
-            </>
-          )}
-          {busy && (
-            <p role="status">
-              {t("正在读取或提交…", "Reading or submitting…")}
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="warn">
-              {messages[error]
-                ? t(...messages[error])
-                : `${t("操作未完成，请核对后重试", "Operation incomplete; review before retrying")} (${error})`}
-            </p>
-          )}
+            )}
+            {directory && (
+              <details className="panel">
+                <summary>
+                  {t(
+                    "手动接入指导（不使用接入串时）",
+                    "Manual admission guide (without an access string)",
+                  )}
+                </summary>
+                <ol>
+                  <li>
+                    {t(
+                      "将以下公开连接项合并进新主机的 sentinel.yaml。这里不包含邀请码或私钥。",
+                      "Merge these public connection fields into sentinel.yaml on the new Host. They contain no invitation or private key.",
+                    )}
+                    <pre>{`sui:\n  host_connection_enabled: true\n  network: ${JSON.stringify(profile.network)}\n  rpc: ${JSON.stringify(profile.rpcUrl)}\n  chain_identifier: ${JSON.stringify(directory?.chainIdentifier ?? profile.chainIdentifier ?? "")}\n  protocol_package_id: ${JSON.stringify(profile.packageId)}\n  protocol_original_package_id: ${JSON.stringify(profile.originalPackageId ?? profile.packageId)}\n  okr_package_id: ${JSON.stringify(profile.okrPackageId ?? profile.packageId)}\n  okr_original_package_id: ${JSON.stringify(profile.originalOkrPackageId ?? profile.okrPackageId ?? profile.originalPackageId ?? profile.packageId)}\n  direct_package_id: ${JSON.stringify(profile.directPackageId ?? profile.packageId)}\n  direct_original_package_id: ${JSON.stringify(profile.originalDirectPackageId ?? profile.directPackageId ?? profile.originalPackageId ?? profile.packageId)}\n  protocol_registry_id: ${JSON.stringify(profile.registryId)}\n  org_id: ${JSON.stringify(organizationId)}\n  host_join_gas_budget: 200000000`}</pre>
+                  </li>
+                  <li>
+                    {t(
+                      "在新主机安装 envd，明确初始化独立 Host 密钥。",
+                      "Install envd on the new Host and explicitly initialize independent Host keys.",
+                    )}
+                    <pre>envd --config sentinel.yaml --init-host</pre>
+                  </li>
+                  <li>
+                    {t(
+                      "向输出的 Host 地址充值交易 Gas；它与管理设备使用不同地址。",
+                      "Fund the Host address printed by initialization for transaction Gas. It differs from the management device address.",
+                    )}
+                  </li>
+                  <li>
+                    {t(
+                      "运行接入命令，在终端隐藏输入邀请码。核对组织、Coordinator 公钥、有限观察权限和 Gas，再输入 JOIN 与完整组织 ID 确认。启动 envd 不会自动入组。",
+                      "Run admission and enter the invitation through hidden terminal input. Verify the organization, Coordinator key, finite observation authority and Gas, then confirm with JOIN and the full organization ID. Starting envd does not automatically join.",
+                    )}
+                    <pre>envd --config sentinel.yaml --join-host</pre>
+                  </li>
+                  <li>
+                    {t(
+                      "结果未知时查询原交易，无需邀请码或私钥。接入成功表示链上成员资格。再启动 envd，按链上当前入口和公钥认证连接；主机在线、运行发现和 Agent 导入仍单独核验。",
+                      "Query an uncertain original transaction without the invitation or private keys. Admission confirms on-chain membership. Then start envd to connect using the current chain endpoint and key; online state, discovery and Agent import are verified separately.",
+                    )}
+                    <pre>envd --config sentinel.yaml</pre>
+                    <pre>
+                      envd --config sentinel.yaml --host-join-status
+                      --host-address 0xYOUR_HOST_ADDRESS
+                    </pre>
+                  </li>
+                </ol>
+              </details>
+            )}
+            {management && (
+              <>
+                <section className="panel">
+                  <h3>{t("组织邀请", "Organization invitations")}</h3>
+                  {!management.invitations.length && (
+                    <p>{t("尚无邀请", "No invitations")}</p>
+                  )}
+                  {management.invitations.map((i) => (
+                    <div key={i.id} className="host-row">
+                      <code className="long-id">{i.id}</code>
+                      <p>
+                        {status(i)} ·{" "}
+                        {new Date(Number(i.expires_at_ms)).toLocaleString()}
+                      </p>
+                      <button
+                        disabled={locked || i.revoked || i.uses !== 0}
+                        onClick={() => edit("revoke-invite", i.id)}
+                      >
+                        {t("撤销此邀请", "Revoke invitation")}
+                      </button>
+                    </div>
+                  ))}
+                </section>
+                <section className="panel">
+                  <h3>{t("主机成员", "Host memberships")}</h3>
+                  {!management.memberships.length && (
+                    <p>{t("尚无成员", "No memberships")}</p>
+                  )}
+                  {management.memberships.map((m) => (
+                    <div key={m.id} className="host-row">
+                      <strong>{m.name}</strong> ·{" "}
+                      {m.revoked
+                        ? t("已撤销", "Revoked")
+                        : BigInt(m.expires_at_ms) <= clockMs
+                          ? t("已过期", "Expired")
+                          : t(
+                              "资格有效，在线未知",
+                              "Membership valid; connectivity unknown",
+                            )}
+                      <br />
+                      <code className="long-id">{m.id}</code>
+                      <button
+                        disabled={locked || m.revoked}
+                        onClick={() => edit("revoke-member", m.id)}
+                      >
+                        {t("撤销成员资格", "Revoke membership")}
+                      </button>
+                    </div>
+                  ))}
+                </section>
+              </>
+            )}
+          </details>
         </dialog>
       )}
     </>

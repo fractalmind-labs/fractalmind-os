@@ -64,6 +64,19 @@ export type HostDirectory = {
   activeHostsTableId: string | null;
   instancesTableId: string | null;
 };
+/** Entry discovery deliberately excludes invitation/member history. */
+export type HostEntries = Omit<HostDirectory, "invitations" | "memberships">;
+export async function hostEntries(
+  chain: ChainReadSession,
+  organizationId: string,
+): Promise<HostEntries> {
+  const {
+    invitations: _invites,
+    memberships: _members,
+    ...entries
+  } = await readHostDirectory(chain, organizationId, false);
+  return entries;
+}
 const id = /^0x[0-9a-f]{64}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const day = 86400000n;
@@ -145,8 +158,14 @@ export async function hostDirectory(
   chain: ChainReadSession,
   organizationId: string,
 ): Promise<HostDirectory> {
-  await chain.checkNetwork();
-  const human = await chain.human();
+  return readHostDirectory(chain, organizationId, true);
+}
+async function readHostDirectory(
+  chain: ChainReadSession,
+  organizationId: string,
+  includeHistory: boolean,
+): Promise<HostDirectory> {
+  const human = await chain.identity();
   if (!human.human.organizations.includes(organizationId)) bad();
   const before = await object(
     chain,
@@ -210,11 +229,15 @@ export async function hostDirectory(
     scoped(index?.bindings ?? [], "CoordinatorBinding", (bytes) =>
       CoordinatorBindingBcs.parse(bytes),
     ),
-    scoped(index?.invitations ?? [], "HostInvite", (bytes) =>
-      HostInviteBcs.parse(bytes),
+    scoped(
+      includeHistory ? (index?.invitations ?? []) : [],
+      "HostInvite",
+      (bytes) => HostInviteBcs.parse(bytes),
     ),
-    scoped(index?.memberships ?? [], "HostMembership", (bytes) =>
-      HostMembershipBcs.parse(bytes),
+    scoped(
+      includeHistory ? (index?.memberships ?? []) : [],
+      "HostMembership",
+      (bytes) => HostMembershipBcs.parse(bytes),
     ),
   ]);
   for (const b of bindings) {
@@ -324,12 +347,13 @@ export class HostAdmission {
   }
   private async target(operation: HostOperation) {
     if (operation.kind === "binding") return "";
-    const directory = await this.directory();
     if (operation.kind === "invite") {
+      const directory = await hostEntries(this.chain, this.organizationId);
       const b = directory.bindings.find((b) => b.id === operation.bindingId);
       if (!b || b.revoked) throw new HostAdmissionError("unavailable");
       return JSON.stringify(b);
     }
+    const directory = await this.directory();
     const value =
       operation.kind === "revoke-invite"
         ? directory.invitations.find((i) => i.id === operation.targetId)
@@ -493,7 +517,7 @@ export class HostAdmission {
     if (matches.length !== 1) bad();
     const invite = matches[0],
       material = this.secrets.get(outcome.requestId);
-    if (!material) return { invite, code: null };
+    if (!material) return { invite, code: null, directory };
     if (
       invite.issuer_human !== this.chain.profile.humanId ||
       invite.issuer_grant !== this.grantId ||
@@ -514,7 +538,7 @@ export class HostAdmission {
             invite.id,
             material.entropy,
           );
-    return { invite, code };
+    return { invite, code, directory };
   }
   private dropSecret(requestId: string) {
     this.secrets.get(requestId)?.entropy.fill(0);

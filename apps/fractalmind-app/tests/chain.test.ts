@@ -280,3 +280,18 @@ test("a missing child object cannot be mistaken for an absent organization direc
   const snapshot = await f.session().loadOrganization(f.organizationId);
   assert.equal(snapshot.okrs.value, null);
 });
+
+test("Lightweight identity validates provenance/network/time without loading grants or organizations", async () => {
+  const f = fixture();
+  f.sdk.identity.getDeviceGrant = async () => {
+    throw new Error("unrelated grant history unavailable");
+  };
+  f.sdk.organization.getOrganization = async () => {
+    throw new Error("unrelated organization unavailable");
+  };
+  const result = await f.session().identity();
+  assert.equal(result.human.id, profile.humanId);
+  assert.equal(result.clockMs, 1000n);
+  f.human.registry_id = id("0x999");
+  await assert.rejects(f.session().identity(), /invalid_provenance/);
+});
