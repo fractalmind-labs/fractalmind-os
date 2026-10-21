@@ -4,7 +4,11 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
+	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -864,4 +868,80 @@ func TestPollBackoff(t *testing.T) {
 			t.Fatalf("failures=%d: %v, want %v", tc.failures, got, tc.want)
 		}
 	}
+}
+
+func TestWatchLoopLogsARepeatedFailureOnce(t *testing.T) {
+	originalGOOS := currentGOOS
+	currentGOOS = "darwin"
+	defer func() { currentGOOS = originalGOOS }()
+
+	bot, err := NewIMessageBot("+123", "", "")
+	if err != nil {
+		t.Fatalf("NewIMessageBot: %v", err)
+	}
+	restore := watchInitialBackoff
+	watchInitialBackoff = time.Millisecond
+	t.Cleanup(func() { watchInitialBackoff = restore })
+
+	var logs strings.Builder
+	var mu sync.Mutex
+	log.SetOutput(lockedWriter{&mu, &logs})
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	var starts atomic.Int32
+	bot.startWatchFn = func(ctx context.Context, recipient string) (io.ReadCloser, func() error, error) {
+		if starts.Add(1) >= 5 {
+			cancel()
+		}
+		denied := `permissionDenied(path: "/Users/me/Library/Messages/chat.db", underlying: authorization denied (code: 23))` + "\n"
+		return io.NopCloser(strings.NewReader(denied)), nil, nil
+	}
+
+	bot.wg.Add(1)
+	go bot.watchLoop(ctx)
+	bot.wg.Wait()
+
+	mu.Lock()
+	out := logs.String()
+	mu.Unlock()
+	if got := strings.Count(out, "imsg watch stopped: permissionDenied"); got != 1 {
+		t.Fatalf("logged the failure %d times, want once:\n%s", got, out)
+	}
+	if !strings.Contains(out, "grant Full Disk Access") {
+		t.Fatalf("missing the Full Disk Access hint:\n%s", out)
+	}
+	if strings.Contains(out, "failed to parse imsg event") {
+		t.Fatalf("still logs every unparsable line:\n%s", out)
+	}
+}
+
+func TestProcessImsgStreamCountsEventsAndKeepsFirstProblem(t *testing.T) {
+	originalGOOS := currentGOOS
+	currentGOOS = "darwin"
+	defer func() { currentGOOS = originalGOOS }()
+
+	bot, err := NewIMessageBot("+123", "", "")
+	if err != nil {
+		t.Fatalf("NewIMessageBot: %v", err)
+	}
+	bot.SetHandler(&fakeIMessageHandler{})
+	stream := "first problem\n" +
+		`{"rowid":1,"text":"hi","sender":"+999","is_from_me":true,"timestamp":"2026-03-04T13:00:00Z","attachments":[]}` + "\n" +
+		"second problem\n"
+	result := bot.processImsgStream(context.Background(), io.NopCloser(strings.NewReader(stream)))
+	if result.events != 1 || result.problem != "first problem" {
+		t.Fatalf("result = %+v, want 1 event and the first problem", result)
+	}
+}
+
+type lockedWriter struct {
+	mu *sync.Mutex
+	w  io.Writer
+}
+
+func (l lockedWriter) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.w.Write(p)
 }

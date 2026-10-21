@@ -303,11 +303,20 @@ func (b *IMessageBot) IsAllowed(senderID string) bool {
 	return true
 }
 
+// watchInitialBackoff is the first wait before restarting a failed imsg watch;
+// it doubles up to maxWatchBackoff while the watch keeps failing.
+var watchInitialBackoff = time.Second
+
+const maxWatchBackoff = 5 * time.Minute
+
 func (b *IMessageBot) watchLoop(ctx context.Context) {
 	defer b.wg.Done()
 
-	backoff := time.Second
-	const maxBackoff = 30 * time.Second
+	backoff := watchInitialBackoff
+	maxBackoff := maxWatchBackoff
+	// The same failure repeats on every restart (for example a missing Full
+	// Disk Access grant), so each distinct problem is logged once.
+	lastProblem := ""
 
 	for {
 		startWatch := b.startWatchFn
@@ -331,7 +340,7 @@ func (b *IMessageBot) watchLoop(ctx context.Context) {
 			}
 		}
 
-		b.processImsgStream(ctx, reader)
+		result := b.processImsgStream(ctx, reader)
 
 		if waitFn != nil {
 			_ = waitFn()
@@ -341,7 +350,18 @@ func (b *IMessageBot) watchLoop(ctx context.Context) {
 			return
 		}
 
-		log.Printf("imessage: imsg watch exited, restarting...")
+		if result.events > 0 {
+			backoff = watchInitialBackoff
+			lastProblem = ""
+		}
+		problem := result.problem
+		if problem == "" {
+			problem = "imsg watch exited"
+		}
+		if problem != lastProblem {
+			log.Printf("imessage: imsg watch stopped: %s%s; restarting with backoff up to %s", problem, imsgProblemHint(problem), maxBackoff)
+			lastProblem = problem
+		}
 		b.markError()
 		select {
 		case <-ctx.Done():
@@ -359,7 +379,27 @@ func minBackoff(a, b time.Duration) time.Duration {
 	return b
 }
 
-func (b *IMessageBot) processImsgStream(ctx context.Context, reader io.ReadCloser) {
+// imsgStreamResult says how one watch stream went: how many events it
+// delivered, and the first line it could not parse. imsg prints failures such
+// as permissionDenied as plain text instead of JSON.
+type imsgStreamResult struct {
+	events  int
+	problem string
+}
+
+// imsgProblemHint adds the fix for failures the user has to resolve.
+func imsgProblemHint(problem string) string {
+	if !strings.Contains(problem, "permissionDenied") && !strings.Contains(problem, "authorization denied") {
+		return ""
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		exe = "the fractalbot executable"
+	}
+	return fmt.Sprintf(" (grant Full Disk Access to %s in System Settings > Privacy & Security)", exe)
+}
+
+func (b *IMessageBot) processImsgStream(ctx context.Context, reader io.ReadCloser) (result imsgStreamResult) {
 	defer reader.Close()
 
 	scanner := bufio.NewScanner(reader)
@@ -375,9 +415,12 @@ func (b *IMessageBot) processImsgStream(ctx context.Context, reader io.ReadClose
 
 		var event imsgWatchEvent
 		if err := json.Unmarshal(line, &event); err != nil {
-			log.Printf("imessage: failed to parse imsg event: %v", err)
+			if result.problem == "" {
+				result.problem = truncateRunes(strings.TrimSpace(string(line)), 200)
+			}
 			continue
 		}
+		result.events++
 
 		// Skip messages sent by this bot — only process genuine inbound.
 		if event.IsFromMe {
@@ -402,6 +445,15 @@ func (b *IMessageBot) processImsgStream(ctx context.Context, reader io.ReadClose
 	if err := scanner.Err(); err != nil && ctx.Err() == nil {
 		log.Printf("imessage: imsg stream read error: %v", err)
 	}
+	return result
+}
+
+func truncateRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n]) + "…"
 }
 
 func (b *IMessageBot) defaultStartImsgWatch(ctx context.Context, recipient string) (io.ReadCloser, func() error, error) {
