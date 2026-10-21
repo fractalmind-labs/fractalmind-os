@@ -871,6 +871,10 @@ func TestPollBackoff(t *testing.T) {
 }
 
 func TestWatchLoopLogsARepeatedFailureOnce(t *testing.T) {
+	originalGOOS := currentGOOS
+	currentGOOS = "darwin"
+	defer func() { currentGOOS = originalGOOS }()
+
 	bot, err := NewIMessageBot("+123", "", "")
 	if err != nil {
 		t.Fatalf("NewIMessageBot: %v", err)
@@ -913,6 +917,10 @@ func TestWatchLoopLogsARepeatedFailureOnce(t *testing.T) {
 }
 
 func TestProcessImsgStreamCountsEventsAndKeepsFirstProblem(t *testing.T) {
+	originalGOOS := currentGOOS
+	currentGOOS = "darwin"
+	defer func() { currentGOOS = originalGOOS }()
+
 	bot, err := NewIMessageBot("+123", "", "")
 	if err != nil {
 		t.Fatalf("NewIMessageBot: %v", err)
