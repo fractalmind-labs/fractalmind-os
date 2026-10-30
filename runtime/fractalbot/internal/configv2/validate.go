@@ -3,6 +3,7 @@ package configv2
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"path"
 	"regexp"
 	"sort"
@@ -13,8 +14,9 @@ import (
 )
 
 var (
-	namePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,62}$`)
-	uuidPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	namePattern       = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,62}$`)
+	uuidPattern       = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	dshSessionPattern = regexp.MustCompile(`^session-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 )
 
 const (
@@ -114,7 +116,7 @@ func (c *Config) validate(p Platform) error {
 
 func (c *Config) validateRuntimes(ps *problems) {
 	r := c.Runtimes
-	if r.ClaudeDesktop.DeliveryTimeoutSeconds < 0 || r.CodexApp.DeliveryTimeoutSeconds < 0 || r.AgentManager.AssignTimeoutSeconds < 0 {
+	if r.ClaudeDesktop.DeliveryTimeoutSeconds < 0 || r.CodexApp.DeliveryTimeoutSeconds < 0 || r.DeepSeekHarness.DeliveryTimeoutSeconds < 0 || r.AgentManager.AssignTimeoutSeconds < 0 {
 		ps.add("runtimes: timeouts must not be negative")
 	}
 	if script := r.AgentManager.Script; strings.Contains(script, "..") {
@@ -134,14 +136,14 @@ func (c *Config) validateAgents(ps *problems, p Platform) map[string][]string {
 			ps.add("%s: agent names use lower-case letters, digits, hyphens and underscores", prefix)
 		}
 		switch a.Runtime {
-		case RuntimeClaudeDesktop, RuntimeCodexApp, RuntimeAgentManager:
+		case RuntimeClaudeDesktop, RuntimeCodexApp, RuntimeDeepSeekHarness, RuntimeAgentManager:
 			if reason := p.runtimeSupport(a.Runtime); reason != "" {
 				ps.add("%s.runtime: %s", prefix, reason)
 			}
 		case "":
-			ps.add("%s.runtime: required (claudeDesktop, codexApp or agentManager)", prefix)
+			ps.add("%s.runtime: required (claudeDesktop, codexApp, deepseekHarness or agentManager)", prefix)
 		default:
-			ps.add("%s.runtime: unsupported runtime %q (use claudeDesktop, codexApp or agentManager)", prefix, a.Runtime)
+			ps.add("%s.runtime: unsupported runtime %q (use claudeDesktop, codexApp, deepseekHarness or agentManager)", prefix, a.Runtime)
 		}
 		if a.Workspace == "" {
 			ps.add("%s.workspace: required", prefix)
@@ -156,6 +158,13 @@ func (c *Config) validateAgents(ps *problems, p Platform) map[string][]string {
 		case RuntimeClaudeDesktop:
 			if a.Session != "" {
 				ps.add("%s.session: claudeDesktop agents have no session", prefix)
+			}
+		case RuntimeDeepSeekHarness:
+			if !dshSessionPattern.MatchString(a.Session) {
+				ps.add("%s.session: deepseekHarness agents need the DeepSeek Harness session ID (session-<lower-case UUID>)", prefix)
+			}
+			if err := validateDeepSeekHarnessEndpoint(c.Runtimes.DeepSeekHarness.CDPEndpoint); err != nil {
+				ps.add("runtimes.deepseekHarness.cdpEndpoint: %v", err)
 			}
 		case RuntimeAgentManager:
 			if !namePattern.MatchString(a.Session) {
@@ -177,6 +186,23 @@ func (c *Config) validateAgents(ps *problems, p Platform) map[string][]string {
 		}
 	}
 	return bound
+}
+
+func validateDeepSeekHarnessEndpoint(raw string) error {
+	endpoint := strings.TrimSpace(raw)
+	if endpoint == "" {
+		return errors.New("required when an agent uses deepseekHarness")
+	}
+	parsed, err := url.ParseRequestURI(endpoint)
+	if err != nil || parsed.Scheme != "http" || parsed.Host == "" || parsed.User != nil {
+		return errors.New("must be an unauthenticated http loopback URL")
+	}
+	switch strings.ToLower(parsed.Hostname()) {
+	case "127.0.0.1", "::1", "localhost":
+		return nil
+	default:
+		return errors.New("must use localhost, 127.0.0.1, or ::1")
+	}
 }
 
 // channelInstances returns every configured `type.name`.
