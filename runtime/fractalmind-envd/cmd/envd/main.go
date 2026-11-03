@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strconv"
 	"strings"
@@ -502,6 +503,12 @@ func main() {
 
 	if activeRoles.Coordinator {
 		coordinatorServer = coordinator.NewServer(cfg.Coordinator.ListenAddr, 30*time.Second, cfg.Coordinator.APIToken)
+		if !cfg.RequireSignedCommands() {
+			// The node opted out of signature enforcement, so the relay must
+			// forward the legacy commands instead of rejecting them.
+			coordinatorServer.SetAllowUnsignedCommands(true)
+			log.Printf("[coordinator] WARNING: unsigned legacy commands are relayed (security.require_signed_commands=false)")
+		}
 		if connectionKeys != nil {
 			if err := configureChainCoordinator(coordinatorServer, cfg, connectionReader, ctrlKey); err != nil {
 				log.Fatalf("[coordinator] %v", err)
@@ -945,19 +952,123 @@ func proxyDesktopSignal(cfg config.DesktopConfig, sig ws.DesktopSignalPayload) w
 	return res
 }
 
-// handleCommand accepts only signed intents. Coordinator credentials establish
-// a transport connection; they never authorize local agent or shell actions.
-func handleCommand(cmd ws.CommandPayload, _ *agent.Scanner, _ *config.Config, runtimeExecutor runtimeCommandExecutor) map[string]interface{} {
+// handleCommand dispatches a command received on the control channel.
+//
+// Signed NodeCommand intents are always accepted: coordinator credentials
+// establish a transport connection; they never authorize local agent or shell
+// actions. The legacy unsigned commands are therefore rejected unless the node
+// explicitly opts out with security.require_signed_commands=false. That opt-out
+// re-enables the pre-v0.2.0 surface (status, restart, logs, kill, shell), and
+// `shell` additionally requires agents.allow_shell=true.
+func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Config, runtimeExecutor runtimeCommandExecutor) map[string]interface{} {
+	result := map[string]interface{}{
+		"success": true,
+	}
+
 	switch cmd.Command {
 	case "signed_command", "signed-command", "node_command":
 		return handleSignedCommand(context.Background(), cmd.Args, runtimeExecutor)
-	default:
+	}
+
+	if cfg.RequireSignedCommands() {
 		return map[string]interface{}{
 			"success":    false,
 			"error_code": "unsigned_command_disabled",
-			"error":      "commands require a signed NodeCommand with an authorized target, action and scope",
+			"error":      "commands require a signed NodeCommand with an authorized target, action and scope (set security.require_signed_commands=false to accept legacy commands)",
 		}
 	}
+
+	log.Printf("[cmd] legacy unsigned command accepted: security.require_signed_commands is false")
+
+	switch cmd.Command {
+	case "status":
+		agents, err := scanner.Scan()
+		if err != nil {
+			result["success"] = false
+			result["error"] = err.Error()
+			return result
+		}
+		result["agents"] = agents
+
+	case "restart":
+		if cmd.AgentID == "" {
+			result["success"] = false
+			result["error"] = "agent_id required"
+			return result
+		}
+		if err := scanner.RestartAgent(cmd.AgentID); err != nil {
+			result["success"] = false
+			result["error"] = err.Error()
+			return result
+		}
+		result["message"] = fmt.Sprintf("agent %s restarted", cmd.AgentID)
+
+	case "logs":
+		if cmd.AgentID == "" {
+			result["success"] = false
+			result["error"] = "agent_id required"
+			return result
+		}
+		lines := "100"
+		if cmd.Args != "" {
+			lines = cmd.Args
+		}
+		out, err := exec.Command("tmux", "capture-pane", "-t", cmd.AgentID, "-p", "-S", "-"+lines).Output()
+		if err != nil {
+			result["success"] = false
+			result["error"] = err.Error()
+			return result
+		}
+		result["logs"] = string(out)
+
+	case "kill":
+		if cmd.AgentID == "" {
+			result["success"] = false
+			result["error"] = "agent_id required"
+			return result
+		}
+		if err := exec.Command("tmux", "kill-session", "-t", cmd.AgentID).Run(); err != nil {
+			result["success"] = false
+			result["error"] = err.Error()
+			return result
+		}
+		result["message"] = fmt.Sprintf("agent %s killed", cmd.AgentID)
+
+	case "shell":
+		if !cfg.Agents.AllowShell {
+			result["success"] = false
+			result["error_code"] = "shell_disabled"
+			result["error"] = "shell command disabled (set agents.allow_shell=true to enable)"
+			log.Printf("[cmd] rejected shell: agents.allow_shell is false")
+			return result
+		}
+		if cmd.Args == "" {
+			result["success"] = false
+			result["error"] = "args required (shell command)"
+			return result
+		}
+		if !shellCommandAllowed(cmd.Args, cfg.Agents.ShellAllowlist) {
+			result["success"] = false
+			result["error"] = "shell command not in agents.shell_allowlist"
+			log.Printf("[cmd] rejected shell: command not in allowlist")
+			return result
+		}
+		out, err := runShellCommand(cmd.Args, parseShellTimeout(cfg.Agents.ShellTimeout))
+		if err != nil {
+			result["success"] = false
+			result["error"] = err.Error()
+			result["output"] = string(out)
+			return result
+		}
+		result["output"] = string(out)
+
+	default:
+		result["success"] = false
+		result["error"] = fmt.Sprintf("unknown command: %s", cmd.Command)
+	}
+
+	log.Printf("[cmd] %s result: success=%v", cmd.Command, result["success"])
+	return result
 }
 
 func parseShellTimeout(raw string) time.Duration {
