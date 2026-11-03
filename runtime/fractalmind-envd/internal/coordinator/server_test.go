@@ -220,6 +220,62 @@ func TestCoordinatorRejectsUnsignedCommandsEvenWithBearerToken(t *testing.T) {
 	}
 }
 
+func TestCoordinatorRelaysLegacyCommandsWhenUnsignedAllowed(t *testing.T) {
+	server := NewServer(":0", 2*time.Second, "")
+	server.SetAllowUnsignedCommands(true)
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	conn := dialTestWebSocket(t, testServer.URL)
+	defer conn.Close()
+
+	registerWorker(t, conn, "node-legacy", "worker-legacy", "dev", heartbeat.Payload{})
+
+	commandDone := make(chan struct{})
+	go func() {
+		defer close(commandDone)
+
+		var msg ws.Message
+		if err := conn.ReadJSON(&msg); err != nil {
+			t.Errorf("read command: %v", err)
+			return
+		}
+
+		var payload ws.CommandPayload
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+			t.Errorf("decode command payload: %v", err)
+			return
+		}
+		if payload.Command != "status" || payload.AgentID != "agent-legacy" || payload.Args != "-n 5" {
+			t.Errorf("relayed legacy command = %q agent=%q args=%q", payload.Command, payload.AgentID, payload.Args)
+		}
+
+		sendWSMessage(t, conn, ws.Message{
+			Type: "command_result",
+			Payload: mustRawJSON(commandResultPayload{
+				RequestID: payload.RequestID,
+				Result: map[string]interface{}{
+					"success": true,
+				},
+			}),
+		})
+	}()
+
+	waitForSentinel(t, testServer.URL, "node-legacy", nil)
+	body := httpPostJSON(t, testServer.URL+"/api/sentinels/node-legacy/command", commandRequest{
+		Command: "status", AgentID: "agent-legacy", Args: "-n 5",
+	})
+	<-commandDone
+
+	var resp struct {
+		Success bool `json:"success"`
+	}
+	decodeJSON(t, body, &resp)
+	if !resp.Success {
+		t.Fatalf("legacy command was not relayed: %s", body)
+	}
+}
+
 func TestCoordinatorNodeCommandProxy(t *testing.T) {
 	server := NewServer(":0", 2*time.Second, "")
 	testServer := httptest.NewServer(server.Handler())
