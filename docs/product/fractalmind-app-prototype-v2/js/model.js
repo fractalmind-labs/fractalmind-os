@@ -1075,13 +1075,19 @@
     if (d.role !== 'manage') return { ok: false, code: 'not_root_device' };
     return { ok: true };
   }
-  function validateOrg(profile, input) {
+  /** Organization names are unique across the whole network: the protocol's
+   *  ProtocolRegistry.name_registry refuses a name in use (abort 3002), whoever owns it.
+   *  `taken` is every name the app has read as in use (the client checks the registry
+   *  before quoting; the contract checks again at commit). */
+  const nameOf = o => String(o && o.name && typeof o.name === 'object' ? (o.name.zh || o.name.en) : o && o.name).trim();
+  function validateOrg(profile, input, taken) {
     const name = String(input.name || '').trim(), description = String(input.description || '').trim();
     if (!name) return { ok: false, code: 'org_name_empty' };
     if ([...name].length > ORG_NAME_MAX) return { ok: false, code: 'org_name_long' };
     if ([...description].length > ORG_DESC_MAX) return { ok: false, code: 'org_desc_long' };
-    const dup = profile.orgs.some(o => String(o.name && (o.name.zh || o.name.en || o.name)).trim() === name);
-    return { ok: true, name, description, dup };
+    const used = new Set([...profile.orgs.map(nameOf), ...(taken || [])]);
+    if (used.has(name)) return { ok: false, code: 'org_name_taken', mine: profile.orgs.some(o => nameOf(o) === name) };
+    return { ok: true, name, description };
   }
   /** A new organization starts empty, with this human as its only admin. Devices whose
    *  grant is not limited to one organization (role 'manage' here) can use it at once;
@@ -1089,7 +1095,7 @@
   function createOrg(profile, p, tx, now) {
     const c = canCreateOrg(profile, p.deviceId);
     if (!c.ok) return c;
-    const v = validateOrg(profile, p);
+    const v = validateOrg(profile, p, p.takenAtCommit);
     if (!v.ok) return v;
     const id = `org-${digest(`${tx.id}:org`).slice(0, 8)}`;
     profile.orgs.push({ id, chainId: `0x${digest(tx.id + ':chain')}${digest(tx.id + ':chain2')}`.slice(0, 66), name: v.name, description: v.description, kind: 'org', role: 'admin', network: 'testnet', status: 'confirmed', createdAt: now, createdBy: p.deviceId });
