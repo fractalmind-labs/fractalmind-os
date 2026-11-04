@@ -14,6 +14,7 @@ import {
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { normalizeProfile, ChainReadSession } from "./chain";
+import { organizationNameAvailability as lookupOrganizationName } from "./organization-create";
 import { NativeDeviceSigner } from "./native-device";
 import { NativeRecoverySigner } from "./native-onboarding";
 import { DeviceIdentityVerifier } from "./device-identity";
@@ -27,7 +28,8 @@ export class IdentityCreationAttemptError extends Error {
       | "original_transaction_not_failed"
       | "creation_attempt_changed"
       | "creation_already_exists"
-      | "creation_history_unavailable",
+      | "creation_history_unavailable"
+      | "organization_name_taken",
   ) {
     super(code);
   }
@@ -92,6 +94,43 @@ export function identityCreationFailure(
   )
     return "organization_name_taken";
   return error.code;
+}
+
+export type OnboardingOrganizationNameAvailability =
+  | { state: "available"; name: string }
+  | { state: "taken"; name: string; organizationId: string }
+  | { state: "unavailable"; name: string };
+
+function organizationNameTaken(cause: unknown, packageId: string) {
+  const error = cause as
+    | {
+        $kind?: string;
+        MoveAbort?: {
+          abortCode?: string;
+          location?: { package?: string; module?: string; functionName?: string };
+        };
+      }
+    | undefined;
+  return (
+    error?.$kind === "MoveAbort" &&
+    error.MoveAbort?.abortCode === "3002" &&
+    error.MoveAbort.location?.package === packageId &&
+    error.MoveAbort.location.module === "organization" &&
+    error.MoveAbort.location.functionName === "new_organization"
+  );
+}
+
+/** Failed post-signing receipts still retain the exact Move error. Keep the
+ * entered name in the form and tell the person who won the registry race. */
+export function identityOrganizationOutcomeFailure(
+  outcome: Pick<SelfPayTransactionOutcome, "status" | "transaction">,
+  packageId: string,
+) {
+  return (
+    outcome.status === "failed" && organizationNameTaken(outcome.transaction?.status.error, packageId)
+      ? "organization_name_taken"
+      : null
+  );
 }
 export function normalizeDeployment(
   value: DeploymentProfile,
@@ -442,6 +481,9 @@ export class IdentityCreation {
     if (current.outcome) return current.outcome;
     if (found.organizations.length)
       throw new Error("Organization already exists; open it");
+    const availability = await this.organizationNameAvailability(name.trim());
+    if (availability.state === "taken")
+      throw new IdentityCreationAttemptError("organization_name_taken");
     return this.deviceManager.prepare({
       requestId: current.requestId,
       gasBudget: 200_000_000n,
@@ -455,6 +497,29 @@ export class IdentityCreation {
   }
   organizationRequest(humanId: string) {
     return `org:${this.device.device.profile}:${humanId}`;
+  }
+  /** The personal organization is also a public organization. This is a
+   * direct lookup in the protocol registry, not a scan of this Human. */
+  async organizationNameAvailability(
+    name: string,
+  ): Promise<OnboardingOrganizationNameAvailability> {
+    const trimmed = name.trim();
+    try {
+      const found = await this.locate();
+      if (!found) throw new Error("Human not confirmed");
+      const availability = await lookupOrganizationName(
+        new ChainReadSession(found.profile),
+        trimmed,
+        found.organizations,
+      );
+      return availability.state === "taken"
+        ? { state: "taken", name: trimmed, organizationId: availability.organizationId }
+        : availability.state === "available"
+          ? { state: "available", name: trimmed }
+          : { state: "unavailable", name: trimmed };
+    } catch {
+      return { state: "unavailable", name: trimmed };
+    }
   }
   async submitOrganization(quote: SelfPayFeeQuote) {
     await this.pin();

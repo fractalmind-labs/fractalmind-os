@@ -1,7 +1,9 @@
-import { DEVICE_ACTIONS, SelfPayTransactionManager, type SelfPayFeeQuote, type SelfPayTransactionOutcome, type TransactionJournal } from "@fractalmind-labs/fractalmind-sdk";
+import { DEVICE_ACTIONS, SelfPayTransactionManager, TransactionPreflightError, type SelfPayFeeQuote, type SelfPayTransactionOutcome, type TransactionJournal } from "@fractalmind-labs/fractalmind-sdk";
+import { bcs } from "@mysten/sui/bcs";
+import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { Signer } from "@mysten/sui/cryptography";
 import type { OrganizationData } from "@fractalmind-labs/fractalmind-sdk";
-import { ChainReadSession } from "./chain";
+import { ChainReadSession, missingDynamicField } from "./chain";
 import type { Grant } from "./domain";
 
 /** The protocol's `new_organization` allowance is in bytes; the product
@@ -16,7 +18,8 @@ export type OrganizationCreateErrorCode =
   | "invalid_description"
   | "invalid_request_id"
   | "human_changed"
-  | "organization_not_visible";
+  | "organization_not_visible"
+  | "organization_name_taken";
 
 export class OrganizationCreateError extends Error {
   constructor(readonly code: OrganizationCreateErrorCode) {
@@ -26,8 +29,60 @@ export class OrganizationCreateError extends Error {
 
 export type OrganizationInput = { name: string; description: string };
 export type OrganizationValidation =
-  | { ok: true; name: string; description: string; duplicate: boolean }
+  | { ok: true; name: string; description: string }
   | { ok: false; code: "invalid_name" | "invalid_description" };
+
+export type OrganizationNameAvailability =
+  | { state: "available"; name: string }
+  | { state: "taken"; name: string; organizationId: string; own: boolean }
+  | { state: "unavailable"; name: string };
+
+const Table = bcs.struct("Table", { id: bcs.Address, size: bcs.u64() });
+const ProtocolRegistry = bcs.struct("ProtocolRegistry", {
+  id: bcs.Address,
+  organizations: Table,
+  name_registry: Table,
+  org_count: bcs.u64(),
+});
+
+async function findOrganizationByName(
+  chain: Pick<ChainReadSession, "profile" | "sdk">,
+  name: string,
+) {
+  /** New SDKs expose this exact point lookup. Keep the verified BCS fallback
+   * for an App bundle paired with the immediately preceding SDK release; it
+   * has the identical table/key semantics, never a directory scan. */
+  const api = chain.sdk.organization as unknown as {
+    findByName?: (value: string) => Promise<{ organizationId: string | null }>;
+  };
+  if (api.findByName) return (await api.findByName(name)).organizationId;
+  const registryId = chain.profile.registryId;
+  const { object } = await chain.sdk.client.client.core.getObject({
+    objectId: registryId,
+    include: { content: true },
+  });
+  if (
+    object.objectId !== registryId ||
+    object.type !== (await chain.sdk.client.coreType("organization", "ProtocolRegistry")) ||
+    object.owner.$kind !== "Shared" ||
+    !object.content
+  )
+    throw new Error("Configured registry is not a shared ProtocolRegistry.");
+  const registry = ProtocolRegistry.parse(object.content);
+  if (registry.id !== registryId) throw new Error("ProtocolRegistry UID mismatch.");
+  const key = bcs.string().serialize(name).toBytes();
+  try {
+    const { dynamicField } = await chain.sdk.client.client.core.getDynamicField({
+      parentId: registry.name_registry.id,
+      name: { type: "0x1::string::String", bcs: key },
+    });
+    return normalizeSuiAddress(bcs.Address.parse(dynamicField.value.bcs));
+  } catch (error) {
+    if (missingDynamicField(error, registry.name_registry.id, "0x1::string::String", key))
+      return null;
+    throw error;
+  }
+}
 
 type GrantFacts = Pick<
   Grant,
@@ -69,7 +124,6 @@ export function rootGrantForDevice(
 
 export function validateOrganization(
   input: OrganizationInput,
-  organizations: readonly Pick<OrganizationData, "name">[],
 ): OrganizationValidation {
   const name = String(input.name ?? "").trim();
   const description = String(input.description ?? "").trim();
@@ -81,8 +135,73 @@ export function validateOrganization(
     ok: true,
     name,
     description,
-    duplicate: organizations.some((organization) => organization.name.trim() === name),
   };
+}
+
+/** Query the protocol-wide name table. A transport or provenance failure must
+ * never become a false "free" result: callers can proceed, but must make its
+ * uncertainty clear because the final Move invariant still owns uniqueness. */
+export async function organizationNameAvailability(
+  chain: Pick<ChainReadSession, "profile" | "sdk">,
+  name: string,
+  organizations: readonly Pick<OrganizationData, "objectId">[],
+  lookup: (chain: Pick<ChainReadSession, "profile" | "sdk">, name: string) => Promise<string | null> = findOrganizationByName,
+): Promise<OrganizationNameAvailability> {
+  try {
+    const organizationId = await lookup(chain, name);
+    if (!organizationId) return { state: "available", name };
+    return {
+      state: "taken",
+      name,
+      organizationId,
+      own: organizations.some((organization) => organization.objectId === organizationId),
+    };
+  } catch {
+    return { state: "unavailable", name };
+  }
+}
+
+function isOrganizationNameTaken(cause: unknown, packageId: string) {
+  const error = cause as
+    | {
+        $kind?: string;
+        MoveAbort?: {
+          abortCode?: string;
+          location?: { package?: string; module?: string; functionName?: string };
+        };
+      }
+    | undefined;
+  return (
+    error?.$kind === "MoveAbort" &&
+    error.MoveAbort?.abortCode === "3002" &&
+    error.MoveAbort.location?.package === packageId &&
+    error.MoveAbort.location.module === "organization" &&
+    error.MoveAbort.location.functionName === "new_organization"
+  );
+}
+
+/** Do not map a coincidental 3002 from another package/function. The exact
+ * `new_organization` abort means another creator won the race after lookup. */
+export function organizationCreationFailure(error: unknown, packageId: string): string {
+  if (error instanceof OrganizationCreateError) return error.code;
+  if (
+    error instanceof TransactionPreflightError &&
+    error.code === "simulation_failed" &&
+    isOrganizationNameTaken(error.cause, packageId)
+  )
+    return "organization_name_taken";
+  return error instanceof TransactionPreflightError ? error.code : "unavailable";
+}
+
+export function organizationOutcomeFailure(
+  outcome: Pick<SelfPayTransactionOutcome, "status" | "transaction">,
+  packageId: string,
+) {
+  return (
+    outcome.status === "failed" && isOrganizationNameTaken(outcome.transaction?.status.error, packageId)
+      ? "organization_name_taken"
+      : "simulation_failed"
+  );
 }
 
 export type OrganizationKind = "suborganization" | "personal" | "organization";
@@ -178,7 +297,7 @@ export class OrganizationCreation {
     const identity = await this.chain.human();
     if (identity.human.id !== input.humanId)
       throw new OrganizationCreateError("human_changed");
-    const valid = validateOrganization(input, identity.organizations);
+    const valid = validateOrganization(input);
     if (!valid.ok) throw new OrganizationCreateError(valid.code);
     const grant = rootGrantForDevice(
       identity.grants.value,
@@ -187,6 +306,13 @@ export class OrganizationCreation {
       identity.clockMs,
     );
     if (!grant) throw new OrganizationCreateError("not_root_device");
+    const availability = await organizationNameAvailability(
+      this.chain,
+      valid.name,
+      identity.organizations,
+    );
+    if (availability.state === "taken")
+      throw new OrganizationCreateError("organization_name_taken");
     const original = await this.manager.query(input.requestId);
     if (original) return original;
     return this.manager.prepare({

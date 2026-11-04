@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   IndexedDbTransactionJournal,
-  TransactionPreflightError,
   type SelfPayFeeQuote,
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
@@ -12,10 +11,14 @@ import { NativeDeviceError, NativeDeviceSigner } from "../native-device";
 import {
   OrganizationCreation,
   OrganizationCreateError,
+  organizationCreationFailure,
+  organizationNameAvailability,
+  organizationOutcomeFailure,
   organizationRequestId,
   restrictedDevices,
   rootGrantForDevice,
   rootGrants,
+  type OrganizationNameAvailability,
   validateOrganization,
 } from "../organization-create";
 import { go } from "./router";
@@ -29,6 +32,7 @@ type Attempt = {
   beforeOrganizationIds: string[];
 };
 type Phase = "form" | "checking" | "quoting" | "ready" | "signing" | "unknown" | "created";
+type NameCheck = OrganizationNameAvailability | { state: "checking"; name: string };
 
 function key(network: string, chainIdentifier: string | undefined, humanId: string, profile: string) {
   return `fractalmind.app.org-create.v1:${JSON.stringify([network, chainIdentifier ?? "", humanId, profile])}`;
@@ -62,12 +66,6 @@ function nonce() {
   crypto.getRandomValues(bytes);
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-function code(error: unknown) {
-  if (error instanceof OrganizationCreateError || error instanceof TransactionPreflightError || error instanceof NativeDeviceError)
-    return error.code;
-  return "unavailable";
-}
-
 export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
   const app = useApp();
   const t = useT();
@@ -82,7 +80,9 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [created, setCreated] = useState<{ name: string; restricted: string[] } | null>(null);
+  const [nameCheck, setNameCheck] = useState<NameCheck | null>(null);
   const flow = useRef<OrganizationCreation | null>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
   const live = useRef(true);
 
   const now = identity ? clockNow(identity, app.wallMs) : 0n;
@@ -93,9 +93,20 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       ? key(app.profile.network, identity.chainIdentifier, identity.human.id, deviceProfile)
       : null;
   const validation = useMemo(
-    () => validateOrganization({ name, description }, identity?.organizations ?? []),
-    [name, description, identity?.organizations],
+    () => validateOrganization({ name, description }),
+    [name, description],
   );
+  const activeNameCheck =
+    validation.ok && nameCheck?.name === validation.name ? nameCheck : null;
+  const lookupProfile = app.profile
+    ? JSON.stringify([
+        app.profile.network,
+        app.profile.rpcUrl,
+        app.profile.packageId,
+        app.profile.originalPackageId ?? "",
+        app.profile.registryId,
+      ])
+    : "";
 
   const text = (value: string) =>
     t(
@@ -106,6 +117,7 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
         invalid_request_id: "设备配置名过长，不能安全保存这笔交易。",
         human_changed: "当前 Human 已变化；请重新打开此流程。",
         organization_not_visible: "交易已确认，但新组织尚未可读取；请稍后刷新原交易。",
+        organization_name_taken: "这个名字已经有组织在用了：组织名称在整个网络里不能重复，换一个吧。",
         needs_funds: "本设备余额不足以支付这笔交易。",
         simulation_failed: "链上拒绝了这笔交易；请刷新后重新检查。",
         stale_quote: "报价已过期；请重新报价。",
@@ -120,6 +132,7 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
         invalid_request_id: "The device profile is too long to save this transaction safely.",
         human_changed: "The current Human changed; reopen this flow.",
         organization_not_visible: "The transaction is confirmed, but the new organization is not readable yet; refresh the original transaction shortly.",
+        organization_name_taken: "This name is already used by an organization. Organization names are unique across the network; choose another one.",
         needs_funds: "This device does not have enough SUI for this transaction.",
         simulation_failed: "The chain rejected this transaction; refresh and review it again.",
         stale_quote: "The quote expired; obtain a new quote.",
@@ -128,6 +141,21 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
         unavailable: "Reading or signing is temporarily unavailable; check the device and network.",
       }[value] ?? "Could not complete this now; try again shortly.",
     );
+
+  const nameTakenText =
+    activeNameCheck?.state === "taken" && activeNameCheck.own
+      ? t(
+          `你已经有一个叫${activeNameCheck.name}的组织了。组织名称在整个网络里不能重复，换一个吧。`,
+          `You already have an organization named ${activeNameCheck.name}. Organization names are unique across the network; choose another one.`,
+        )
+      : text("organization_name_taken");
+  const nameFailureText =
+    failure === "organization_name_taken" ? nameTakenText : failure ? text(failure) : null;
+  const failureCode = (error: unknown) =>
+    error instanceof NativeDeviceError
+      ? error.code
+      : organizationCreationFailure(error, app.profile?.packageId ?? "");
+  const focusName = () => setTimeout(() => nameInput.current?.focus(), 0);
 
   async function openFlow() {
     if (!app.profile || !device || !deviceProfile) throw new NativeDeviceError("locked");
@@ -173,7 +201,9 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       else {
         if (storageKey) clearAttempt(storageKey);
         setAttempt(null);
-        setFailure("simulation_failed");
+        const value = organizationOutcomeFailure(result, app.profile?.packageId ?? "");
+        setFailure(value);
+        if (value === "organization_name_taken") focusName();
         // A definite failed receipt is not an unknown submission. Keep its
         // error visible, but permit the user to explicitly begin a fresh,
         // newly-nonced request after reviewing it.
@@ -181,7 +211,7 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       }
     } catch (error) {
       if (!live.current) return;
-      setFailure(code(error));
+      setFailure(failureCode(error));
       setPhase("unknown");
     }
   }
@@ -203,8 +233,34 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
+  /** Name lookup is intentionally debounced: every result carries the exact
+   * trimmed value it answered so an older RPC response cannot overwrite a new
+   * keystroke. The final lookup below repeats immediately before a quote. */
+  useEffect(() => {
+    if (!validation.ok || !app.profile || !identity) {
+      setNameCheck(null);
+      return;
+    }
+    const lookupName = validation.name;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void organizationNameAvailability(
+        new ChainReadSession(app.profile!),
+        lookupName,
+        identity.organizations,
+      ).then((result) => {
+        if (!cancelled) setNameCheck(result);
+      });
+    }, 400);
+    setNameCheck({ state: "checking", name: lookupName });
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [lookupProfile, validation, identity?.human.id, identity?.organizations]);
+
   async function prepare() {
-    if (!identity || !device || !deviceProfile || !storageKey) {
+    if (!identity || !device || !deviceProfile || !storageKey || !app.profile) {
       setFailure("locked");
       return;
     }
@@ -213,6 +269,20 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       return;
     }
     try {
+      setPhase("checking");
+      const availability = await organizationNameAvailability(
+        new ChainReadSession(app.profile),
+        validation.name,
+        identity.organizations,
+      );
+      if (!live.current) return;
+      setNameCheck(availability);
+      if (availability.state === "taken") {
+        setFailure("organization_name_taken");
+        setPhase("form");
+        focusName();
+        return;
+      }
       const current: Attempt = {
         format: 1,
         requestId: organizationRequestId(deviceProfile, identity.human.id, nonce()),
@@ -241,7 +311,9 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
         else {
           clearAttempt(storageKey);
           setAttempt(null);
-          setFailure("simulation_failed");
+          const value = organizationOutcomeFailure(result, app.profile?.packageId ?? "");
+          setFailure(value);
+          if (value === "organization_name_taken") focusName();
           setPhase("form");
         }
         return;
@@ -250,13 +322,14 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       setPhase("ready");
     } catch (error) {
       if (!live.current) return;
-      const value = code(error);
+      const value = failureCode(error);
       // A preflight failure means nothing was submitted, so this fresh locator
       // must not block a later, explicit attempt.
       clearAttempt(storageKey);
       setAttempt(null);
       setFailure(value);
       setPhase("form");
+      if (value === "organization_name_taken") focusName();
     }
   }
 
@@ -274,12 +347,16 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       else {
         if (storageKey) clearAttempt(storageKey);
         setAttempt(null);
-        setFailure("simulation_failed");
+        const value = organizationOutcomeFailure(result, app.profile?.packageId ?? "");
+        setFailure(value);
         setPhase("form");
+        if (value === "organization_name_taken") focusName();
       }
     } catch (error) {
       if (!live.current) return;
-      setFailure(code(error));
+      const value = failureCode(error);
+      setFailure(value);
+      if (value === "organization_name_taken") focusName();
       setPhase("unknown");
     }
   }
@@ -343,10 +420,16 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
           ) : (
             <Btn
               kind="primary"
-              disabled={!isTauri() || busy}
-              why={!isTauri() ? t("需要在桌面 App 中操作", "Needs the desktop App") : undefined}
+              disabled={!isTauri() || busy || activeNameCheck?.state === "taken"}
+              why={!isTauri()
+                ? t("需要在桌面 App 中操作", "Needs the desktop App")
+                : activeNameCheck?.state === "taken"
+                  ? nameTakenText
+                  : undefined}
               label={
-                phase === "quoting"
+                phase === "checking"
+                  ? t("检查名称…", "Checking name…")
+                  : phase === "quoting"
                   ? t("计算费用…", "Calculating fee…")
                   : phase === "signing"
                     ? t("签名创建中…", "Signing and creating…")
@@ -360,17 +443,20 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
         </>
       }
     >
-      {failure && <div className="note warn" role="alert"><Icon name="alert" /><div>{text(failure)}</div></div>}
+      {nameFailureText && <div className="note warn" role="alert"><Icon name="alert" /><div>{nameFailureText}</div></div>}
       {outcome?.status === "unknown" && <div className="note warn"><Icon name="help" /><div>{t("结果未知：只会查询原交易，不会重放或再次提交。", "Result unknown: only the original transaction will be queried; it will not be replayed or submitted again.")}</div></div>}
       <div className="field">
         <label htmlFor="organization-name">{t("组织名称", "Name")}</label>
-        <input id="organization-name" className="input" value={name} disabled={busy} onChange={(event) => setName(event.target.value)} placeholder={t("例如：家里的事、Meeru Labs", "e.g. Family, Meeru Labs")} />
+        <input ref={nameInput} id="organization-name" className="input" value={name} disabled={busy || phase === "ready"} onChange={(event) => setName(event.target.value)} placeholder={t("例如：家里的事、Meeru Labs", "e.g. Family, Meeru Labs")} />
         {!validation.ok && name && <div className="err small">{text(validation.code)}</div>}
-        {validation.ok && validation.duplicate && <div className="small muted">{t("你已经有一个同名的组织，可以创建，但切换时不容易分辨。", "You already have an organization with this name. It can be created, but will be hard to distinguish when switching.")}</div>}
+        {validation.ok && <div className="small muted">{t("组织名称在整个网络里不能重复，建好后其他人在开放网络里也会看到它。", "Organization names are unique across the network. Other people will be able to see this one on the open network after it is created.")}</div>}
+        {activeNameCheck?.state === "checking" && <div className="small muted">{t("正在查这个名字…", "Checking this name…")}</div>}
+        {activeNameCheck?.state === "taken" && <div className="err small">{nameTakenText}</div>}
+        {activeNameCheck?.state === "unavailable" && <div className="small muted">{t("暂时查不到这个名字有没有被占用，签名后如果重名会失败，手续费不退。", "The name cannot be checked right now. If it is taken, signing can fail and the fee is not refunded.")}</div>}
       </div>
       <div className="field">
         <label htmlFor="organization-description">{t("简介（可选）", "Description (optional)")}</label>
-        <textarea id="organization-description" className="input" rows={2} value={description} disabled={busy} onChange={(event) => setDescription(event.target.value)} />
+        <textarea id="organization-description" className="input" rows={2} value={description} disabled={busy || phase === "ready"} onChange={(event) => setDescription(event.target.value)} />
       </div>
       <ul className="small muted" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
         <li>{t("新组织从空开始：没有 OKR、Agent、主机和记忆，你是唯一的管理员。", "It starts empty: no OKRs, Agents, Hosts or memory; you are its only administrator.")}</li>

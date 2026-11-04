@@ -45,8 +45,8 @@ await access(helper);
 const rootProfile = fixture.profile;
 const scopedProfile = `test-org-scope-${randomBytes(4).toString("hex")}`;
 // The protocol registry globally owns names. The first captured form uses the
-// current Human's name to show the product's duplicate hint; this fresh name
-// is used for the real fee quote and transaction that follow.
+// current Human's name and must block quotation; this fresh name is used for
+// the real fee quote and transaction that follow.
 const createdOrganizationName = `Browser-localnet-${randomBytes(4).toString("hex")}`;
 const allowedProfiles = new Set([rootProfile]);
 let scopedCreated = false;
@@ -394,17 +394,19 @@ try {
   await waitFor("!!document.getElementById('organization-name')", "root-device organization form");
   await fill("organization-name", fixture.personalOrganizationName);
   await fill("organization-description", "为实际本地网络验收创建的第二个组织。");
-  await waitFor("document.body.innerText.includes('已经有一个同名的组织')", "duplicate-name warning");
-  await screenshotMatrix("03-root-form-duplicate");
+  await waitFor("document.body.innerText.includes('你已经有一个叫')", "occupied own-name warning");
+  assert.equal(await evaluate(`(() => [...document.querySelectorAll('button')]
+    .find((button) => (button.innerText || '').trim() === '签名创建')?.disabled)()`), true,
+    "An occupied global name must not quote or submit.");
+  await screenshotMatrix("03-root-form-name-taken");
 
-  // The duplicate hint is deliberately evidence-only: the deployed protocol's
-  // global name registry rejects an equal name. Use a unique name for the
-  // actual on-chain transaction without pretending that the duplicate quote
-  // would have been accepted.
+  // The occupied name did not allocate a request, quote, signature or
+  // transaction. Change it to a fresh global name for the real flow.
   await viewport(1280, 800, false);
   await setTheme("light");
   await fill("organization-name", createdOrganizationName);
-  await waitFor("!document.body.innerText.includes('已经有一个同名的组织')", "unique organization name");
+  await sleep(550);
+  await waitFor("!document.body.innerText.includes('你已经有一个叫')", "unique organization name");
   await viewport(1280, 800, false);
   await setTheme("light");
   await click("签名创建");
@@ -441,7 +443,7 @@ try {
 
   const files = (await (async () => {
     const names = [
-      "01-orgs-entry", "02-org-menu-entry", "03-root-form-duplicate",
+      "01-orgs-entry", "02-org-menu-entry", "03-root-form-name-taken",
       "04-fee-quote", "05-pending", "06-confirmed-workbench",
       "07-non-root-explanation",
     ];

@@ -42,6 +42,12 @@
   `org-new:{profile}:{humanId}:{nonce}` 的持久请求定位符、按目录差集确认新组织，
   并列出仍局限于其他组织的有效设备。交易继续走自付费 `prepare → quote → submit`
   路径，预算与新手引导一致。未知结果只查询原请求，绝不重放。
+- 2026-11-04 的全网唯一性更正已落实：读取 `ProtocolRegistry` 后用
+  `name_registry: Table<String, ID>` 的 String 动态字段精确查询（不是扫描当前 Human）。
+  新建组织和新手引导个人组织都会在输入停顿约 400ms、以及报价前再次检查；已占用的名字不
+  分配请求、不报价、不签名。读取失败只显示“可能重名且手续费不退”的提示，仍由合约作最终
+  判断；精确的 `organization::new_organization` / `3002` 竞态失败会保留表单、聚焦名称框，
+  允许以新请求 ID 改名重试。
 - 新增 `v2/OrganizationCreate.tsx` 和两个入口（“我的组织”的主按钮、组织切换菜单）。
   成功后切换到新组织和工作台，并显示连接主机、首个 OKR 及“去授权设备”的后续操作。
   非根设备只显示说明，不显示可提交表单。现有 `Dialog` 的移动端样式负责改为底部抽屉。
@@ -58,17 +64,18 @@
 
 已运行：
 
-- `cd apps/fractalmind-app && npm test`（446 通过）
+- `cd apps/fractalmind-app && npm test`（448 通过）
 - `cd apps/fractalmind-app && npm run build`（通过）
-- 新鲜隔离 localnet 上发布三包后运行 `scripts/org-create-localnet.ts`（3 项链上验收
-  检查通过；本地临时报告未含私钥）。
+- 新鲜隔离 localnet 上发布三包后运行 `scripts/org-create-localnet.ts`（5 项链上验收
+  检查通过，其中实际确认个人组织名为“自己已占用”、新名字在创建前空闲且确认后变为已占用；
+  本地临时报告未含私钥）。
 - 新鲜隔离 localnet + Vite + Chrome headless/CDP 的真实浏览器验收（28 张：日/夜、
   1280×800/390×844，入口、表单、报价、pending、确认、切换及非根设备说明均已记录）。
   见 `docs/product/org-create-shots/README.md` 与 `acceptance.json`；临时 profile 在脚本
   结束时删除，未接触测试网或主网。
 
 视觉验收相对原型的修正：v2 的 Dialog host 现在在窄屏包在 `.app.m` 中，因此手机用原型
-的底部抽屉规则；无设备名时显示 `另一台设备 · 0x12ab…cd`，而非裸地址。真实链还揭示了
-一个既有约束：协议的全局 `name_registry` 会拒绝重复名（abort `3002`），而原型/规则 2
-把同名视为允许继续的软提示；为诚实取得后续的真实报价和确认截图，截图流在提示后改用
-唯一名称。本次未改合约，差异也记录在截图 README 中。
+的底部抽屉规则；无设备名时显示 `另一台设备 · 0x12ab…cd`，而非裸地址。更正后的规则 2
+与实际合约一致：截图 `03-root-form-name-taken` 显示自己的已占用名字、全网唯一说明和禁用
+的“签名创建”；只在改为新名字后才有真实报价和确认。28 张日/夜、桌面/手机截图均逐张复核，
+没有使用 mock、测试网或主网交易。

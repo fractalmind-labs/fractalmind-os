@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "recordedAt": "2026-11-04T01:34:52.695Z",
+  "recordedAt": "2026-11-04T04:40:58.300Z",
   "network": "localnet",
   "browser": "Chrome headless through CDP",
   "viewportSets": [
@@ -20,10 +20,10 @@
     "02-org-menu-entry-light-phone-390x844.png",
     "02-org-menu-entry-dark-desktop-1280x800.png",
     "02-org-menu-entry-dark-phone-390x844.png",
-    "03-root-form-duplicate-light-desktop-1280x800.png",
-    "03-root-form-duplicate-light-phone-390x844.png",
-    "03-root-form-duplicate-dark-desktop-1280x800.png",
-    "03-root-form-duplicate-dark-phone-390x844.png",
+    "03-root-form-name-taken-light-desktop-1280x800.png",
+    "03-root-form-name-taken-light-phone-390x844.png",
+    "03-root-form-name-taken-dark-desktop-1280x800.png",
+    "03-root-form-name-taken-dark-phone-390x844.png",
     "04-fee-quote-light-desktop-1280x800.png",
     "04-fee-quote-light-phone-390x844.png",
     "04-fee-quote-dark-desktop-1280x800.png",

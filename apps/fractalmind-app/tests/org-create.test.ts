@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEVICE_ACTIONS } from "@fractalmind-labs/fractalmind-sdk";
+import { DEVICE_ACTIONS, TransactionPreflightError } from "@fractalmind-labs/fractalmind-sdk";
 import {
   addedOrganizationId,
   isRootGrant,
+  organizationCreationFailure,
+  organizationNameAvailability,
+  organizationOutcomeFailure,
   organizationKind,
   restrictedDevices,
   validateOrganization,
@@ -32,25 +35,80 @@ test("only a current unscoped approving grant is a root authorization", () => {
 });
 
 test("organization name uses trimmed Unicode code points and description is optional", () => {
-  const organizations = [{ name: "已有组织" }];
-  assert.deepEqual(validateOrganization({ name: "  已有组织  ", description: "  简介  " }, organizations as never), {
+  assert.deepEqual(validateOrganization({ name: "  已有组织  ", description: "  简介  " }), {
     ok: true,
     name: "已有组织",
     description: "简介",
-    duplicate: true,
   });
-  assert.deepEqual(validateOrganization({ name: " ", description: "" }, organizations as never), {
+  assert.deepEqual(validateOrganization({ name: " ", description: "" }), {
     ok: false,
     code: "invalid_name",
   });
-  assert.deepEqual(validateOrganization({ name: "😀".repeat(65), description: "" }, organizations as never), {
+  assert.deepEqual(validateOrganization({ name: "😀".repeat(65), description: "" }), {
     ok: false,
     code: "invalid_name",
   });
-  assert.deepEqual(validateOrganization({ name: "组织", description: "x".repeat(281) }, organizations as never), {
+  assert.deepEqual(validateOrganization({ name: "组织", description: "x".repeat(281) }), {
     ok: false,
     code: "invalid_description",
   });
+});
+
+test("organization names are checked in the global registry, including own names and lookup failures", async () => {
+  const other = "0x" + "1".repeat(64);
+  const own = "0x" + "2".repeat(64);
+  const lookup = (result: string | null | Error) => async (_chain: unknown, name: string) => {
+    assert.equal(name, "Shared name");
+    if (result instanceof Error) throw result;
+    return result;
+  };
+  assert.deepEqual(
+    await organizationNameAvailability({} as never, "Shared name", [{ objectId: own }] as never, lookup(other)),
+    { state: "taken", name: "Shared name", organizationId: other, own: false },
+  );
+  assert.deepEqual(
+    await organizationNameAvailability({} as never, "Shared name", [{ objectId: own }] as never, lookup(own)),
+    { state: "taken", name: "Shared name", organizationId: own, own: true },
+  );
+  assert.deepEqual(
+    await organizationNameAvailability({} as never, "Shared name", [], lookup(null)),
+    { state: "available", name: "Shared name" },
+  );
+  assert.deepEqual(
+    await organizationNameAvailability({} as never, "Shared name", [], lookup(new Error("offline"))),
+    { state: "unavailable", name: "Shared name" },
+  );
+});
+
+test("only the typed organization 3002 failure becomes a retryable global-name error", () => {
+  const pkg = "0x" + "4".repeat(64);
+  const cause = {
+    $kind: "MoveAbort",
+    MoveAbort: {
+      abortCode: "3002",
+      location: { package: pkg, module: "organization", functionName: "new_organization" },
+    },
+  };
+  assert.equal(
+    organizationCreationFailure(
+      new TransactionPreflightError("simulation_failed", "rejected", { cause }),
+      pkg,
+    ),
+    "organization_name_taken",
+  );
+  assert.equal(
+    organizationCreationFailure(
+      new TransactionPreflightError("simulation_failed", "rejected", {
+        cause: { ...cause, MoveAbort: { ...cause.MoveAbort, location: { ...cause.MoveAbort.location, module: "identity" } } },
+      }),
+      pkg,
+    ),
+    "simulation_failed",
+  );
+  assert.equal(
+    organizationOutcomeFailure({ status: "failed", transaction: { status: { error: cause } } } as never, pkg),
+    "organization_name_taken",
+  );
 });
 
 test("organization labels distinguish child, first personal, and later organizations", () => {

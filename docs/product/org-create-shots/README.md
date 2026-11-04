@@ -12,8 +12,8 @@
 | --- | --- |
 | `01-orgs-entry` | “我的组织”页右上角的“新建组织”入口 |
 | `02-org-menu-entry` | 组织切换菜单里的“新建组织…”入口 |
-| `03-root-form-duplicate` | 根设备表单、简介和已有同名组织的提示 |
-| `04-fee-quote` | 改成唯一名称后的真实自付费报价与签名前确认按钮 |
+| `03-root-form-name-taken` | 根设备表单、简介、自己的已占用全网名称提示，以及禁用的“签名创建” |
+| `04-fee-quote` | 改成全网唯一名称后的真实自付费报价与签名前确认按钮 |
 | `05-pending` | 原生设备已实际签名、尚在提交的 pending 状态 |
 | `06-confirmed-workbench` | 已确认后切到新组织工作台及“组织已建好”提示 |
 | `07-non-root-explanation` | 有 `org_scope` 的设备被拒绝时的说明和无设备名回退标签 |
@@ -26,10 +26,10 @@
   在窄屏加上原型 CSS 所需的 `.app.m` frame。
 - 链上 `DeviceGrant` 没有设备显示名。实际截图里的未知设备按产品要求显示为
   `另一台设备 · 0x12ab…cd` 形式，而不是裸地址或虚构名称。
-- 原型/规格把同名组织当作允许继续的软提示；真实协议的全局 `name_registry` 会拒绝同名
-  交易（localnet 复核为 `organization::new_organization` abort `3002`）。所以 `03` 如实
-  显示提示，随后真实交易改用唯一名称，才生成 `04`–`06` 的报价与确认。这是既有合约与
-  原型规格之间的约束差异；本次未获授权改合约，不能伪造一个会成功的重复名交易。
+- 修正后的规格和协议一致：输入停顿后按 `ProtocolRegistry.name_registry` 查询；`03` 是
+  当前 Human 自己已占用的名称，按钮明确禁用，因而没有报价、签名或交易。换成一个新名称后
+  才生成 `04`–`06` 的真实报价、签名和确认。查询与签名之间若被抢注，客户端也会把合约的
+  精确 `organization::new_organization` abort `3002` 映射回同一可改名提示。
 
 验收脚本是
 `apps/fractalmind-app/scripts/org-create-browser-acceptance.mjs`。它创建和销毁本轮测试

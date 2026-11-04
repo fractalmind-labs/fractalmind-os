@@ -27,6 +27,7 @@ import { NativeRecoverySigner } from "../src/native-onboarding";
 import { IdentityCreation, normalizeDeployment } from "../src/onboarding";
 import {
   OrganizationCreation,
+  organizationNameAvailability,
   organizationRequestId,
   restrictedDevices,
 } from "../src/organization-create";
@@ -161,6 +162,15 @@ try {
   assert.ok(first);
   checks.push("onboarding creates exactly one personal organization before the new flow");
 
+  const personalName = await organizationNameAvailability(
+    new ChainReadSession(first.profile),
+    first.organizations[0].name,
+    first.organizations,
+  );
+  assert.equal(personalName.state, "taken");
+  assert.equal(personalName.own, true);
+  checks.push("the production name-table lookup finds the personal organization as this Human's occupied global name");
+
   if (browserReady) {
     await writeFile(output, JSON.stringify({
       format: 1,
@@ -195,11 +205,16 @@ try {
     first.profile.humanId,
     randomBytes(8).toString("hex"),
   );
+  const secondName = `Shared-${randomUUID().slice(0, 8)}`;
+  assert.deepEqual(
+    await organizationNameAvailability(new ChainReadSession(first.profile), secondName, first.organizations),
+    { state: "available", name: secondName },
+  );
   const secondQuote = await createMore.prepare({
     requestId,
     humanId: first.profile.humanId,
     device: device.device.address,
-    name: `Shared-${randomUUID().slice(0, 8)}`,
+    name: secondName,
     description: "Isolated localnet organization creation acceptance",
   });
   assert.ok(!("status" in secondQuote));
@@ -215,6 +230,14 @@ try {
   assert.equal(secondOrganization.admin, first.profile.humanId);
   assert.equal((await new ChainReadSession(first.profile).human()).organizations.length, 2);
   checks.push("production creation flow rereads the Human directory and selects exactly one new, Human-administered organization");
+  const secondNameTaken = await organizationNameAvailability(
+    new ChainReadSession(first.profile),
+    secondName,
+    visible.identity.organizations,
+  );
+  assert.equal(secondNameTaken.state, "taken");
+  assert.equal(secondNameTaken.own, true);
+  checks.push("the published name registry changes a free name to an occupied one only after the confirmed second organization");
 
   // Give an isolated device an organization-scoped grant with APPROVE as well
   // as READ. Its simulated request therefore reaches assert_root and fails on
