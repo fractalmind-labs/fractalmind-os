@@ -330,6 +330,7 @@
 
   const TX_LABEL = {
     'identity.create': ['创建身份与个人组织', 'Create identity and personal organization'],
+    'org.create': ['新建组织', 'Create an organization'],
     'okr.activate': ['激活 OKR', 'Activate OKR'],
     'okr.update': ['确认新的执行约定', 'Confirm a new agreement'],
     'okr.archive': ['归档 OKR', 'Archive OKR'],

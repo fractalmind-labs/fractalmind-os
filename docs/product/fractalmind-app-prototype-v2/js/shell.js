@@ -51,7 +51,7 @@
   }
 
   function orgSub(meta) {
-    const kind = meta.kind === 'personal' ? T('个人组织', 'Personal') : T('团队组织', 'Team');
+    const kind = meta.kind === 'personal' ? T('个人组织', 'Personal') : meta.kind === 'team' ? T('团队组织', 'Team') : T('组织', 'Organization');
     const role = { admin: T('管理员', 'Admin'), member: T('成员', 'Member'), observer: T('观察者', 'Observer') }[meta.role];
     return `${kind} · ${role} · ${T('测试网', 'Testnet')}`;
   }
@@ -64,7 +64,7 @@
     return `<aside class="sidebar" aria-label="${T('主导航', 'Main navigation')}">
       <div class="sb-brand">${U.LOGO}<span>FractalMind</span><span class="demo-tag" title="${T('全部数据为演示', 'All data is demo data')}">${T('演示', 'Demo')}</span></div>
       <button class="sb-org" data-action="org-menu" data-pop-anchor="org" aria-haspopup="menu" aria-label="${T('切换组织', 'Switch organization')}">
-        <span class="avatar ${meta.kind === 'team' ? 'team' : ''}">${U.orgInitial(meta)}</span>
+        <span class="avatar ${meta.kind !== 'personal' ? 'team' : ''}">${U.orgInitial(meta)}</span>
         <span class="grow"><span class="t ellipsis" style="display:block">${esc(L(meta.name))}</span><span class="s">${esc(orgSub(meta))}</span></span>
         ${icon('down', 'sm')}
       </button>
@@ -162,7 +162,7 @@
     const n = unreadCount();
     return `<header class="m-top">
       <button class="org" data-action="org-menu" data-pop-anchor="org-m" aria-label="${T('切换组织', 'Switch organization')}">
-        <span class="avatar sm ${meta.kind === 'team' ? 'team' : ''}">${U.orgInitial(meta)}</span><span class="t">${esc(L(meta.name))}</span>${icon('down', 'xs')}
+        <span class="avatar sm ${meta.kind !== 'personal' ? 'team' : ''}">${U.orgInitial(meta)}</span><span class="t">${esc(L(meta.name))}</span>${icon('down', 'xs')}
       </button>
       <span class="grow"></span>
       ${txIndicator()}
@@ -233,12 +233,13 @@
     const items = p.orgs.map(o => {
       const cur = o.id === p.currentOrgId;
       return `<button class="menu-i ${cur ? 'on' : ''}" data-action="switch-org" data-id="${esc(o.id)}" role="menuitemradio" aria-checked="${cur}">
-        <span class="avatar sm ${o.kind === 'team' ? 'team' : ''}">${U.orgInitial(o)}</span>
+        <span class="avatar sm ${o.kind !== 'personal' ? 'team' : ''}">${U.orgInitial(o)}</span>
         <span class="grow"><span class="ellipsis" style="display:block;font-weight:600">${esc(L(o.name))}</span><span class="tiny muted">${esc(orgSub(o))}</span></span>
         ${cur ? icon('check', 'sm') : ''}</button>`;
     }).join('');
     return `<div class="pop" role="menu" style="width:300px">
       <div class="menu-h">${T('当前组织', 'Current organization')}</div>${items}
+      <button class="menu-i" data-action="org-new">${icon('plus', 'sm')}${T('新建组织…', 'New organization…')}</button>
       <div class="menu-sep"></div>
       <button class="menu-i" data-action="go" data-to="orgs">${icon('layers', 'sm')}${T('我的组织', 'My organizations')}</button>
       <button class="menu-i" data-action="go" data-to="network">${icon('globe', 'sm')}${T('开放网络', 'Open network')}</button>

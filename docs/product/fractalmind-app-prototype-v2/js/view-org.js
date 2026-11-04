@@ -14,7 +14,7 @@
     const p = P();
     const cols = ['read', 'operate', 'approve', 'manage_hosts'];
     const head = [T('组织 / 角色', 'Organization / role'), T('读取', 'Read'), T('执行', 'Operate'), T('审批', 'Approve'), T('管理主机', 'Manage hosts')];
-    const rows = p.orgs.map(o => `<div><span class="avatar sm ${o.kind === 'team' ? 'team' : ''}">${U.orgInitial(o)}</span><span class="grow"><span class="strong">${esc(L(o.name))}</span><span class="tiny muted" style="display:block">${o.role === 'admin' ? T('管理员', 'Admin') : T('成员', 'Member')}</span></span></div>${cols.map(a => {
+    const rows = p.orgs.map(o => `<div><span class="avatar sm ${o.kind !== 'personal' ? 'team' : ''}">${U.orgInitial(o)}</span><span class="grow"><span class="strong">${esc(L(o.name))}</span><span class="tiny muted" style="display:block">${o.role === 'admin' ? T('管理员', 'Admin') : T('成员', 'Member')}</span></span></div>${cols.map(a => {
       const r = M.can(p, p.currentDeviceId, o.id, a, U.now());
       return `<div title="${esc(r.ok ? '' : U.permText(r.code))}" style="color:${r.ok ? 'var(--ok)' : 'var(--text-4)'}">${icon(r.ok ? 'check' : 'x', 'sm')}<span class="tiny">${r.ok ? '' : esc(U.permText(r.code).slice(0, 14))}</span></div>`;
     }).join('')}`).join('');
@@ -357,17 +357,95 @@
       [3, '子组织与组织协作', 'Sub-organizations', '子组织复用同一模型，权限继承需要显式定义。', 'Sub-organizations reuse the same model; inherited authority is explicit.', 'P3', false],
       [4, '组织联邦', 'Federations', '独立组织按授权委托、提交与验收；私有数据不自动共享。', 'Independent organizations delegate, deliver and accept under explicit grants; private data is never shared automatically.', 'P4', false],
     ];
-    return `<div class="page-h"><div><h1>${T('我的组织', 'My organizations')}</h1><p class="muted">${T('可验证的组织关系。切换后，工作台、OKR、主机与权限按该组织重新确定。', 'Verifiable organization relationships. Switching re-establishes the workbench, OKRs, hosts and permissions.')}</p></div></div>
+    return `<div class="page-h"><div><h1>${T('我的组织', 'My organizations')}</h1><p class="muted">${T('可验证的组织关系。切换后，工作台、OKR、主机与权限按该组织重新确定。', 'Verifiable organization relationships. Switching re-establishes the workbench, OKRs, hosts and permissions.')}</p></div>${U.btn({ action: 'org-new', label: T('新建组织', 'New organization'), icon: 'plus', kind: 'primary' })}</div>
       <div class="grid-2">${p.orgs.map(o => {
         const cur = o.id === p.currentOrgId;
         const d = p.data[o.id];
-        return `<article class="card ${cur ? 'accent' : ''}"><div class="row between top"><div class="row"><span class="avatar ${o.kind === 'team' ? 'team' : ''}">${U.orgInitial(o)}</span><div><div class="strong">${esc(L(o.name))}</div><div class="small muted">${o.kind === 'personal' ? T('个人组织', 'Personal') : T('团队组织', 'Team')} · ${o.role === 'admin' ? T('管理员', 'Admin') : T('成员', 'Member')}</div></div></div>${cur ? `<span class="chip brand">${T('当前', 'Current')}</span>` : `<button class="btn sm" data-action="switch-org" data-id="${esc(o.id)}">${T('切换', 'Switch')}</button>`}</div>
+        return `<article class="card ${cur ? 'accent' : ''}"><div class="row between top"><div class="row"><span class="avatar ${o.kind !== 'personal' ? 'team' : ''}">${U.orgInitial(o)}</span><div><div class="strong">${esc(L(o.name))}</div><div class="small muted">${o.kind === 'personal' ? T('个人组织', 'Personal') : T('团队组织', 'Team')} · ${o.role === 'admin' ? T('管理员', 'Admin') : T('成员', 'Member')}</div></div></div>${cur ? `<span class="chip brand">${T('当前', 'Current')}</span>` : `<button class="btn sm" data-action="switch-org" data-id="${esc(o.id)}">${T('切换', 'Switch')}</button>`}</div>
           <dl class="kv mt-12"><dt>${T('链上身份', 'Chain ID')}</dt><dd class="mono small">${esc(U.shortId(o.chainId, 8))} <button class="btn ghost icon sm" data-action="copy" data-copy="${esc(o.chainId)}" aria-label="${T('复制', 'Copy')}">${icon('copy', 'sm')}</button></dd><dt>${T('网络', 'Network')}</dt><dd>Sui ${T('测试网', 'testnet')} · ${o.status === 'confirmed' ? T('已确认', 'confirmed') : o.status}</dd><dt>${T('关系来源', 'Relationship')}</dt><dd>${o.role === 'admin' ? 'OrgAdminCap' : T('成员资格对象', 'Membership object')}</dd><dt>${T('内容', 'Contents')}</dt><dd>${T(`${d.okrs.filter(x => x.lifecycle === 'ACTIVE').length} 个进行中目标 · ${d.hosts.length} 台主机`, `${d.okrs.filter(x => x.lifecycle === 'ACTIVE').length} active goals · ${d.hosts.length} hosts`)}</dd></dl></article>`;
       }).join('')}</div>
       <section class="sec"><div class="sec-h"><h2>${T('成长路径', 'Growth path')}</h2><span class="small muted">${T('每一级复用 OKR、约束、任务、身份、权限与成果证据', 'Every level reuses OKRs, limits, tasks, identity, authority and evidence')}</span></div>
         <div class="fractal">${stages.map(([lv, zh, en, dzh, den, phase, on]) => `<div class="stage-card ${on ? 'on' : 'future'}">${glyph(lv)}<div class="row between"><strong>${esc(T(zh, en))}</strong><span class="chip ${on ? 'ok' : 'wait'}">${phase}</span></div><div class="small muted">${esc(T(dzh, den))}</div>${on ? `<span class="small" style="color:var(--brand-ink)">${T('你在这里', 'You are here')}</span>` : `<span class="small muted">${T('后续开放，暂无可用操作', 'Coming later; no actions yet')}</span>`}</div>`).join('')}</div>
         <div class="note mt-12">${icon('info')}<div>${T('FractalMind 的使命是通过分形、自相似的 Agent 组织向 ASI 发展。组织规模与能力的关系需要持续验证，不用安装量或 Agent 数量代替能力证据。', 'FractalMind aims at ASI through fractal, self-similar agent organizations. The link between scale and capability must be shown with evidence, never with install or Agent counts.')}</div></div></section>`;
   };
+
+  /* ------------------------------------------- New organization (FR-02a) */
+
+  const ORG_ERR = {
+    org_name_empty: ['请填写组织名称', 'Name the organization'],
+    org_name_long: [`组织名称最多 ${M.ORG_NAME_MAX} 个字`, `Up to ${M.ORG_NAME_MAX} characters`],
+    org_desc_long: [`简介最多 ${M.ORG_DESC_MAX} 个字`, `Up to ${M.ORG_DESC_MAX} characters`],
+    not_root_device: ['只有主设备能新建组织', 'Only a main device can create an organization'],
+    device_inactive: ['这台设备的授权已失效', 'This device is no longer authorized'],
+  };
+  const orgErr = code => { const t = ORG_ERR[code]; return t ? T(t[0], t[1]) : U.txErr(code); };
+  const devName = id => { const d = M.find(P().devices, id); return d ? d.name : id; };
+
+  FM.dialogs['org-new'] = () => {
+    const p = P();
+    const c = M.canCreateOrg(p);
+    if (!c.ok) {
+      const roots = p.devices.filter(d => d.role === 'manage' && d.grant.state === 'active').map(d => esc(d.name));
+      return {
+        title: T('新建组织', 'New organization'), size: 'sm',
+        body: `<div class="note">${icon('info')}<div>${T('只有主设备能新建组织：这台设备的授权只限于某个组织。', 'Only a main device can create an organization: this device is authorized for one organization only.')}
+          ${roots.length ? T(`请在 ${roots.join('、')} 上新建；建好后，在那台设备的「我的身份 › 设备」里把这台设备也授权到新组织。`, `Create it on ${roots.join(', ')}; then, on that device, authorize this one for the new organization under My identity › Devices.`) : ''}</div></div>`,
+        foot: `<button class="btn" data-action="close-dialog">${T('知道了', 'OK')}</button>`,
+      };
+    }
+    const tx = U.latestTx(t => t.kind === 'org.create' && t.state !== 'confirmed');
+    const busy = tx && ['pending', 'unknown'].includes(tx.state);
+    const name = U.f('orgnew.name', ''), desc = U.f('orgnew.desc', '');
+    const v = M.validateOrg(p, { name, description: desc });
+    const tried = U.f('orgnew.tried', false);
+    const others = p.devices.filter(d => d.grant.state === 'active' && d.id !== p.currentDeviceId);
+    const fee = `${(M.FEES['org.create'] / M.MIST).toFixed(4)} SUI`;
+    return {
+      title: T('新建组织', 'New organization'), sub: T('为另一件事单独开一个组织：OKR、主机、Agent、记忆和权限都和现有组织分开。', 'A separate organization for something else: its OKRs, hosts, Agents, memory and permissions are kept apart from your other organizations.'), size: 'sm',
+      body: `<div class="field"><label for="on-name">${T('组织名称', 'Name')}</label><input id="on-name" class="input" data-f="orgnew.name" maxlength="${M.ORG_NAME_MAX}" placeholder="${T('例如：家里的事、Meeru Labs', 'e.g. Family, Meeru Labs')}" value="${esc(name)}" ${busy ? 'disabled' : ''}>
+          ${tried && !v.ok && v.code === 'org_name_empty' ? `<div class="err small">${orgErr(v.code)}</div>` : v.dup ? `<div class="small muted">${T('你已经有一个同名的组织，可以用，但切换时不好分辨。', 'You already have an organization with this name; it works, but is hard to tell apart.')}</div>` : ''}</div>
+        <div class="field"><label for="on-desc">${T('简介（可选）', 'Description (optional)')}</label><textarea id="on-desc" class="input" rows="2" data-f="orgnew.desc" maxlength="${M.ORG_DESC_MAX}" ${busy ? 'disabled' : ''}>${esc(desc)}</textarea></div>
+        <ul class="small muted" style="margin:4px 0 0;padding-left:18px;line-height:1.7">
+          <li>${T('新组织从空开始：没有 OKR、Agent、主机和记忆，你是唯一的管理员。', 'It starts empty: no OKRs, Agents, hosts or memory; you are its only admin.')}</li>
+          <li>${T('邀请别人加入要到后续版本（P3）；现在可以先用它分开管理不同的事。', 'Inviting people comes later (P3); for now it keeps different work apart.')}</li>
+          <li>${T(`需要一笔链上交易，约 ${fee}。`, `Needs one chain transaction, about ${fee}.`)}</li>
+        </ul>
+        ${others.length ? `<div class="note mt-12">${icon('monitor')}<div><div class="strong small">${T('你的其他设备', 'Your other devices')}</div>${others.map(d => `<div class="small">${esc(d.name)} · ${d.role === 'manage' ? T('可以直接使用新组织', 'can use it right away') : T('只授权给了现有组织，要用新组织需要另外授权', 'is authorized for another organization only; authorize it for the new one to use it')}</div>`).join('')}</div></div>` : ''}
+        ${tx ? `<div class="mt-12">${U.txLine(tx)}</div>` : ''}`,
+      foot: `<button class="btn" data-action="close-dialog">${T('取消', 'Cancel')}</button>${U.btn({ action: 'org-new-do', label: busy ? T('等待确认…', 'Waiting…') : T('签名创建', 'Sign and create'), kind: 'primary', disabled: busy })}`,
+    };
+  };
+
+  FM.dialogs['org-made'] = ({ id, scoped }) => {
+    const p = P();
+    const o = M.find(p.orgs, id);
+    if (!o) return null;
+    return {
+      title: T('组织已建好', 'Organization created'), sub: esc(L(o.name)), size: 'sm',
+      body: `<div class="small">${T('已切换到新组织。下一步可以连接一台主机、写第一个 OKR。', 'You are now in the new organization. Next: connect a host and write a first OKR.')}</div>
+        ${scoped && scoped.length ? `<div class="note warn mt-12">${icon('alert')}<div>${T(`${scoped.map(devName).map(esc).join('、')} 还不能用这个组织：只授权给了别的组织。`, `${scoped.map(devName).map(esc).join(', ')} cannot use this organization yet: authorized for another one only.`)}</div></div>` : ''}`,
+      foot: `${scoped && scoped.length ? `<button class="btn" data-action="go-close" data-to="identity">${T('去授权设备', 'Authorize devices')}</button>` : ''}<button class="btn primary" data-action="go-close" data-to="hosts">${T('连接主机', 'Connect a host')}</button>`,
+    };
+  };
+
+  Object.assign(FM.actions, {
+    'org-new': () => { ui.pop = null; U.clearForm('orgnew'); U.openDialog('org-new'); },
+    'org-new-do': () => {
+      const p = P();
+      const v = M.validateOrg(p, { name: U.f('orgnew.name', ''), description: U.f('orgnew.desc', '') });
+      if (!v.ok) { U.setF('orgnew.tried', true); render(); toast(orgErr(v.code), 'warn'); return; }
+      U.submitTx({ kind: 'org.create', orgId: null, payload: { name: v.name, description: v.description, deviceId: p.currentDeviceId, data: FM.fixtures.emptyOrgData() } }, {
+        onConfirmed: (res, prof) => {
+          M.switchOrg(prof, res.orgId);
+          U.clearForm('orgnew');
+          ui.dialog = { type: 'org-made', id: res.orgId, scoped: res.scoped };
+          U.save();
+          U.go('workbench');
+        },
+        ok: () => T('已建好组织，已切换过去。', 'Organization created; switched to it.'),
+      });
+    },
+  });
 
   /* ---------------------------------------------------------- Network */
 

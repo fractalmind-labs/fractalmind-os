@@ -1045,7 +1045,7 @@
   /* --------------------------------------------------- Run fees and txs */
 
   const FEES = {
-    'identity.create': 3000000, 'okr.activate': 1200000, 'okr.update': 800000, 'okr.archive': 600000, 'approval.decide': 400000,
+    'identity.create': 3000000, 'org.create': 2000000, 'okr.activate': 1200000, 'okr.update': 800000, 'okr.archive': 600000, 'approval.decide': 400000,
     'invite.create': 900000, 'invite.redeem': 1100000, 'invite.revoke': 500000, 'binding.create': 900000,
     'host.revoke': 600000, 'device.grant': 800000, 'device.revoke': 500000, 'recovery.set': 700000,
     'recovery.apply': 1500000, 'agent.import': 700000, 'agent.include': 900000, 'memory.write': 600000,
@@ -1062,6 +1062,45 @@
     }
     if (wallet.balance < fee) return { ok: false, code: 'insufficient' };
     return { ok: true, payer: 'self' };
+  }
+
+  /* ------------------------------------------------ Organizations (FR-02a) */
+
+  const ORG_NAME_MAX = 64, ORG_DESC_MAX = 280;
+  /** Only a root device (unscoped grant that may approve) can create an organization:
+   *  identity::create_organization asserts it. Returns { ok } or { ok: false, code }. */
+  function canCreateOrg(profile, deviceId) {
+    const d = find(profile.devices, deviceId || profile.currentDeviceId);
+    if (!d || d.grant.state !== 'active') return { ok: false, code: 'device_inactive' };
+    if (d.role !== 'manage') return { ok: false, code: 'not_root_device' };
+    return { ok: true };
+  }
+  function validateOrg(profile, input) {
+    const name = String(input.name || '').trim(), description = String(input.description || '').trim();
+    if (!name) return { ok: false, code: 'org_name_empty' };
+    if ([...name].length > ORG_NAME_MAX) return { ok: false, code: 'org_name_long' };
+    if ([...description].length > ORG_DESC_MAX) return { ok: false, code: 'org_desc_long' };
+    const dup = profile.orgs.some(o => String(o.name && (o.name.zh || o.name.en || o.name)).trim() === name);
+    return { ok: true, name, description, dup };
+  }
+  /** A new organization starts empty, with this human as its only admin. Devices whose
+   *  grant is not limited to one organization (role 'manage' here) can use it at once;
+   *  devices scoped to another organization cannot, until they are authorized for it. */
+  function createOrg(profile, p, tx, now) {
+    const c = canCreateOrg(profile, p.deviceId);
+    if (!c.ok) return c;
+    const v = validateOrg(profile, p);
+    if (!v.ok) return v;
+    const id = `org-${digest(`${tx.id}:org`).slice(0, 8)}`;
+    profile.orgs.push({ id, chainId: `0x${digest(tx.id + ':chain')}${digest(tx.id + ':chain2')}`.slice(0, 66), name: v.name, description: v.description, kind: 'org', role: 'admin', network: 'testnet', status: 'confirmed', createdAt: now, createdBy: p.deviceId });
+    profile.data[id] = p.data;
+    const scoped = [];
+    for (const d of profile.devices) {
+      if (d.grant.state !== 'active') continue;
+      if (d.role === 'manage') d.grant.scopes.push({ orgId: id, actions: ['read', 'operate', 'approve', 'manage_hosts'] });
+      else scoped.push(d.id);
+    }
+    return { ok: true, orgId: id, scoped };
   }
 
   function beginTx(profile, spec, now) {
@@ -1152,6 +1191,7 @@
       case 'host.revoke': return revokeHost(org, p.hostId, now);
       case 'device.grant': return confirmGrant(profile, p.deviceId);
       case 'device.revoke': return revokeDevice(profile, p.deviceId, p.byId, now);
+      case 'org.create': return createOrg(profile, p, tx, now);
       case 'recovery.set': return setRecovery(profile, { digest: p.digest, network: p.network }, now);
       case 'recovery.apply': return applyRecovery(profile, { digest: p.digest }, p.device, now);
       case 'agent.import': return confirmImport(org, p.instanceId, now);
@@ -1593,6 +1633,7 @@
     snapshot, canMessage, conversation, sendMessage, agentReply, adoptProposal, switchRoute,
     scanHost, importObserve, confirmImport, includeIssues, includeInOkr,
     switchOrg, sameContext, contextToken, buildExport,
+    ORG_NAME_MAX, ORG_DESC_MAX, canCreateOrg, validateOrg, createOrg,
     DIRECT_ACTIONS, constrainable, standingToday, directConversation, pickInstance, setDirectInstance, channelCan,
     sendDirect, directReply, executeStandingApproval, updateStanding, promoteDirect,
   };
