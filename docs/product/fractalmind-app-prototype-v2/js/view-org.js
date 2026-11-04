@@ -375,10 +375,14 @@
     org_name_empty: ['请填写组织名称', 'Name the organization'],
     org_name_long: [`组织名称最多 ${M.ORG_NAME_MAX} 个字`, `Up to ${M.ORG_NAME_MAX} characters`],
     org_desc_long: [`简介最多 ${M.ORG_DESC_MAX} 个字`, `Up to ${M.ORG_DESC_MAX} characters`],
+    org_name_taken: ['这个名字已经有组织在用了：组织名称在整个网络里不能重复，换一个吧。', 'An organization already uses this name; names are unique across the network. Pick another.'],
     not_root_device: ['只有主设备能新建组织', 'Only a main device can create an organization'],
     device_inactive: ['这台设备的授权已失效', 'This device is no longer authorized'],
   };
   const orgErr = code => { const t = ORG_ERR[code]; return t ? T(t[0], t[1]) : U.txErr(code); };
+  // Every name the app knows is in use: your organizations and the network directory. The
+  // real app looks the name up in the protocol's name registry before quoting.
+  const takenNames = () => ((U.root && U.root.network) || []).map(n => String(typeof n.name === 'object' ? (n.name.zh || n.name.en) : n.name).trim());
   const devName = id => { const d = M.find(P().devices, id); return d ? d.name : id; };
 
   FM.dialogs['org-new'] = () => {
@@ -396,14 +400,14 @@
     const tx = U.latestTx(t => t.kind === 'org.create' && t.state !== 'confirmed');
     const busy = tx && ['pending', 'unknown'].includes(tx.state);
     const name = U.f('orgnew.name', ''), desc = U.f('orgnew.desc', '');
-    const v = M.validateOrg(p, { name, description: desc });
+    const v = M.validateOrg(p, { name, description: desc }, takenNames());
     const tried = U.f('orgnew.tried', false);
     const others = p.devices.filter(d => d.grant.state === 'active' && d.id !== p.currentDeviceId);
     const fee = `${(M.FEES['org.create'] / M.MIST).toFixed(4)} SUI`;
     return {
       title: T('新建组织', 'New organization'), sub: T('为另一件事单独开一个组织：OKR、主机、Agent、记忆和权限都和现有组织分开。', 'A separate organization for something else: its OKRs, hosts, Agents, memory and permissions are kept apart from your other organizations.'), size: 'sm',
       body: `<div class="field"><label for="on-name">${T('组织名称', 'Name')}</label><input id="on-name" class="input" data-f="orgnew.name" maxlength="${M.ORG_NAME_MAX}" placeholder="${T('例如：家里的事、Meeru Labs', 'e.g. Family, Meeru Labs')}" value="${esc(name)}" ${busy ? 'disabled' : ''}>
-          ${tried && !v.ok && v.code === 'org_name_empty' ? `<div class="err small">${orgErr(v.code)}</div>` : v.dup ? `<div class="small muted">${T('你已经有一个同名的组织，可以用，但切换时不好分辨。', 'You already have an organization with this name; it works, but is hard to tell apart.')}</div>` : ''}</div>
+          ${!v.ok && v.code === 'org_name_taken' ? `<div class="err small">${v.mine ? T('你已经有一个叫这个名字的组织了：组织名称在整个网络里不能重复，换一个吧。', 'You already have an organization with this name; names are unique across the network. Pick another.') : orgErr(v.code)}</div>` : tried && !v.ok && v.code === 'org_name_empty' ? `<div class="err small">${orgErr(v.code)}</div>` : `<div class="small muted">${T('组织名称在整个网络里不能重复，建好后其他人在开放网络里也会看到它。', 'Names are unique across the network; others can see it in the open network.')}</div>`}</div>
         <div class="field"><label for="on-desc">${T('简介（可选）', 'Description (optional)')}</label><textarea id="on-desc" class="input" rows="2" data-f="orgnew.desc" maxlength="${M.ORG_DESC_MAX}" ${busy ? 'disabled' : ''}>${esc(desc)}</textarea></div>
         <ul class="small muted" style="margin:4px 0 0;padding-left:18px;line-height:1.7">
           <li>${T('新组织从空开始：没有 OKR、Agent、主机和记忆，你是唯一的管理员。', 'It starts empty: no OKRs, Agents, hosts or memory; you are its only admin.')}</li>
@@ -432,9 +436,9 @@
     'org-new': () => { ui.pop = null; U.clearForm('orgnew'); U.openDialog('org-new'); },
     'org-new-do': () => {
       const p = P();
-      const v = M.validateOrg(p, { name: U.f('orgnew.name', ''), description: U.f('orgnew.desc', '') });
+      const v = M.validateOrg(p, { name: U.f('orgnew.name', ''), description: U.f('orgnew.desc', '') }, takenNames());
       if (!v.ok) { U.setF('orgnew.tried', true); render(); toast(orgErr(v.code), 'warn'); return; }
-      U.submitTx({ kind: 'org.create', orgId: null, payload: { name: v.name, description: v.description, deviceId: p.currentDeviceId, data: FM.fixtures.emptyOrgData() } }, {
+      U.submitTx({ kind: 'org.create', orgId: null, payload: { name: v.name, description: v.description, deviceId: p.currentDeviceId, takenAtCommit: takenNames(), data: FM.fixtures.emptyOrgData() } }, {
         onConfirmed: (res, prof) => {
           M.switchOrg(prof, res.orgId);
           U.clearForm('orgnew');
@@ -443,6 +447,8 @@
           U.go('workbench');
         },
         ok: () => T('已建好组织，已切换过去。', 'Organization created; switched to it.'),
+        // Someone else took the name between the check and the signature: keep the form.
+        onFailed: res => { if (res.code === 'org_name_taken') { U.setF('orgnew.tried', true); ui.dialog = { type: 'org-new' }; } },
       });
     },
   });
