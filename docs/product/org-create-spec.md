@@ -1,0 +1,29 @@
+# 新建组织：实现规格（FR-02a）
+
+2026-11-04 定。需求与交互以 `fractalmind-app-prd.md` 的 J5、FR-02a 和原型 v2（`fractalmind-app-prototype-v2/`，入口「我的组织」右上角、组织切换菜单）为准。本文件把它们落到 `apps/fractalmind-app`；原型和本文件冲突时以本文件为准。
+
+## 不改的东西
+
+- 不改合约。`identity::create_organization` 已允许根授权设备随时新建组织，并把它挂到 Human 的 `organizations`、`admin_caps`、`roles` 上；SDK 已有 `sdk.identity.createOrganization({ humanId, grantId, name, description })`。
+- 不做邀请成员、子组织、联邦（P3/P4，原「团队与子组织」即将推出卡片保留）。
+- 新手引导的个人组织流程不变（`onboarding.ts` 里「已有组织就报错」只属于新手引导，不要挪到新流程里）。
+
+## 规则
+
+1. **谁能新建**：当前设备的授权（`DeviceGrant`）满足 `org_scope` 为空、`actions` 含 APPROVE、未撤销、未过期、代数等于 Human 当前代数（与合约 `assert_root` 一致）。不满足时入口仍可见，点开后是说明弹层：「只有主设备能新建组织：这台设备的授权只限于某个组织。」列出这个 Human 名下满足条件的设备名，并说明建好后在那台设备的「我的身份 › 设备」里给这台设备授权。不出现可提交的表单。
+2. **表单**：名称必填，去掉首尾空格后 1–64 个字符（按 Unicode 码点计）；简介可选，最多 280 字符。与自己已有组织同名时给提示但允许。表单上写明：从空开始、你是唯一管理员、邀请他人在后续版本、预计手续费（用现有自付费报价，与新手引导同一套）。
+3. **提交**：复用新手引导的 `deviceManager.prepare` → 报价 → 提交路径，新建一个请求 ID：`org-new:{profile}:{humanId}:{随机 nonce}`，在用户点「签名创建」时生成并持久化，直到交易有确定结果；按钮在 pending / 结果未知时不可再次提交。结果未知时按现有规则查询原交易，**不重放**。gas 预算与新手引导建组织相同。
+4. **确认后**：重新读取 Human（`chain.human()`），找到新增的组织 ID（`organizations` 比提交前多出的那一个），`selectOrganization` 切过去，进入工作台，弹出「组织已建好」：下一步建议（连接主机、写第一个 OKR），以及**还不能使用新组织的设备**：本 Human 名下有效授权中 `org_scope` 为某个别的组织的那些设备，附「去授权设备」入口（我的身份 › 设备）。
+5. **标签**：组织副标题的类型改为：`depth > 0` → 子组织；是这个 Human 的**个人组织** → 个人组织；其余 → 组织。个人组织 = `human.organizations` 的第一个（新手引导创建的那个）。把这个判断写成一个有单测的函数，Shell 顶栏、切换菜单、「我的组织」列表、我的身份页统一用它（现在 `Shell.tsx` 用 `depth > 0` 判断，其余一律叫「个人」，要改）。
+6. **入口**：「我的组织」页标题右侧主按钮「新建组织」；组织切换菜单在组织列表下方加「新建组织…」。手机布局下同样可用（弹层改为底部抽屉，沿用现有手机对话框模式）。
+
+## 文案
+
+中文为准，英文逐条对应，放进现有 i18n（`t(zh, en)`）。直接沿用原型 v2 `js/view-org.js` 里 `org-new` / `org-made` 两个弹层和错误表 `ORG_ERR` 的文字。
+
+## 验收
+
+1. `npm test`、`npm run build` 通过；新增单测：根授权判断（无 org_scope + APPROVE 通过；有 org_scope、缺 APPROVE、已撤销、已过期、旧代数各不通过）、名称校验、组织类型标签、提交前后组织列表差集取新组织、受限设备列表。
+2. 仿照 `scripts/native-onboarding-localnet.ts` 写 `scripts/org-create-localnet.ts`：在本地网络上建身份和个人组织后，再用主设备新建第二个组织，断言 Human 的 `organizations` 为 2、新组织管理员是该 Human、App 读取层能读到两个组织；再用一个 `org_scope` 限定的设备尝试新建，断言合约拒绝。只用本地网络，不碰测试网。
+3. 用开发模式在浏览器里走一遍：新建 → 待确认 → 已确认 → 切换 → 成功弹层；非主设备的说明弹层；截图日间、夜间各一套放 `docs/product/org-create-shots/`，并与原型同屏对照，列出差异。
+4. 交付说明写在本文件末尾「实现记录」。
