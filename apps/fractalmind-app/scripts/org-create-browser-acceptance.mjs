@@ -36,6 +36,17 @@ assert.equal(fixture.browserReady, true, "Use FM_ORG_CREATE_BROWSER_READY=1 to c
 assert.match(fixture.profile, /^test-[A-Za-z0-9_-]{1,59}$/);
 const output = resolve(process.argv[3]);
 await mkdir(output, { recursive: true });
+const screenshotNames = [
+  "01-orgs-entry", "02-org-menu-entry", "03-root-form-name-taken",
+  "04-fee-quote", "05-pending", "06-confirmed-workbench",
+  "07-non-root-explanation",
+];
+const requestedScreenshots = process.env.FM_ORG_CREATE_SCREENSHOTS
+  ? new Set(process.env.FM_ORG_CREATE_SCREENSHOTS.split(",").map((name) => name.trim()).filter(Boolean))
+  : null;
+if (requestedScreenshots)
+  for (const name of requestedScreenshots)
+    assert.ok(screenshotNames.includes(name), `Unknown screenshot set: ${name}`);
 const rpc = fixture.connection?.rpcUrl;
 assert.equal(fixture.connection?.network, "localnet");
 assert.ok(["127.0.0.1", "localhost", "[::1]"].includes(new URL(rpc).hostname), "Visual acceptance is localnet only.");
@@ -233,6 +244,7 @@ async function screenshot(name) {
 }
 
 async function screenshotMatrix(name) {
+  if (requestedScreenshots && !requestedScreenshots.has(name)) return;
   await setTheme("light");
   await viewport(1280, 800, false);
   await screenshot(`${name}-light-desktop-1280x800`);
@@ -395,6 +407,21 @@ try {
   await fill("organization-name", fixture.personalOrganizationName);
   await fill("organization-description", "为实际本地网络验收创建的第二个组织。");
   await waitFor("document.body.innerText.includes('你已经有一个叫')", "occupied own-name warning");
+  const occupiedNameState = await evaluate(`(() => {
+    const field = document.getElementById("organization-name")?.closest(".field");
+    return {
+      error: field?.querySelector(".err-t")?.innerText || "",
+      inputIsDanger: document.getElementById("organization-name")?.classList.contains("err") || false,
+      hasAlwaysOnHint: field?.innerText.includes("建好后其他人在开放网络里也会看到它。") || false,
+    };
+  })()`);
+  assert.equal(
+    occupiedNameState.error,
+    `你已经有一个叫「${fixture.personalOrganizationName}」的组织了。组织名称在整个网络里不能重复，换一个吧。`,
+    "The own-name message quotes the name with Chinese quotation marks.",
+  );
+  assert.equal(occupiedNameState.inputIsDanger, true, "An occupied name uses the v2 danger field treatment.");
+  assert.equal(occupiedNameState.hasAlwaysOnHint, false, "An occupied name shows its error without the generic uniqueness hint.");
   assert.equal(await evaluate(`(() => [...document.querySelectorAll('button')]
     .find((button) => (button.innerText || '').trim() === '签名创建')?.disabled)()`), true,
     "An occupied global name must not quote or submit.");
@@ -441,28 +468,26 @@ try {
   await waitFor(`document.body.innerText.includes(${JSON.stringify(`另一台设备 ·`)})`, "unnamed-device label");
   await screenshotMatrix("07-non-root-explanation");
 
-  const files = (await (async () => {
-    const names = [
-      "01-orgs-entry", "02-org-menu-entry", "03-root-form-name-taken",
-      "04-fee-quote", "05-pending", "06-confirmed-workbench",
-      "07-non-root-explanation",
-    ];
-    return names.flatMap((name) => [
+  const files = screenshotNames.flatMap((name) => [
       `${name}-light-desktop-1280x800.png`, `${name}-light-phone-390x844.png`,
       `${name}-dark-desktop-1280x800.png`, `${name}-dark-phone-390x844.png`,
     ]);
-  })());
-  await writeFile(join(output, "acceptance.json"), JSON.stringify({
-    format: 1,
-    recordedAt: new Date().toISOString(),
-    network: "localnet",
-    browser: "Chrome headless through CDP",
-    viewportSets: ["1280x800", "390x844"],
-    themes: ["light", "dark"],
-    screenshots: files,
-    privateKeysInReport: false,
-  }, null, 2) + "\n");
-  console.log(JSON.stringify({ passed: files.length, output }));
+  if (!requestedScreenshots)
+    await writeFile(join(output, "acceptance.json"), JSON.stringify({
+      format: 1,
+      recordedAt: new Date().toISOString(),
+      network: "localnet",
+      browser: "Chrome headless through CDP",
+      viewportSets: ["1280x800", "390x844"],
+      themes: ["light", "dark"],
+      screenshots: files,
+      privateKeysInReport: false,
+    }, null, 2) + "\n");
+  console.log(JSON.stringify({
+    passed: requestedScreenshots ? requestedScreenshots.size * 4 : files.length,
+    output,
+    refreshed: requestedScreenshots ? [...requestedScreenshots] : undefined,
+  }));
 } finally {
   try { await page?.send("Page.close"); } catch {}
   page?.close();

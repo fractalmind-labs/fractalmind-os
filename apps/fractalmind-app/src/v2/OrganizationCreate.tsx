@@ -145,12 +145,16 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
   const nameTakenText =
     activeNameCheck?.state === "taken" && activeNameCheck.own
       ? t(
-          `你已经有一个叫${activeNameCheck.name}的组织了。组织名称在整个网络里不能重复，换一个吧。`,
-          `You already have an organization named ${activeNameCheck.name}. Organization names are unique across the network; choose another one.`,
+          `你已经有一个叫「${activeNameCheck.name}」的组织了。组织名称在整个网络里不能重复，换一个吧。`,
+          `You already have an organization named “${activeNameCheck.name}”. Organization names are unique across the network; choose another one.`,
         )
       : text("organization_name_taken");
-  const nameFailureText =
-    failure === "organization_name_taken" ? nameTakenText : failure ? text(failure) : null;
+  const nameFieldError =
+    activeNameCheck?.state === "taken" || failure === "organization_name_taken"
+      ? nameTakenText
+      : null;
+  const nonNameFailureText =
+    failure && failure !== "organization_name_taken" ? text(failure) : null;
   const failureCode = (error: unknown) =>
     error instanceof NativeDeviceError
       ? error.code
@@ -443,16 +447,16 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
         </>
       }
     >
-      {nameFailureText && <div className="note warn" role="alert"><Icon name="alert" /><div>{nameFailureText}</div></div>}
+      {nonNameFailureText && <div className="note warn" role="alert"><Icon name="alert" /><div>{nonNameFailureText}</div></div>}
       {outcome?.status === "unknown" && <div className="note warn"><Icon name="help" /><div>{t("结果未知：只会查询原交易，不会重放或再次提交。", "Result unknown: only the original transaction will be queried; it will not be replayed or submitted again.")}</div></div>}
       <div className="field">
         <label htmlFor="organization-name">{t("组织名称", "Name")}</label>
-        <input ref={nameInput} id="organization-name" className="input" value={name} disabled={busy || phase === "ready"} onChange={(event) => setName(event.target.value)} placeholder={t("例如：家里的事、Meeru Labs", "e.g. Family, Meeru Labs")} />
-        {!validation.ok && name && <div className="err small">{text(validation.code)}</div>}
-        {validation.ok && <div className="small muted">{t("组织名称在整个网络里不能重复，建好后其他人在开放网络里也会看到它。", "Organization names are unique across the network. Other people will be able to see this one on the open network after it is created.")}</div>}
-        {activeNameCheck?.state === "checking" && <div className="small muted">{t("正在查这个名字…", "Checking this name…")}</div>}
-        {activeNameCheck?.state === "taken" && <div className="err small">{nameTakenText}</div>}
-        {activeNameCheck?.state === "unavailable" && <div className="small muted">{t("暂时查不到这个名字有没有被占用，签名后如果重名会失败，手续费不退。", "The name cannot be checked right now. If it is taken, signing can fail and the fee is not refunded.")}</div>}
+        <input ref={nameInput} id="organization-name" className={`input${nameFieldError ? " err" : ""}`} value={name} disabled={busy || phase === "ready"} onChange={(event) => setName(event.target.value)} placeholder={t("例如：家里的事、Meeru Labs", "e.g. Family, Meeru Labs")} />
+        {!validation.ok && name && <div className="err-t"><Icon name="x" size="xs" />{text(validation.code)}</div>}
+        {validation.ok && !nameFieldError && <div className="small muted">{t("组织名称在整个网络里不能重复，建好后其他人在开放网络里也会看到它。", "Organization names are unique across the network. Other people will be able to see this one on the open network after it is created.")}</div>}
+        {!nameFieldError && activeNameCheck?.state === "checking" && <div className="small muted">{t("正在查这个名字…", "Checking this name…")}</div>}
+        {nameFieldError && <div className="err-t" role="alert"><Icon name="x" size="xs" />{nameFieldError}</div>}
+        {!nameFieldError && activeNameCheck?.state === "unavailable" && <div className="small muted">{t("暂时查不到这个名字有没有被占用，签名后如果重名会失败，手续费不退。", "The name cannot be checked right now. If it is taken, signing can fail and the fee is not refunded.")}</div>}
       </div>
       <div className="field">
         <label htmlFor="organization-description">{t("简介（可选）", "Description (optional)")}</label>
