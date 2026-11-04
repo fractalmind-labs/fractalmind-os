@@ -6,6 +6,7 @@ import { createContext, lazy, Suspense, useContext, useState, type ReactNode } f
 import { useApp } from "./store";
 import { Dialog, useT } from "./ui";
 import { go } from "./router";
+import { OrganizationCreateDialog } from "./OrganizationCreate";
 
 const LocalHostSetup = lazy(() => import("../LocalHostSetup"));
 const AgentCreate = lazy(() => import("../AgentCreate"));
@@ -13,6 +14,7 @@ const AgentDiscover = lazy(() => import("../AgentDiscover"));
 const HostAccess = lazy(() => import("../HostAccess"));
 
 export type DialogSpec =
+  | { kind: "organization-create" }
   | { kind: "host-setup" }
   | { kind: "agent-create" }
   | { kind: "agent-import"; session?: string | null }
@@ -40,7 +42,9 @@ export function DialogHost({ children }: { children: ReactNode }) {
   const snapshot = app.snapshot;
   const loading = <p className="small muted">{t("加载…", "Loading…")}</p>;
   let body: ReactNode = null;
-  if (spec && snapshot && app.profile) {
+  if (spec?.kind === "organization-create" && app.profile) {
+    body = <OrganizationCreateDialog onClose={close} />;
+  } else if (spec && snapshot && app.profile) {
     const organizationId = snapshot.organization.objectId;
     if (spec.kind === "host-setup")
       body = (

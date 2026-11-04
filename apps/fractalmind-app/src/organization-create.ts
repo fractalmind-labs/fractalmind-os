@@ -87,6 +87,15 @@ export function validateOrganization(
 
 export type OrganizationKind = "suborganization" | "personal" | "organization";
 
+export function organizationKindText(kind: OrganizationKind): [string, string] {
+  const labels: Record<OrganizationKind, [string, string]> = {
+    suborganization: ["子组织", "Sub-organization"],
+    personal: ["个人组织", "Personal organization"],
+    organization: ["组织", "Organization"],
+  };
+  return labels[kind];
+}
+
 /** The Human vector is authoritative and ordered. The first entry is the
  * onboarding-created personal organization; other depth-zero entries are
  * organizations created through this flow. */
@@ -152,7 +161,7 @@ export class OrganizationCreation {
     journal: TransactionJournal,
   ) {
     this.manager = new SelfPayTransactionManager({
-      client: chain.sdk.client,
+      client: chain.sdk.client.client,
       network: chain.profile.network,
       signer,
       journal,
