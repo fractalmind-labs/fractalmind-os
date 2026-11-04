@@ -27,3 +27,40 @@
 2. 仿照 `scripts/native-onboarding-localnet.ts` 写 `scripts/org-create-localnet.ts`：在本地网络上建身份和个人组织后，再用主设备新建第二个组织，断言 Human 的 `organizations` 为 2、新组织管理员是该 Human、App 读取层能读到两个组织；再用一个 `org_scope` 限定的设备尝试新建，断言合约拒绝。只用本地网络，不碰测试网。
 3. 用开发模式在浏览器里走一遍：新建 → 待确认 → 已确认 → 切换 → 成功弹层；非主设备的说明弹层；截图日间、夜间各一套放 `docs/product/org-create-shots/`，并与原型同屏对照，列出差异。
 4. 交付说明写在本文件末尾「实现记录」。
+
+## 实现记录
+
+2026-11-04 实现于 `terra/org-create`。
+
+- 新增 `src/organization-create.ts`。它在每次报价前重读 `Human`，仅接受与
+  `identity::assert_root` 一致的当前无范围 APPROVE 授权；校验名称和简介、生成
+  `org-new:{profile}:{humanId}:{nonce}` 的持久请求定位符、按目录差集确认新组织，
+  并列出仍局限于其他组织的有效设备。交易继续走自付费 `prepare → quote → submit`
+  路径，预算与新手引导一致。未知结果只查询原请求，绝不重放。
+- 新增 `v2/OrganizationCreate.tsx` 和两个入口（“我的组织”的主按钮、组织切换菜单）。
+  成功后切换到新组织和工作台，并显示连接主机、首个 OKR 及“去授权设备”的后续操作。
+  非根设备只显示说明，不显示可提交表单。现有 `Dialog` 的移动端样式负责改为底部抽屉。
+- 组织类型判断现在在 `organizationKind` 中统一：有 depth 的是子组织，Human 向量第
+  一个是个人组织，其余是组织；Shell 顶栏、切换菜单、我的组织和我的身份页共用它。
+- 增加 `scripts/org-create-localnet.ts`。该脚本仅接受 loopback RPC/faucet：先创建
+  身份和个人组织，再以生产 `OrganizationCreation` 控制器建第二个组织；它断言目录为
+  两项、第二项管理员为该 Human、读取层可见两项，并以有 APPROVE 但带 `org_scope` 的
+  设备模拟创建，断言合约拒绝且不广播负例。
+
+规格未明示而按原型处理的情况：简介同名称一样在提交前去首尾空格（原型
+`validateOrg` 如此处理）。`DeviceGrant` 没有设备显示名字段、且本次不能改合约，故
+“可用主设备”和受限设备以稳定的缩写地址显示，而不是捏造一个名称。
+
+已运行：
+
+- `cd apps/fractalmind-app && npm test`（446 通过）
+- `cd apps/fractalmind-app && npm run build`（通过）
+- 新鲜隔离 localnet 上发布三包后运行 `scripts/org-create-localnet.ts`（3 项链上验收
+  检查通过；本地临时报告未含私钥）。
+
+视觉验收状态：此工作环境的浏览器访问主机不可用（浏览器清单为空，并返回
+“browser access host is unavailable”），因此没有伪造日间/夜间截图。预定的截图目录
+为 `docs/product/org-create-shots/`；其中的说明记录了待在可用浏览器中完成的实际同屏
+对照。代码层面相对原型的有意差异是使用现有 v2 `Dialog`/i18n 和既有成功页导航，
+而不是引入原型的独立 CSS；表单、非主设备说明、费用披露、成功提示和后续建议均与
+原型的 `org-new`/`org-made` 流程对应。
