@@ -284,10 +284,13 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const primaryLabel = (address: string) =>
+  const deviceLabel = (address: string) =>
     address === device?.address
       ? t("本设备", "This device")
-      : `${t("主设备", "Main device")} · ${shortId(address, 10)}`;
+      : t(
+          `另一台设备 · ${shortId(address, 10)}`,
+          `Another device · ${shortId(address, 10)}`,
+        );
   const busy = ["checking", "quoting", "signing", "unknown"].includes(phase);
 
   if (created)
@@ -299,7 +302,7 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
             <Icon name="alert" />
             <div>
               <strong>{t("这些设备还不能使用新组织", "These devices cannot use the new organization yet")}</strong>
-              <div className="small mt-4">{created.restricted.map((address) => shortId(address, 10)).join(" · ")}</div>
+              <div className="small mt-4">{created.restricted.map(deviceLabel).join(" · ")}</div>
               <Btn size="sm" className="mt-8" label={t("去授权设备", "Authorize devices")} onClick={() => { onClose(); go("identity"); }} />
             </div>
           </div>
@@ -316,7 +319,7 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
             {t("只有主设备能新建组织：这台设备的授权只限于某个组织。", "Only a main device can create an organization: this device is authorized for one organization only.")}
             {primaries.length > 0 && (
               <div className="small mt-8">
-                {t("可用主设备：", "Available main devices: ")}{primaries.map((grant) => primaryLabel(grant.device)).join(" · ")}
+                {t("可用主设备：", "Available main devices: ")}{primaries.map((grant) => deviceLabel(grant.device)).join(" · ")}
                 <br />
                 {t("建好后，请在那台设备的“我的身份 › 设备”里给这台设备授权。", "After creating it, authorize this device under My identity › Devices on that main device.")}
               </div>

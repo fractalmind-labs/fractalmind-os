@@ -57,10 +57,13 @@
 - `cd apps/fractalmind-app && npm run build`（通过）
 - 新鲜隔离 localnet 上发布三包后运行 `scripts/org-create-localnet.ts`（3 项链上验收
   检查通过；本地临时报告未含私钥）。
+- 新鲜隔离 localnet + Vite + Chrome headless/CDP 的真实浏览器验收（28 张：日/夜、
+  1280×800/390×844，入口、表单、报价、pending、确认、切换及非根设备说明均已记录）。
+  见 `docs/product/org-create-shots/README.md` 与 `acceptance.json`；临时 profile 在脚本
+  结束时删除，未接触测试网或主网。
 
-视觉验收状态：此工作环境的浏览器访问主机不可用（浏览器清单为空，并返回
-“browser access host is unavailable”），因此没有伪造日间/夜间截图。预定的截图目录
-为 `docs/product/org-create-shots/`；其中的说明记录了待在可用浏览器中完成的实际同屏
-对照。代码层面相对原型的有意差异是使用现有 v2 `Dialog`/i18n 和既有成功页导航，
-而不是引入原型的独立 CSS；表单、非主设备说明、费用披露、成功提示和后续建议均与
-原型的 `org-new`/`org-made` 流程对应。
+视觉验收相对原型的修正：v2 的 Dialog host 现在在窄屏包在 `.app.m` 中，因此手机用原型
+的底部抽屉规则；无设备名时显示 `另一台设备 · 0x12ab…cd`，而非裸地址。真实链还揭示了
+一个既有约束：协议的全局 `name_registry` 会拒绝重复名（abort `3002`），而原型/规则 2
+把同名视为允许继续的软提示；为诚实取得后续的真实报价和确认截图，截图流在提示后改用
+唯一名称。本次未改合约，差异也记录在截图 README 中。

@@ -43,6 +43,10 @@ try {
 
 const rpc = process.env.FM_LOCALNET_RPC ?? "http://127.0.0.1:29000";
 const faucet = process.env.FM_LOCALNET_FAUCET ?? "http://127.0.0.1:29123";
+/** A visual-acceptance fixture stops after the real personal organization and
+ * deliberately retains only its generated `test-*` device until the browser
+ * harness removes it. Normal localnet acceptance always cleans up. */
+const browserReady = process.env.FM_ORG_CREATE_BROWSER_READY === "1";
 for (const url of [rpc, faucet]) {
   const parsed = new URL(url);
   assert.ok(
@@ -156,6 +160,28 @@ try {
   );
   assert.ok(first);
   checks.push("onboarding creates exactly one personal organization before the new flow");
+
+  if (browserReady) {
+    await writeFile(output, JSON.stringify({
+      format: 1,
+      recordedAt: new Date().toISOString(),
+      browserReady: true,
+      profile,
+      device: device.device,
+      connection: first.profile,
+      rootGrantId: first.grantId,
+      humanId: first.profile.humanId,
+      personalOrganizationId: first.organizations[0].objectId,
+      personalOrganizationName: first.organizations[0].name,
+      checks,
+      limits: {
+        network: "isolated localnet only",
+        retainedProfile: "generated test-* profile; browser acceptance must remove it",
+        privateKeysInReport: false,
+      },
+    }, null, 2) + "\n", { flag: "wx", mode: 0o600 });
+    console.log(JSON.stringify({ browserReady: true, report: output }));
+  } else {
 
   const chain = new ChainReadSession(first.profile);
   const createMore = new OrganizationCreation(
@@ -303,7 +329,8 @@ try {
       privateKeysInReport: false,
     },
   }, null, 2) + "\n", { flag: "wx", mode: 0o600 });
-  console.log(JSON.stringify({ passed: checks.length, report: output }));
+    console.log(JSON.stringify({ passed: checks.length, report: output }));
+  }
 } finally {
-  if (created) request("remove");
+  if (created && !browserReady) request("remove");
 }
