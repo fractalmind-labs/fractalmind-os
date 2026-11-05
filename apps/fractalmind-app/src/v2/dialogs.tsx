@@ -2,10 +2,11 @@
 // create or import an Agent, connections / invitations / revocation. The
 // flows themselves are the tested ones from the first App; v2 frames them in
 // the prototype dialog.
-import { createContext, lazy, Suspense, useContext, useState, type ReactNode } from "react";
+import { createContext, lazy, Suspense, useContext, useEffect, useState, type ReactNode } from "react";
 import { useApp } from "./store";
 import { Dialog, useT } from "./ui";
 import { go } from "./router";
+import { OrganizationCreateDialog } from "./OrganizationCreate";
 
 const LocalHostSetup = lazy(() => import("../LocalHostSetup"));
 const AgentCreate = lazy(() => import("../AgentCreate"));
@@ -13,6 +14,7 @@ const AgentDiscover = lazy(() => import("../AgentDiscover"));
 const HostAccess = lazy(() => import("../HostAccess"));
 
 export type DialogSpec =
+  | { kind: "organization-create" }
   | { kind: "host-setup" }
   | { kind: "agent-create" }
   | { kind: "agent-import"; session?: string | null }
@@ -22,9 +24,28 @@ type Dialogs = { open: (spec: DialogSpec) => void };
 const DialogContext = createContext<Dialogs>({ open: () => {} });
 export const useDialogs = () => useContext(DialogContext);
 
+/** The ported prototype's responsive rules intentionally key off `.app.m`.
+ * Keep the shell and its dialogs in the same frame so a real narrow viewport
+ * gets the bottom-sheet behavior instead of desktop overlays squeezed small. */
+function useMobileFrame() {
+  const current = () =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
+  const [mobile, setMobile] = useState(current);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const query = window.matchMedia("(max-width: 760px)");
+    const change = () => setMobile(query.matches);
+    change();
+    query.addEventListener("change", change);
+    return () => query.removeEventListener("change", change);
+  }, []);
+  return mobile;
+}
+
 export function DialogHost({ children }: { children: ReactNode }) {
   const app = useApp();
   const t = useT();
+  const mobile = useMobileFrame();
   const [spec, setSpec] = useState<DialogSpec | null>(null);
   // HostAccess keeps its own native dialog; each request bumps `n`.
   const [access, setAccess] = useState<{ kind: "binding" | "invite" | "revoke-member"; target?: string; n: number } | null>(
@@ -40,7 +61,9 @@ export function DialogHost({ children }: { children: ReactNode }) {
   const snapshot = app.snapshot;
   const loading = <p className="small muted">{t("加载…", "Loading…")}</p>;
   let body: ReactNode = null;
-  if (spec && snapshot && app.profile) {
+  if (spec?.kind === "organization-create" && app.profile) {
+    body = <OrganizationCreateDialog onClose={close} />;
+  } else if (spec && snapshot && app.profile) {
     const organizationId = snapshot.organization.objectId;
     if (spec.kind === "host-setup")
       body = (
@@ -95,20 +118,22 @@ export function DialogHost({ children }: { children: ReactNode }) {
   }
   return (
     <DialogContext.Provider value={{ open }}>
-      {children}
-      <Suspense fallback={spec ? loading : null}>
-        {body}
-        {snapshot && app.profile && (
-          <HostAccess
-            key={JSON.stringify([app.profile.humanId, snapshot.organization.objectId])}
-            profile={app.profile}
-            organizationId={snapshot.organization.objectId}
-            t={t}
-            onChanged={app.refresh}
-            request={access}
-          />
-        )}
-      </Suspense>
+      <div className={`app${mobile ? " m" : ""}`}>
+        {children}
+        <Suspense fallback={spec ? loading : null}>
+          {body}
+          {snapshot && app.profile && (
+            <HostAccess
+              key={JSON.stringify([app.profile.humanId, snapshot.organization.objectId])}
+              profile={app.profile}
+              organizationId={snapshot.organization.objectId}
+              t={t}
+              onChanged={app.refresh}
+              request={access}
+            />
+          )}
+        </Suspense>
+      </div>
     </DialogContext.Provider>
   );
 }

@@ -8,6 +8,8 @@ import { ago, Icon, Logo, shortId, until, useLang, useT } from "./ui";
 import { focusOkr, orgCounts, okrTitle } from "./model";
 import { agentName, hostName } from "../display";
 import { Notifications, Palette, useUnread } from "./Palette";
+import { useDialogs } from "./dialogs";
+import { organizationKind, organizationKindText } from "../organization-create";
 
 type Nav = { id: PageName; icon: string; zh: string; en: string };
 const NAV: Nav[] = [
@@ -34,7 +36,9 @@ function useOrgMeta() {
   const org = app.identity?.organizations.find((o) => o.objectId === app.organizationId);
   const name = org?.name || (app.identity ? t("未选择组织", "No organization") : t("正在读取", "Loading"));
   const admin = !!org && !!app.profile && org.admin === app.profile.humanId;
-  const kind = org && Number(org.depth) > 0 ? t("子组织", "Sub-organization") : t("个人组织", "Personal");
+  const kind = org
+    ? t(...organizationKindText(organizationKind(org, app.identity?.organizations ?? [])))
+    : t("组织", "Organization");
   const network = { testnet: t("测试网", "Testnet"), mainnet: t("主网", "Mainnet"), devnet: "Devnet", localnet: t("本地网络", "Localnet") }[
     app.profile?.network ?? "testnet"
   ];
@@ -44,6 +48,7 @@ function useOrgMeta() {
 function OrgMenu({ onClose, anchor }: { onClose: () => void; anchor: DOMRect }) {
   const app = useApp();
   const t = useT();
+  const dialogs = useDialogs();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const away = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && onClose();
@@ -69,11 +74,27 @@ function OrgMenu({ onClose, anchor }: { onClose: () => void; anchor: DOMRect }) 
           }}
         >
           <span className="avatar sm">{[...(o.name || "?")][0]?.toUpperCase()}</span>
-          <span className="grow ellipsis">{o.name || shortId(o.objectId)}</span>
+          <span className="grow" style={{ minWidth: 0 }}>
+            <span className="ellipsis" style={{ display: "block" }}>{o.name || shortId(o.objectId)}</span>
+            <span className="tiny muted" style={{ display: "block" }}>
+              {t(...organizationKindText(organizationKind(o, app.identity?.organizations ?? [])))}
+            </span>
+          </span>
           {o.objectId === app.organizationId && <Icon name="check" size="sm" />}
         </button>
       ))}
       <div className="divider" />
+      <button
+        className="menu-i"
+        role="menuitem"
+        onClick={() => {
+          dialogs.open({ kind: "organization-create" });
+          onClose();
+        }}
+      >
+        <Icon name="plus" size="sm" />
+        {t("新建组织…", "New organization…")}
+      </button>
       <button
         className="menu-i"
         role="menuitem"

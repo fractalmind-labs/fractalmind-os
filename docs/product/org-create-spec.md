@@ -32,3 +32,50 @@
 2. 仿照 `scripts/native-onboarding-localnet.ts` 写 `scripts/org-create-localnet.ts`：在本地网络上建身份和个人组织后，再用主设备新建第二个组织，断言 Human 的 `organizations` 为 2、新组织管理员是该 Human、App 读取层能读到两个组织；再用一个 `org_scope` 限定的设备尝试新建，断言合约拒绝。只用本地网络，不碰测试网。
 3. 用开发模式在浏览器里走一遍：新建 → 待确认 → 已确认 → 切换 → 成功弹层；非主设备的说明弹层；截图日间、夜间各一套放 `docs/product/org-create-shots/`，并与原型同屏对照，列出差异。
 4. 交付说明写在本文件末尾「实现记录」。
+
+## 实现记录
+
+2026-11-04 实现于 `terra/org-create`。
+
+- 新增 `src/organization-create.ts`。它在每次报价前重读 `Human`，仅接受与
+  `identity::assert_root` 一致的当前无范围 APPROVE 授权；校验名称和简介、生成
+  `org-new:{profile}:{humanId}:{nonce}` 的持久请求定位符、按目录差集确认新组织，
+  并列出仍局限于其他组织的有效设备。交易继续走自付费 `prepare → quote → submit`
+  路径，预算与新手引导一致。未知结果只查询原请求，绝不重放。
+- 2026-11-04 的全网唯一性更正已落实：读取 `ProtocolRegistry` 后用
+  `name_registry: Table<String, ID>` 的 String 动态字段精确查询（不是扫描当前 Human）。
+  新建组织和新手引导个人组织都会在输入停顿约 400ms、以及报价前再次检查；已占用的名字不
+  分配请求、不报价、不签名。读取失败只显示“可能重名且手续费不退”的提示，仍由合约作最终
+  判断；精确的 `organization::new_organization` / `3002` 竞态失败会保留表单、聚焦名称框，
+  允许以新请求 ID 改名重试。
+- 新增 `v2/OrganizationCreate.tsx` 和两个入口（“我的组织”的主按钮、组织切换菜单）。
+  成功后切换到新组织和工作台，并显示连接主机、首个 OKR 及“去授权设备”的后续操作。
+  非根设备只显示说明，不显示可提交表单。现有 `Dialog` 的移动端样式负责改为底部抽屉。
+- 组织类型判断现在在 `organizationKind` 中统一：有 depth 的是子组织，Human 向量第
+  一个是个人组织，其余是组织；Shell 顶栏、切换菜单、我的组织和我的身份页共用它。
+- 增加 `scripts/org-create-localnet.ts`。该脚本仅接受 loopback RPC/faucet：先创建
+  身份和个人组织，再以生产 `OrganizationCreation` 控制器建第二个组织；它断言目录为
+  两项、第二项管理员为该 Human、读取层可见两项，并以有 APPROVE 但带 `org_scope` 的
+  设备模拟创建，断言合约拒绝且不广播负例。
+
+规格未明示而按原型处理的情况：简介同名称一样在提交前去首尾空格（原型
+`validateOrg` 如此处理）。`DeviceGrant` 没有设备显示名字段、且本次不能改合约，故
+“可用主设备”和受限设备以稳定的缩写地址显示，而不是捏造一个名称。
+
+已运行：
+
+- `cd apps/fractalmind-app && npm test`（448 通过）
+- `cd apps/fractalmind-app && npm run build`（通过）
+- 新鲜隔离 localnet 上发布三包后运行 `scripts/org-create-localnet.ts`（5 项链上验收
+  检查通过，其中实际确认个人组织名为“自己已占用”、新名字在创建前空闲且确认后变为已占用；
+  本地临时报告未含私钥）。
+- 新鲜隔离 localnet + Vite + Chrome headless/CDP 的真实浏览器验收（28 张：日/夜、
+  1280×800/390×844，入口、表单、报价、pending、确认、切换及非根设备说明均已记录）。
+  见 `docs/product/org-create-shots/README.md` 与 `acceptance.json`；临时 profile 在脚本
+  结束时删除，未接触测试网或主网。
+
+视觉验收相对原型的修正：v2 的 Dialog host 现在在窄屏包在 `.app.m` 中，因此手机用原型
+的底部抽屉规则；无设备名时显示 `另一台设备 · 0x12ab…cd`，而非裸地址。更正后的规则 2
+与实际合约一致：截图 `03-root-form-name-taken` 显示自己的已占用名字、全网唯一说明和禁用
+的“签名创建”；只在改为新名字后才有真实报价和确认。28 张日/夜、桌面/手机截图均逐张复核，
+没有使用 mock、测试网或主网交易。

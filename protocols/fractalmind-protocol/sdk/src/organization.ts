@@ -1,4 +1,6 @@
+import { bcs, TypeTagSerializer } from '@mysten/sui/bcs';
 import type { Transaction } from '@mysten/sui/transactions';
+import { deriveDynamicFieldID, normalizeSuiAddress } from '@mysten/sui/utils';
 
 import {
   FractalMindClient,
@@ -14,6 +16,39 @@ import type {
   OrganizationData,
   UpdateDescriptionInput,
 } from './types.js';
+
+const ID = bcs.Address;
+const Table = bcs.struct('Table', { id: ID, size: bcs.u64() });
+const ProtocolRegistry = bcs.struct('ProtocolRegistry', {
+  id: ID,
+  organizations: Table,
+  name_registry: Table,
+  org_count: bcs.u64(),
+});
+
+/** This is deliberately a point lookup, rather than a paginated scan of the
+ * public directory. The chain's name table is the authority for names across
+ * every Human, including organizations the current Human cannot list. */
+export type OrganizationNameLookup = {
+  organizationId: string | null;
+  registryId: string;
+};
+
+function missingNameField(error: unknown, parentId: string, name: Uint8Array) {
+  const objectId = deriveDynamicFieldID(
+    parentId,
+    TypeTagSerializer.parseFromStr('0x1::string::String'),
+    name,
+  );
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'reason' in error &&
+    error.reason === 'notFound' &&
+    'objectId' in error &&
+    error.objectId === objectId
+  );
+}
 
 export class OrganizationApi {
   constructor(private readonly fm: FractalMindClient) {}
@@ -46,6 +81,41 @@ export class OrganizationApi {
     });
 
     return tx;
+  }
+
+  /** Resolve one trimmed organization name through
+   * `ProtocolRegistry.name_registry: Table<String, ID>`. A missing dynamic
+   * field is a definite free name; all other read failures deliberately reach
+   * the caller so the UI can warn without falsely declaring it available. */
+  async findByName(name: string, protocolRegistryId?: ObjectId): Promise<OrganizationNameLookup> {
+    if (!name || name !== name.trim()) throw new Error('Organization name must be trimmed and non-empty.');
+    const registryId = this.fm.resolveRegistryId(protocolRegistryId);
+    const { object } = await this.fm.client.core.getObject({
+      objectId: registryId,
+      include: { content: true },
+    });
+    if (
+      object.objectId !== registryId ||
+      object.type !== (await this.fm.coreType('organization', 'ProtocolRegistry')) ||
+      object.owner.$kind !== 'Shared' ||
+      !object.content
+    )
+      throw new Error('Configured registry is not a shared ProtocolRegistry.');
+    const registry = ProtocolRegistry.parse(object.content);
+    if (registry.id !== registryId) throw new Error('ProtocolRegistry UID mismatch.');
+    const key = bcs.string().serialize(name).toBytes();
+    try {
+      const { dynamicField } = await this.fm.client.core.getDynamicField({
+        parentId: registry.name_registry.id,
+        name: { type: '0x1::string::String', bcs: key },
+      });
+      const organizationId = normalizeSuiAddress(ID.parse(dynamicField.value.bcs));
+      return { registryId, organizationId };
+    } catch (error) {
+      if (missingNameField(error, registry.name_registry.id, key))
+        return { registryId, organizationId: null };
+      throw error;
+    }
   }
 
   async getOrganization(organizationId: ObjectId): Promise<OrganizationData> {
