@@ -11,10 +11,10 @@ import {
 } from "@fractalmind-labs/fractalmind-sdk";
 import { ChainReadSession } from "./chain";
 import { DeviceIdentityVerifier } from "./device-identity";
-import { NativeDeviceSigner } from "./native-device";
+import { NativeDeviceSigner, type NativeInvoke } from "./native-device";
 import { asDeviceActions, operatorExpiryAt } from "./agent-operators";
 import { isAgentPairing } from "./agent-operator-chain";
-import { wrapOrgKeysForAgent } from "./agent-operator-keys";
+import { organizationKeyVersion, wrapOrgKeysForAgent } from "./pairing";
 
 const id = /^0x[0-9a-f]{64}$/;
 const gasBudget = 200_000_000n;
@@ -54,6 +54,7 @@ export class AgentOperatorFlow {
   constructor(
     readonly chain: ChainReadSession,
     readonly signer: NativeDeviceSigner,
+    readonly invoke: NativeInvoke,
     journal: TransactionJournal = new IndexedDbTransactionJournal(),
   ) {
     localnet(chain);
@@ -152,24 +153,35 @@ export class AgentOperatorFlow {
     let wrappedKeys: Uint8Array | undefined;
     if (operation.kind === "approve") {
       const label = before.label;
-      if (typeof label !== "string") fail("invalid_source");
+      const request = before.request;
       const encryptedKeys = before.proof.encryptedKeys;
-      if (typeof encryptedKeys !== "string" || !before.request) fail("invalid_source");
-      // This single call is the terra/agent-cli-p0b seam. The current stub
-      // throws; once the helper lands its authenticated wrapped bytes are
-      // supplied to the upgraded SDK/Move entry point below.
+      const network = this.chain.profile.network;
+      if (
+        typeof label !== "string" ||
+        !request ||
+        typeof encryptedKeys !== "string" ||
+        network !== "localnet"
+      )
+        fail("invalid_source");
+      // The native overload keeps the owner keyring in the vault; its pure
+      // counterpart is used by the localnet CLI acceptance.
+      const keyVersion = await organizationKeyVersion(
+        this.chain,
+        before.organizationId,
+      );
       wrappedKeys = await wrapOrgKeysForAgent({
+        invoke: this.invoke,
         profile: this.signer.device.profile,
-        network: this.chain.profile.network,
+        network,
         organizationId: before.organizationId,
+        keyVersion,
+        organizationCount: before.human.human.organizations.length,
         encryptedKeys,
-        recipientAddress: before.request.device,
-        signingPublicKey: Uint8Array.from(before.request.signing_public_key),
-        encryptionPublicKey: Uint8Array.from(before.request.encryption_public_key),
+        recipientAddress: request.device,
+        signingPublicKey: Uint8Array.from(request.signing_public_key),
+        encryptionPublicKey: Uint8Array.from(request.encryption_public_key),
       });
-      type ApprovalWithWrappedKeys = Parameters<typeof this.chain.sdk.identity.approveAgentOperator>[0] & { encryptedKeys: Uint8Array };
-      const approve = this.chain.sdk.identity.approveAgentOperator as unknown as (input: ApprovalWithWrappedKeys) => Transaction;
-      transaction = approve({
+      transaction = this.chain.sdk.identity.approveAgentOperator({
         identityRegistryId: await this.chain.sdk.identity.resolveRegistry(this.chain.profile.registryId),
         humanId: before.human.human.id,
         grantId: operation.grantId,

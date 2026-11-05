@@ -78,6 +78,7 @@ export function agentActivityKind(functionName: string): AgentActivityKind {
   switch (functionName) {
     case "okr::draft":
     case "okr::create_draft":
+    case "okr::create_draft_by_agent":
     case "okr::update_draft":
       return "draft_okr";
     case "evidence::create":
@@ -96,6 +97,7 @@ export function agentActivityKind(functionName: string): AgentActivityKind {
       return "pause_run";
     case "approval::request":
     case "product_record::request_approval":
+    case "product_record::save_agent_request":
     case "review::create_review":
       return "request_approval";
     default:

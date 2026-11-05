@@ -59,25 +59,71 @@ type Plan = {
 };
 export { pairingFingerprint };
 
+export type NativeAgentOrgKeyWrap = Readonly<{
+  invoke: NativeInvoke;
+  profile: string;
+  network: "localnet" | "testnet";
+  organizationId: string;
+  keyVersion: string;
+  organizationCount: number;
+  encryptedKeys: string;
+  recipientAddress: string;
+  signingPublicKey: Uint8Array;
+  encryptionPublicKey: Uint8Array;
+}>;
+
 /** Wrap an already-authorized organization keyring for an Agent Operator's
- * pairing encryption key. This is deliberately pure: the approval UI remains
- * responsible for obtaining keyring bytes from the native device boundary and
- * for showing the human the recipient it is about to authorize. */
+ * pairing encryption key. The byte overload is deliberately pure for the
+ * CLI/localnet flow. The native overload keeps a desktop owner's keyring in
+ * the vault, which selects one organization and produces the same
+ * recipient-bound envelope without exporting any key material to the WebView. */
 export async function wrapOrgKeysForAgent(
   keyring: Uint8Array,
   recipientEncryptionPublicKey: Uint8Array,
   network: "localnet" | "testnet",
   recipientAddress: string,
+): Promise<Uint8Array>;
+export async function wrapOrgKeysForAgent(
+  input: NativeAgentOrgKeyWrap,
+): Promise<Uint8Array>;
+export async function wrapOrgKeysForAgent(
+  keyringOrNative: Uint8Array | NativeAgentOrgKeyWrap,
+  recipientEncryptionPublicKey?: Uint8Array,
+  network?: "localnet" | "testnet",
+  recipientAddress?: string,
 ) {
+  if (!(keyringOrNative instanceof Uint8Array)) {
+    const input = keyringOrNative;
+    const envelope = wrappedEnvelope(
+      await call(input.invoke, "fm_device_wrap_organization_keys", {
+        profile: input.profile,
+        request: JSON.stringify({
+          network: input.network,
+          organizationId: input.organizationId,
+          keyVersion: input.keyVersion,
+          organizationCount: input.organizationCount,
+          encryptedKeys: input.encryptedKeys,
+          recipientAddress: input.recipientAddress,
+          signingPublicKey: toBase64(input.signingPublicKey),
+          encryptionPublicKey: toBase64(input.encryptionPublicKey),
+        }),
+      }),
+    );
+    const wrapped = fromBase64(envelope);
+    if (wrapped.length > 65536) throw new PairingError("invalid_source");
+    return wrapped;
+  }
+  if (!recipientEncryptionPublicKey || !network || !recipientAddress)
+    throw new PairingError("invalid_input");
   if (
-    !keyring.length ||
-    keyring.length > 65536 ||
+    !keyringOrNative.length ||
+    keyringOrNative.length > 65536 ||
     recipientEncryptionPublicKey.length !== 32 ||
     !id.test(recipientAddress)
   )
     throw new PairingError("invalid_input");
   return wrapKeys(
-    keyring,
+    keyringOrNative,
     recipientEncryptionPublicKey,
     `fractalmind.device-keys.v1:${network}:${recipientAddress.toLowerCase()}`,
   );
@@ -422,20 +468,7 @@ export class DevicePairing {
     });
   }
   private async keyVersion(organizationId: string) {
-    const index = await this.sdk.productRecord
-      .listCurrent(organizationId, null, 1)
-      .catch(async (error) => {
-        if (
-          missingIndex(
-            error,
-            organizationId,
-            await this.sdk.client.coreType("product_record", "IndexBinding"),
-          )
-        )
-          return { keyVersion: "1" };
-        throw error;
-      });
-    return index.keyVersion;
+    return organizationKeyVersion(this.chain, organizationId);
   }
   private async shareSource(requestId: string, grantId: string) {
     const state = await this.inspect(requestId),
@@ -587,4 +620,27 @@ export class DevicePairing {
       data: state.data,
     };
   }
+}
+
+/** Read the public product-record key version that authorizes a scoped key
+ * envelope. Ordinary device sharing and Agent approval share this source so
+ * neither path can wrap stale organization material. */
+export async function organizationKeyVersion(
+  chain: ChainReadSession,
+  organizationId: string,
+) {
+  const index = await chain.sdk.productRecord
+    .listCurrent(organizationId, null, 1)
+    .catch(async (error) => {
+      if (
+        missingIndex(
+          error,
+          organizationId,
+          await chain.sdk.client.coreType("product_record", "IndexBinding"),
+        )
+      )
+        return { keyVersion: "1" };
+      throw error;
+    });
+  return index.keyVersion;
 }

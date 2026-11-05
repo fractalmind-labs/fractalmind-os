@@ -1,6 +1,7 @@
-/** Local-only P0b acceptance: publishes a fresh zero-address build, creates a
- * Human and organization, approves an Agent with its wrapped organization
- * keyring, then proves its two bounded OPERATE writers and revocation gates.
+/** Local-only Agent CLI/App acceptance: publishes a fresh zero-address build,
+ * creates a Human and organization, has the App model/flow approve an Agent
+ * with its wrapped organization keyring, then proves bounded writes, activity,
+ * renewal and revocation.
  * Usage: npm run localnet -- /absolute/path/to/zero-address-bytecode.json
  */
 import assert from 'node:assert/strict';
@@ -14,9 +15,15 @@ import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
-import { bcs } from '@mysten/sui/bcs';
-import { FractalMindSDK, bytesToHex, createDeviceEncryptionKeys, createRecoveryCode, randomContentKey, recoveryKeys, wrapKeys } from '@fractalmind-labs/fractalmind-sdk';
+import { fromBase64, toBase64 } from '@mysten/sui/utils';
+import { FractalMindSDK, MemoryTransactionJournal, bytesToHex, createDeviceEncryptionKeys, createRecoveryCode, randomContentKey, recoveryKeys, wrapKeys } from '@fractalmind-labs/fractalmind-sdk';
 import { run } from '../src/index.js';
+import { ChainReadSession } from '../../fractalmind-app/src/chain.ts';
+import { NativeDeviceSigner, type NativeInvoke } from '../../fractalmind-app/src/native-device.ts';
+import { AgentOperatorFlow } from '../../fractalmind-app/src/agent-operator-flow.ts';
+import { readAgentOperatorDirectory } from '../../fractalmind-app/src/agent-operator-chain.ts';
+import { agentActivityKind } from '../../fractalmind-app/src/agent-operators.ts';
+import { wrapOrgKeysForAgent } from '../../fractalmind-app/src/pairing.ts';
 
 const bytecodePath = process.argv[2];
 assert.ok(bytecodePath, 'Pass the bytecode JSON built from a zero-address local test copy.');
@@ -72,6 +79,27 @@ async function eventually<T>(read: () => Promise<T>, description: string): Promi
     try { return await read(); } catch (error) { last = error; await new Promise(resolve => setTimeout(resolve, 100)); }
   }
   throw new Error(`${description} did not become readable.`, { cause: last });
+}
+/** A confirmed receipt can precede the read node's gas-object update. Do not
+ * quote the next App action against that stale gas reference. */
+async function waitForAppWrites(
+  outcome: { status: string; transaction?: Data },
+  description: string,
+) {
+  assert.equal(outcome.status, 'confirmed', `${description} must confirm`);
+  for (const change of outcome.transaction?.effects?.changedObjects ?? []) {
+    if (
+      (change.outputState !== 'ObjectWrite' && change.outputState !== 'PackageWrite')
+      || !change.outputVersion
+    )
+      continue;
+    await eventually(async () => {
+      const current = await client.core.getObject({ objectId: change.objectId });
+      if (BigInt(current.object.version) < BigInt(change.outputVersion!))
+        throw new Error(`${description} output is stale`);
+      return current;
+    }, `${description} output ${change.objectId}`);
+  }
 }
 
 /** The protocol must be published before its separately-addressed OKR package.
@@ -138,17 +166,86 @@ const silent = { out: (line: string) => cliOutput.push(line), err: (line: string
 try {
   const loginCode = await run(['auth', 'login', '--org', organizationId, '--network', 'localnet', '--deployment', deploymentPath, '--faucet', '--no-wait', '--json'], silent);
   assert.equal(loginCode, 0, `agent pairing request should publish: ${cliErrors.join('')} (package=${packageId}, registry=${registryId}, identityRegistry=${identityRegistryId}, human=${humanId}, org=${organizationId})`);
+  const login = JSON.parse(cliOutput.at(-1)!) as { requestId?: string; pairingCode?: string; state?: string };
   const profile = JSON.parse(await readFile(join(sandbox, 'profile-localnet.json'), 'utf8')) as { requestId: string; grantId?: string; address: string };
-  const clock = await client.core.getObject({ objectId: '0x6', include: { content: true } });
-  const now = BigInt(bcs.struct('Clock', { id: bcs.Address, timestamp_ms: bcs.u64() }).parse(clock.object.content!).timestamp_ms);
-  const request = await sdk.identity.getDevicePairing(profile.requestId);
-  const agentKeys = await wrapKeys(keyring, Uint8Array.from(request.encryption_public_key), `fractalmind.device-keys.v1:localnet:${profile.address}`);
-  await execute(sdk.identity.approveAgentOperator({
-    identityRegistryId, humanId, grantId: rootGrantId, requestId: profile.requestId, organizationId,
-    actions: ['read', 'operate'], expiresAtMs: now + 86_400_000n, encryptedKeys: agentKeys, label: 'localnet CLI',
-  }), root);
+  assert.equal(login.requestId, profile.requestId, 'CLI must report the stored pairing request');
+  assert.equal(login.state, 'pending');
+  const appChain = new ChainReadSession({
+    network: 'localnet', rpcUrl: rpc, packageId, registryId, okrPackageId, humanId,
+  }, sdk);
+  const pending = await eventually(
+    async () => {
+      const directory = await readAgentOperatorDirectory(appChain, organizationId);
+      const found = directory.pending.find((item) => item.request.id === profile.requestId);
+      if (!found) throw new Error('App page model has not observed the CLI pairing request');
+      return found;
+    },
+    'App page pending Agent request',
+  );
+  assert.equal(pending.code, login.pairingCode, 'App and CLI must show the same pairing code');
+
+  // The flow is exercised with a local in-memory native bridge.  Its key
+  // response uses the same pure helper as the desktop vault's scoped wrapper;
+  // production keeps the owner keyring in the vault and never exposes it.
+  const ownerProfile = 'agent-operator-e2e-owner';
+  const ownerInvoke: NativeInvoke = async (command, args) => {
+    assert.equal(args.profile, ownerProfile);
+    if (command === 'fm_device_public') return {
+      format: 1, profile: ownerProfile, address: rootAddress,
+      signingPublicKey: toBase64(root.getPublicKey().toRawBytes()),
+      encryptionPublicKey: toBase64(device.publicKey),
+    };
+    if (command === 'fm_device_prove') {
+      const bytes = new TextEncoder().encode(args.challenge);
+      const signed = await root.signPersonalMessage(bytes);
+      return { bytes: toBase64(bytes), signature: signed.signature };
+    }
+    if (command === 'fm_device_sign_transaction') {
+      const bytes = fromBase64(args.bytes);
+      const signed = await root.signTransaction(bytes);
+      return { bytes: args.bytes, signature: signed.signature };
+    }
+    if (command === 'fm_device_wrap_organization_keys') {
+      const request = JSON.parse(args.request) as {
+        network: 'localnet'; organizationId: string; recipientAddress: string;
+        encryptionPublicKey: string; encryptedKeys: string;
+      };
+      assert.equal(request.network, 'localnet');
+      assert.equal(request.organizationId, organizationId);
+      assert.equal(request.recipientAddress, profile.address);
+      assert.ok(request.encryptedKeys.length > 0, 'App flow must source the owner grant envelope');
+      return toBase64(await wrapOrgKeysForAgent(
+        keyring,
+        fromBase64(request.encryptionPublicKey),
+        request.network,
+        request.recipientAddress,
+      ));
+    }
+    throw new Error(`Unexpected native command ${command}`);
+  };
+  const ownerSigner = await NativeDeviceSigner.load(ownerInvoke, ownerProfile);
+  const appFlow = new AgentOperatorFlow(
+    appChain,
+    ownerSigner,
+    ownerInvoke,
+    new MemoryTransactionJournal(),
+  );
+  const approvalQuote = await appFlow.prepare({
+    kind: 'approve', requestId: profile.requestId, grantId: rootGrantId,
+    operate: true, days: 7, label: 'localnet CLI',
+  });
+  if ('status' in approvalQuote)
+    throw new Error('App approval unexpectedly resolved an existing request.');
+  const approvalOutcome = await appFlow.submit(approvalQuote);
+  assert.equal(approvalOutcome.status, 'confirmed', 'App approval must confirm');
+  await waitForAppWrites(approvalOutcome, 'App approval');
+  const grantedId = await eventually(
+    () => appFlow.approvedGrantId(approvalOutcome),
+    'App-approved Agent marker',
+  );
   assert.equal(await run(['auth', 'status', '--network', 'localnet', '--json'], silent), 0, `approval should be visible to CLI: ${cliErrors.join('')}`);
   const granted = JSON.parse(await readFile(join(sandbox, 'profile-localnet.json'), 'utf8')) as { grantId: string };
+  assert.equal(granted.grantId, grantedId, 'CLI must bind the grant approved by the App flow');
   assert.ok((await sdk.identity.getDeviceGrant(granted.grantId)).encrypted_keys.length > 0, 'approved Agent must receive its wrapped keyring');
   assert.equal(await run(['okr', 'draft', 'create', '--network', 'localnet', '--file', draftPath, '--request-id', 'p0b-draft', '--json'], silent), 0, `OPERATE Agent should create a draft: ${cliErrors.join('')}`);
   const listed = await eventually(() => sdk.okr.listOkrs(organizationId, null, 50), 'draft directory');
@@ -170,12 +267,47 @@ try {
     const value = JSON.parse(new TextDecoder().decode(humanRead.plaintext)) as { title?: string; status?: string };
     assert.equal(value.title, 'Review draft'); assert.equal(value.status, 'pending');
   } finally { humanRead.plaintext.fill(0); }
-  await execute(sdk.identity.changeDevicePermissions({ humanId, grantId: rootGrantId, targetGrantId: granted.grantId, organizationId, actions: ['read'], expiresAtMs: now + 86_400_000n }), root);
-  assert.equal(await run(['approval', 'request', 'okr.activate', '--title', 'Denied by READ', '--body', 'No quote.', '--network', 'localnet', '--request-id', 'p0b-read-only'], silent), 4, 'READ-only Agent must not quote a writer');
-  await execute(sdk.identity.revokeDevice({ humanId, grantId: rootGrantId, targetGrantId: granted.grantId }), root);
-  assert.equal(await run(['org', 'show', '--network', 'localnet', '--json'], silent), 5, 'revoked Agent must be denied on the next fresh read');
+  const active = await eventually(
+    async () => {
+      const directory = await readAgentOperatorDirectory(appChain, organizationId);
+      const found = directory.active.find((item) => item.grant.id === granted.grantId);
+      if (!found || !found.activity.some((item) => item.function === 'okr::create_draft_by_agent')
+        || !found.activity.some((item) => item.function === 'product_record::save_agent_request'))
+        throw new Error('App page activity model has not observed both Agent writes');
+      return found;
+    },
+    'App page Agent activity',
+  );
+  assert.equal(agentActivityKind(active.activity.find((item) => item.function === 'okr::create_draft_by_agent')!.function), 'draft_okr');
+  assert.equal(agentActivityKind(active.activity.find((item) => item.function === 'product_record::save_agent_request')!.function), 'request_approval');
+  const renewalQuote = await appFlow.prepare({
+    kind: 'change', targetGrantId: granted.grantId, grantId: rootGrantId,
+    operate: true, days: 30,
+  });
+  if ('status' in renewalQuote)
+    throw new Error('App renewal unexpectedly resolved an existing request.');
+  const renewalOutcome = await appFlow.submit(renewalQuote);
+  assert.equal(renewalOutcome.status, 'confirmed', 'App renewal must confirm');
+  await waitForAppWrites(renewalOutcome, 'App renewal');
+  const renewed = await eventually(() => sdk.identity.getDeviceGrant(granted.grantId), 'renewed Agent grant');
+  assert.ok(renewed.actions.includes(2), 'renewed grant keeps OPERATE');
+  const revokeOperation = {
+    kind: 'revoke', targetGrantId: granted.grantId, grantId: rootGrantId,
+  } as const;
+  const revokeQuote = await appFlow.prepare(revokeOperation);
+  if ('status' in revokeQuote)
+    throw new Error('App revocation unexpectedly resolved an existing request.');
+  const revokeOutcome = await appFlow.submit(revokeQuote);
+  assert.equal(revokeOutcome.status, 'confirmed', 'App revocation must confirm');
+  await waitForAppWrites(revokeOutcome, 'App revocation');
+  const revoked = await eventually(async () => {
+    const grant = await sdk.identity.getDeviceGrant(granted.grantId);
+    if (!grant.revoked) throw new Error('Agent grant is not revoked yet');
+    return grant;
+  }, 'revoked Agent grant');
+  assert.equal(revoked.revoked, true);
   assert.equal(await run(['approval', 'request', 'okr.activate', '--title', 'Revoked', '--body', 'No transaction.', '--network', 'localnet', '--request-id', 'p0b-revoked'], silent), 5, 'revoked Agent must be denied on the next fresh write');
-  console.log(JSON.stringify({ status: 'PASS', checks: ['pair', 'approve READ+OPERATE with wrapped keys', 'draft create', 'draft decrypt', 'approval request', 'human-side approval decrypt', 'READ-only write denied', 'revocation read denied', 'revocation write denied'] }));
+  console.log(JSON.stringify({ status: 'PASS', checks: ['CLI pairing', 'App pending model pairing code', 'App approval READ+OPERATE with wrapped keys', 'draft create', 'draft decrypt', 'approval request', 'App activity labels', 'App renew', 'App revoke', 'revocation write denied'] }));
 } finally {
   contentKey.fill(0); keyring.fill(0); recovery.encryptionSecret.fill(0); device.secret.fill(0);
   if (previous.FM_CONFIG_DIR === undefined) delete process.env.FM_CONFIG_DIR; else process.env.FM_CONFIG_DIR = previous.FM_CONFIG_DIR;

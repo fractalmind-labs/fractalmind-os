@@ -82,7 +82,11 @@ function useFlow() {
     if (!app.profile || !app.deviceProfile || !isTauri()) throw new AgentOperatorFlowError("unsupported_network");
     if (flow.current) return flow.current;
     const signer = await NativeDeviceSigner.load((command, args) => invoke(command, args), app.deviceProfile);
-    flow.current = new AgentOperatorFlow(new ChainReadSession(app.profile), signer);
+    flow.current = new AgentOperatorFlow(
+      new ChainReadSession(app.profile),
+      signer,
+      (command, args) => invoke(command, args),
+    );
     return flow.current;
   };
 }
