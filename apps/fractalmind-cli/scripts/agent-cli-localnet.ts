@@ -1,5 +1,6 @@
-/** Local-only P1 acceptance: publishes a fresh zero-address build, creates a
- * Human and organization, pairs an Agent with READ, then proves revocation.
+/** Local-only P2 boundary acceptance: publishes a fresh zero-address build,
+ * creates a Human and organization, pairs an Agent, and proves fresh write
+ * authorization plus the current APPROVE-only writer boundary.
  * Usage: npm run localnet -- /absolute/path/to/zero-address-bytecode.json
  */
 import assert from 'node:assert/strict';
@@ -86,7 +87,9 @@ const organizationId = created(org, '::organization::Organization');
 
 const sandbox = await mkdtemp(join(tmpdir(), 'fractalmind-cli-localnet-'));
 const deploymentPath = join(sandbox, 'deployment.json');
+const draftPath = join(sandbox, 'draft.json');
 await writeFile(deploymentPath, JSON.stringify({ network: 'localnet', packageId, registryId, fullnodeUrl: rpc }), { mode: 0o600 });
+await writeFile(draftPath, JSON.stringify({ objective: 'P2 contract-boundary draft' }), { mode: 0o600 });
 const previous = { FM_CONFIG_DIR: process.env.FM_CONFIG_DIR, FM_KEY_PASSPHRASE: process.env.FM_KEY_PASSPHRASE, FM_LOCALNET_FAUCET: process.env.FM_LOCALNET_FAUCET };
 process.env.FM_CONFIG_DIR = sandbox; process.env.FM_KEY_PASSPHRASE = 'localnet-only-acceptance-passphrase'; process.env.FM_LOCALNET_FAUCET = faucet;
 const cliErrors: string[] = [];
@@ -102,9 +105,16 @@ try {
   assert.equal(await run(['org', 'show', '--network', 'localnet', '--json'], silent), 0, `READ Agent can show organization: ${cliErrors.join('')}`);
   assert.equal(await run(['okr', 'list', '--network', 'localnet', '--json'], silent), 0, `READ Agent can list OKRs: ${cliErrors.join('')}`);
   const granted = JSON.parse(await readFile(join(sandbox, 'profile-localnet.json'), 'utf8')) as { grantId: string };
+  assert.equal(await run(['run', 'pause', '0x1', '--network', 'localnet', '--dry-run', '--request-id', 'p2-read-only'], silent), 4, 'READ-only Agent must not quote a write');
+  await execute(sdk.identity.changeDevicePermissions({ humanId, grantId: rootGrantId, targetGrantId: granted.grantId, organizationId, actions: ['read', 'operate'], expiresAtMs: now + 86_400_000n }), root);
+  // This is deliberately an observed protocol boundary, not a simulated P2
+  // success.  Current okr::create_draft requires APPROVE, which an Agent
+  // Operator cannot hold; the CLI must expose that via exit 8 and never send.
+  assert.equal(await run(['okr', 'draft', 'create', '--network', 'localnet', '--file', draftPath, '--request-id', 'p2-draft'], silent), 8, 'OPERATE Agent must receive an explicit approval escalation for an APPROVE-only draft writer');
   await execute(sdk.identity.revokeDevice({ humanId, grantId: rootGrantId, targetGrantId: granted.grantId }), root);
   assert.equal(await run(['org', 'show', '--network', 'localnet', '--json'], silent), 5, 'revoked Agent must be denied on the next fresh read');
-  console.log(JSON.stringify({ status: 'PASS', checks: ['pair', 'approve READ', 'org show', 'okr list', 'revocation'] }));
+  assert.equal(await run(['run', 'pause', '0x1', '--network', 'localnet', '--dry-run', '--request-id', 'p2-revoked'], silent), 5, 'revoked Agent must be denied on the next fresh write');
+  console.log(JSON.stringify({ status: 'BLOCKED_BY_CONTRACT', checks: ['pair', 'approve READ', 'READ write denied', 'grant READ+OPERATE', 'draft needs approval', 'revocation read denied', 'revocation write denied'], blocker: 'okr::create_draft and product_record::save require APPROVE; Agent Operator grants are restricted to READ+OPERATE.' }));
 } finally {
   contentKey.fill(0); keyring.fill(0); recovery.encryptionSecret.fill(0); device.secret.fill(0);
   if (previous.FM_CONFIG_DIR === undefined) delete process.env.FM_CONFIG_DIR; else process.env.FM_CONFIG_DIR = previous.FM_CONFIG_DIR;

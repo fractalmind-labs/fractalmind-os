@@ -1,6 +1,7 @@
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import type { TransactionJournal, TransactionJournalEntry } from '@fractalmind-labs/fractalmind-sdk';
 import type { Deployment, Profile } from './types.js';
 
 export const configDir = () => process.env.FM_CONFIG_DIR
@@ -27,6 +28,7 @@ export async function readJson<T>(path: string): Promise<T | null> {
 
 export const profilePath = (network: string) => join(configDir(), `profile-${network}.json`);
 export const cachePath = (network: string, key: string) => join(configDir(), 'cache', network, `${key}.json`);
+export const journalPath = (network: string) => join(configDir(), 'journal', `${network}.json`);
 
 export async function loadProfile(network: string): Promise<Profile | null> {
   const profile = await readJson<Profile>(profilePath(network));
@@ -58,4 +60,70 @@ export async function readCache<T>(network: string, key: string): Promise<{ valu
 
 export async function writeCache(network: string, key: string, value: unknown) {
   await writePrivateJson(cachePath(network, key), { value, stale_since: new Date().toISOString() });
+}
+
+type JournalFile = { format: 1; entries: TransactionJournalEntry[] };
+const pendingGasConflict = (left: TransactionJournalEntry, right: TransactionJournalEntry) =>
+  left.namespace === right.namespace && left.status === 'pending' && right.status === 'pending'
+  && (left.addressGas && right.addressGas || left.gasReferences.some(ref => right.gasReferences.some(other => other.objectId === ref.objectId)));
+
+/** Durable CLI journal.  It records only prepared digests and public gas
+ * references; transaction bytes, signatures, keys, and encrypted payloads
+ * never touch disk.  A small exclusive lock serializes two local CLI
+ * processes, so a retry always queries its original digest instead of
+ * rebuilding a transaction. */
+export class FileTransactionJournal implements TransactionJournal {
+  private readonly path: string;
+  private readonly lock: string;
+  constructor(network: string) { this.path = journalPath(network); this.lock = `${this.path}.lock`; }
+
+  private async read(): Promise<JournalFile> {
+    const value = await readJson<JournalFile>(this.path);
+    if (!value) return { format: 1, entries: [] };
+    if (value.format !== 1 || !Array.isArray(value.entries)) throw new Error('Invalid transaction journal.');
+    return value;
+  }
+
+  async get(namespace: string, requestId: string) {
+    const file = await this.read();
+    const entry = file.entries.find(value => value.namespace === namespace && value.requestId === requestId);
+    return entry ? structuredClone(entry) : undefined;
+  }
+
+  private async exclusive<T>(fn: () => Promise<T>): Promise<T | undefined> {
+    await privateDir(dirname(this.path));
+    let handle;
+    try { handle = await open(this.lock, 'wx', 0o600); }
+    catch (error: unknown) {
+      if (typeof error === 'object' && error && 'code' in error && error.code === 'EEXIST') return undefined;
+      throw error;
+    }
+    try { return await fn(); }
+    finally { await handle.close(); await unlink(this.lock).catch(() => {}); }
+  }
+
+  async claim(entry: TransactionJournalEntry) {
+    const result = await this.exclusive(async () => {
+      const file = await this.read();
+      if (file.entries.some(existing => existing.requestId === entry.requestId && existing.namespace === entry.namespace
+        || pendingGasConflict(existing, entry))) return false;
+      file.entries.push(structuredClone(entry));
+      await writePrivateJson(this.path, file);
+      return true;
+    });
+    return result ?? false;
+  }
+
+  async replace(entry: TransactionJournalEntry, expectedRevision: number) {
+    const result = await this.exclusive(async () => {
+      const file = await this.read();
+      const index = file.entries.findIndex(existing => existing.namespace === entry.namespace && existing.requestId === entry.requestId);
+      const current = index < 0 ? undefined : file.entries[index];
+      if (!current || current.digest !== entry.digest || current.status !== 'pending' || current.revision !== expectedRevision) return false;
+      file.entries[index] = structuredClone(entry);
+      await writePrivateJson(this.path, file);
+      return true;
+    });
+    return result ?? false;
+  }
 }

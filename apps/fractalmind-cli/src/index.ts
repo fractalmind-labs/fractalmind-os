@@ -1,9 +1,11 @@
 #!/usr/bin/env node
+import { readFile } from 'node:fs/promises';
 import { login, logout, status } from './auth.js';
 import { EXIT, emitError, FmError, render } from './output.js';
-import { approvalList, agentList, agentShow, eventPage, hostList, hostShow, okrList, okrShow, orgShow, runList, runShow, schema, whoami } from './readers.js';
+import { approvalList, approvalShow, agentList, agentShow, eventPage, hostList, hostShow, okrList, okrShow, orgShow, runList, runShow, schema, whoami } from './readers.js';
 import { loadDeployment } from './storage.js';
 import type { ParsedArgs } from './types.js';
+import { approvalRequired, messageAgent, pauseRun, type WriteOptions } from './writers.js';
 
 export function parse(argv: string[]): ParsedArgs {
   const command: string[] = [], values: Record<string, string | boolean> = {};
@@ -25,7 +27,12 @@ function text(values: ParsedArgs['values'], name: string) {
   if (typeof value !== 'string' || !value.trim()) throw new FmError(EXIT.usage, 'usage', `--${name} requires a value.`);
   return value;
 }
-function optionalText(values: ParsedArgs['values'], name: string) { const value = flag(values, name); return typeof value === 'string' ? value : undefined; }
+function optionalText(values: ParsedArgs['values'], name: string) {
+  const value = flag(values, name);
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || !value.trim()) throw new FmError(EXIT.usage, 'usage', `--${name} requires a value.`);
+  return value;
+}
 function network(values: ParsedArgs['values']) {
   const value = optionalText(values, 'network') ?? process.env.FM_NETWORK ?? 'testnet';
   if (value !== 'localnet' && value !== 'testnet') throw new FmError(EXIT.usage, 'usage', '--network must be localnet or testnet.');
@@ -33,6 +40,40 @@ function network(values: ParsedArgs['values']) {
 }
 function isJson(values: ParsedArgs['values']) { return flag(values, 'json') === true; }
 function deploymentArg(values: ParsedArgs['values']) { return optionalText(values, 'deployment'); }
+function enabled(values: ParsedArgs['values'], name: string) {
+  const value = flag(values, name);
+  if (value === undefined) return false;
+  if (value !== true) throw new FmError(EXIT.usage, 'usage', `--${name} does not take a value.`);
+  return true;
+}
+function writeOptions(values: ParsedArgs['values']): WriteOptions {
+  return { dryRun: enabled(values, 'dry-run'), requestId: optionalText(values, 'request-id'), maxFee: optionalText(values, 'max-fee') };
+}
+const objectId = /^0x[0-9a-fA-F]+$/;
+function object(value: string | undefined, noun: string) {
+  if (!value || !objectId.test(value)) throw new FmError(EXIT.usage, 'usage', `${noun} must be a Sui object id.`);
+  return value;
+}
+async function draftFile(path: string | undefined) {
+  const source = text({ file: path ?? false }, 'file');
+  let parsed: unknown;
+  try {
+    const raw = await readFile(source, 'utf8');
+    if (new TextEncoder().encode(raw).length > 65_504) throw new Error('too large');
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new FmError(EXIT.usage, 'usage', '--file must name a readable JSON draft no larger than 65,504 bytes.');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+    throw new FmError(EXIT.usage, 'usage', 'The draft file must contain a JSON object.');
+  return parsed as Record<string, unknown>;
+}
+function oneEvidence(values: ParsedArgs['values']) {
+  const choices = ['file', 'url', 'text'].flatMap(name => optionalText(values, name) === undefined ? [] : [[name, optionalText(values, name)!] as const]);
+  if (choices.length !== 1) throw new FmError(EXIT.usage, 'usage', 'Specify exactly one of --file, --url, or --text.');
+  if (new TextEncoder().encode(choices[0]![1]).length > 65_504) throw new FmError(EXIT.usage, 'usage', 'Evidence content is too large.');
+  return { [choices[0]![0]]: choices[0]![1] };
+}
 function warning(weaker: boolean) {
   if (weaker) process.stderr.write('WARNING: using the FM_KEY_PASSPHRASE encrypted-file fallback; it is weaker than the system secret store.\n');
 }
@@ -75,6 +116,59 @@ export async function run(argv: string[], io: { out?: (line: string) => void; er
     if (first === 'run' && second === 'list' && !third) { output(await runList(net)); return EXIT.ok; }
     if (first === 'run' && second === 'show') { output(await runShow(net, third)); return EXIT.ok; }
     if (first === 'approval' && second === 'list' && !third) { output(await approvalList(net)); return EXIT.ok; }
+    if (first === 'approval' && second === 'show') { output(await approvalShow(net, third)); return EXIT.ok; }
+
+    if (first === 'run' && second === 'pause' && third) {
+      output(await pauseRun(net, object(third, 'Run id'), writeOptions(parsed.values))); return EXIT.ok;
+    }
+    if (first === 'okr' && second === 'draft' && third === 'create') {
+      writeOptions(parsed.values);
+      const draft = await draftFile(optionalText(parsed.values, 'file'));
+      approvalRequired({
+        action: 'okr.draft.create',
+        reason: 'The deployed okr::create_draft entry point requires an APPROVE grant. Agent Operators are permanently limited to READ+OPERATE.',
+        title: typeof draft.objective === 'string' ? draft.objective : 'Create OKR draft',
+        body: 'Create the supplied OKR draft; the Agent cannot activate it.',
+      });
+    }
+    if (first === 'okr' && second === 'draft' && third === 'update') {
+      writeOptions(parsed.values);
+      const okrId = object(parsed.command[3], 'OKR id');
+      await draftFile(optionalText(parsed.values, 'file'));
+      approvalRequired({
+        action: 'okr.draft.update',
+        reason: 'The deployed OKR replacement path requires an APPROVE grant. Agent Operators are permanently limited to READ+OPERATE.',
+        title: 'Update OKR draft', body: 'Update the supplied draft only; activation remains a human approval.', ref: okrId,
+      });
+    }
+    if (first === 'kr' && second === 'progress' && third) {
+      writeOptions(parsed.values);
+      const kr = object(third, 'KR id');
+      const value = text(parsed.values, 'value');
+      if (!/^(0|[1-9][0-9]*)(\.[0-9]{1,6})?$/.test(value)) throw new FmError(EXIT.usage, 'usage', '--value must be a non-negative decimal with at most six fractional digits.');
+      const note = optionalText(parsed.values, 'note');
+      if (note && new TextEncoder().encode(note).length > 4096) throw new FmError(EXIT.usage, 'usage', '--note is limited to 4,096 bytes.');
+      approvalRequired({ action: 'kr.progress', reason: 'KR observations require a RemoteCapability and execution evidence; an Agent Operator cannot forge either.', title: 'Record KR progress', body: note ?? `Record progress ${value}.`, ref: kr });
+    }
+    if (first === 'kr' && second === 'evidence' && third === 'add') {
+      writeOptions(parsed.values);
+      const kr = object(parsed.command[3], 'KR id');
+      const evidence = oneEvidence(parsed.values);
+      approvalRequired({ action: 'kr.evidence.add', reason: 'The App evidence path is execution-attested and requires a RemoteCapability; an Agent Operator cannot create an unattested substitute.', title: 'Add KR evidence', body: JSON.stringify(evidence), ref: kr });
+    }
+    if (first === 'agent' && second === 'message' && third && parsed.command[3]) {
+      const target = third, message = parsed.command[3]!;
+      if (new TextEncoder().encode(message).length > 4096) throw new FmError(EXIT.usage, 'usage', 'Message is limited to 4,096 bytes.');
+      output(await messageAgent(net, target, message, writeOptions(parsed.values))); return EXIT.ok;
+    }
+    if (first === 'approval' && second === 'request' && third) {
+      writeOptions(parsed.values);
+      const kind = third;
+      if (!/^[a-z][a-z0-9._-]{0,63}$/.test(kind)) throw new FmError(EXIT.usage, 'usage', '<kind> must be a lowercase identifier up to 64 characters.');
+      const title = text(parsed.values, 'title'), body = text(parsed.values, 'body'), ref = optionalText(parsed.values, 'ref');
+      if (ref) object(ref, '--ref');
+      approvalRequired({ action: `approval.request.${kind}`, reason: 'product_record::save requires an APPROVE grant for every kind, including approval. An Agent Operator cannot file this record without violating its on-chain privilege bound.', title, body, ref });
+    }
     if (first === 'events' && !second && flag(parsed.values, 'follow') === true) {
       let cursor: string | null = null;
       // eventPage deliberately authorizes again on every poll.

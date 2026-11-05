@@ -3,7 +3,7 @@ import { bcs } from '@mysten/sui/bcs';
 import { requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { normalizeSuiAddress, toBase64 } from '@mysten/sui/utils';
-import { createDeviceEncryptionKeys, FractalMindSDK, pairingCode, pairingFingerprint, type DeviceAction } from '@fractalmind-labs/fractalmind-sdk';
+import { createDeviceEncryptionKeys, DEVICE_ACTIONS, FractalMindSDK, pairingCode, pairingFingerprint, type DeviceAction } from '@fractalmind-labs/fractalmind-sdk';
 import { deleteKey, loadKey, saveKey } from './keystore.js';
 import { EXIT, FmError } from './output.js';
 import { loadProfile, removeProfile, saveProfile } from './storage.js';
@@ -46,7 +46,8 @@ export function evaluateGrant(input: {
     throw new FmError(EXIT.revoked_or_expired, 'revoked_or_expired', grant.revoked ? 'The Agent grant was revoked.' : 'The Agent grant expired.');
   }
   if (grant.human_id !== humanId || grant.device !== asAddress(profile.address) || grant.org_scope !== organizationId
-    || grant.generation !== human.generation || !grant.actions.includes(READ)) {
+    || grant.generation !== human.generation || !grant.actions.includes(READ)
+    || !grant.actions.includes(DEVICE_ACTIONS[required])) {
     throw new FmError(EXIT.not_authorized, 'not_authorized', `Grant does not permit ${required}.`);
   }
 }

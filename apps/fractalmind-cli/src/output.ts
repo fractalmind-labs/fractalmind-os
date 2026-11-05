@@ -1,8 +1,24 @@
-export const EXIT = Object.freeze({ ok: 0, usage: 2, needs_funding: 3, not_authorized: 4, revoked_or_expired: 5, chain_unreachable: 6, not_found: 7 });
+export const EXIT = Object.freeze({
+  ok: 0,
+  usage: 2,
+  needs_funding: 3,
+  not_authorized: 4,
+  revoked_or_expired: 5,
+  chain_unreachable: 6,
+  not_found: 7,
+  needs_approval: 8,
+  fee_exceeds_limit: 9,
+  conflict: 10,
+});
 export type ExitCode = (typeof EXIT)[keyof typeof EXIT];
 
 export class FmError extends Error {
-  constructor(readonly exitCode: ExitCode, readonly code: keyof typeof EXIT, detail: string) { super(detail); }
+  constructor(
+    readonly exitCode: ExitCode,
+    readonly code: keyof typeof EXIT,
+    detail: string,
+    readonly data?: Record<string, unknown>,
+  ) { super(detail); }
 }
 
 export const json = (value: unknown) => JSON.stringify(value, (_key, item) => typeof item === 'bigint' ? item.toString() : item);
@@ -27,7 +43,7 @@ export function render(value: unknown, forceJson: boolean, write: (line: string)
 
 export function emitError(error: unknown, write: (line: string) => void = line => process.stderr.write(line)): ExitCode {
   if (error instanceof FmError) {
-    write(`${json({ error: error.code, code: error.exitCode, detail: error.message })}\n`);
+    write(`${json({ error: error.code, code: error.exitCode, detail: error.message, ...(error.data ?? {}) })}\n`);
     return error.exitCode;
   }
   write(`${json({ error: 'chain_unreachable', code: EXIT.chain_unreachable, detail: error instanceof Error ? error.message : String(error) })}\n`);

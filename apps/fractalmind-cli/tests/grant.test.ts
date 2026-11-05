@@ -30,3 +30,8 @@ test('wrong device, scope, or missing READ are exit 4', () => {
     assert.throws(() => evaluateGrant(input), (error: unknown) => error instanceof FmError && error.exitCode === 4);
   }
 });
+
+test('an OPERATE write is denied to a READ-only Agent grant', () => {
+  const input = good(); input.required = 'operate';
+  assert.throws(() => evaluateGrant(input), (error: unknown) => error instanceof FmError && error.exitCode === 4);
+});

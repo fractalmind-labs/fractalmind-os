@@ -172,6 +172,17 @@ export async function approvalList(network: string) {
   });
 }
 
+export async function approvalShow(network: string, value: string | undefined) {
+  const recordId = id(value, 'Approval record id');
+  return readAuthorized(network, `approval:show:${recordId}`, async ({ sdk, profile }) => {
+    let record;
+    try { record = await sdk.productRecord.getRecord(recordId); } catch (error) { notFound(error, 'Approval record'); }
+    if (!same(record.organization_id, profile.organizationId) || record.kind !== PRODUCT_RECORD_KINDS.approval)
+      throw new FmError(EXIT.not_found, 'not_found', 'Approval record belongs to another organization or is not an approval.');
+    return record;
+  });
+}
+
 export async function eventPage(network: string, cursor?: string | null) {
   return readAuthorized(network, `events:${cursor ?? ''}`, async ({ sdk, profile }) => {
     const core = sdk.client.client.core as unknown as { listEvents(input: unknown): Promise<{ events: unknown[]; cursor: string | null; hasNextPage: boolean }> };
@@ -188,9 +199,10 @@ export const schema = {
   name: 'fm', version: 1,
   commands: {
     auth: ['login --org <name|id> [--network localnet|testnet] [--label <name>] [--faucet] [--no-wait]', 'status', 'logout'],
-    read: ['whoami', 'org show', 'okr list|show <id>', 'host list|show <id>', 'agent list|show <id>', 'run list|show <id>', 'approval list', 'events --follow'],
+    read: ['whoami', 'org show', 'okr list|show <id>', 'host list|show <id>', 'agent list|show <id>', 'run list|show <id>', 'approval list|show <id>', 'events --follow'],
+    write: ['run pause <id> [--dry-run] [--request-id <id>] [--max-fee <SUI>]', 'okr draft create --file <draft.json>', 'okr draft update <okr-id> --file <draft.json>', 'kr progress <kr-id> --value <n> [--note <text>]', 'kr evidence add <kr-id> --file|--url|--text <value>', 'agent message <agent|instance> <text>', 'approval request <kind> --title <title> --body <body> [--ref <object>]'],
     utility: ['schema'],
   },
-  exits: { 0: 'ok', 2: 'usage', 3: 'needs_funding', 4: 'not_authorized', 5: 'revoked_or_expired', 6: 'chain_unreachable', 7: 'not_found' },
-  rules: ['All read commands recheck an on-chain READ Agent Operator grant.', 'Approvals are always performed by a human in the App.', 'No command in this release sends an operational transaction except auth login.'],
+  exits: { 0: 'ok', 2: 'usage', 3: 'needs_funding', 4: 'not_authorized', 5: 'revoked_or_expired', 6: 'chain_unreachable', 7: 'not_found', 8: 'needs_approval', 9: 'fee_exceeds_limit', 10: 'conflict' },
+  rules: ['All writes recheck an on-chain OPERATE Agent Operator grant before quoting and before submission.', 'Use --dry-run before any write that could spend SUI.', 'A write journal persists its original digest before broadcast; retry with the same --request-id never re-submits.', 'Approvals are always performed by a human in the App. Current contract approval-record and OKR-draft writers require APPROVE, so those commands return exit 8 with filing instructions.'],
 };
