@@ -70,6 +70,18 @@
 
 ## 7. 待核实的风险
 
-- **同一系统用户的威胁**：Agent 与 App 以同一系统用户运行。必须确认 App 的设备钥匙签名需要用户在场（Touch ID / 系统密码），否则 Agent 进程可直接调用负责人的钥匙绕过一切。代码里暂未找到 user presence 设置，P0 一并核查并补上。
+- **同一系统用户的威胁**：Agent 与 App 以同一系统用户运行。设备钥匙核查见 §8：当前签名**不要求用户在场**，因此 P1 之前不能把 App 已解锁的设备会话当作 Agent 隔离边界。
 - 合约升级在测试网由协调人执行。主网需负责人单独确认。
 - `product_record` 的 approval 类型目前用于 OKR 审批，需要确认能承载通用审批请求，否则在 P2 扩一个子类型。
+
+## 8. 设备钥匙核查
+
+核查日期：2026-11-04。结论：**`presence=no`**。App 会使用系统凭据库保存设备钥匙，但当前实现既没有 Touch ID/系统密码确认，也没有 Secure Enclave / `SecAccessControl` 的 user-presence 策略；一次解锁后，在空闲窗口内的每次签名都是静默的。
+
+- 在 macOS/iOS 上，native crate 固定使用 `keyring` 的 `apple-native` 后端（`apps/fractalmind-app/native/Cargo.toml:24-25`），而存储层直接导出通用的 `keyring::Entry`（`apps/fractalmind-app/native/src/storage.rs:5-6`）。`DeviceVault::entry` 只以 service/account 创建该 entry（`apps/fractalmind-app/native/src/lib.rs:222-228`）；源码没有配置 `SecAccessControl`、Secure Enclave、biometry 或 user-presence 属性。
+- `unlock` 从该 entry 读取密钥并放进内存 session（`apps/fractalmind-app/native/src/lib.rs:160-167`、`248-257`）。默认 session 可保持 15 分钟（`39-42`），而 `load` 在每次操作时复制内存中的钥匙并刷新空闲计时（`230-246`）。这一步没有任何 UI 或系统认证调用。
+- `sign_transaction` 直接以 session 中的钥匙签名（`301-303`）；其底层只校验交易编码、sender 和 gas owner 后就产生签名（`337-368`）。Tauri 的 `fm_device_sign_transaction` 也只是把 WebView 参数转给该方法（`apps/fractalmind-app/src-tauri/src/lib.rs:155-169`）；前端 `NativeDeviceSigner.signTransaction` 在调用该命令前没有 presence gate（`apps/fractalmind-app/src/native-device.ts:272-295`）。
+- 存在一层**来源**限制：所有这些 Tauri 命令都调用 `main_window`，只接受 label 为 `main` 且本地 Tauri origin 的 WebView（`apps/fractalmind-app/src-tauri/src/lib.rs:11-29`），并在 invoke handler 中注册（`501-524`）。本次源码核查没有发现把签名命令暴露为本地 HTTP、socket 或 shell IPC 的接口。因此不能仅凭源码断言任意同一 OS 用户进程能直接读出钥匙串内容或直接调用签名命令。
+- 但这个限制不等于用户在场：一旦 App 已解锁，能够在受信任 main WebView 中执行代码的攻击者（例如 WebView XSS/供应链注入，或取得该 UI 自动化控制权的同一用户进程）可以调用 signing command，并在最多 15 分钟的 activity-refreshed session 内得到静默签名。原始钥匙不必离开 native 内存即可造成链上写入。
+
+这个结论仅来自源码和依赖配置审查；没有读取任何真实钥匙或改变 App 的钥匙处理。若要把 Agent 与人的签名边界落实为强制控制，需要协调人另行决定：每笔敏感签名重新要求系统 presence，或至少将 App 的人类设备会话与 Agent 的设备/进程隔离。

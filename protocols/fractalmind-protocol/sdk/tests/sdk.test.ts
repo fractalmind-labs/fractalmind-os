@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { FractalMindSDK } from '../src/index.js';
+import { AgentOperatorBcs, FractalMindSDK } from '../src/index.js';
 
 const PACKAGE_ID = '0x123';
 const REGISTRY_ID = '0x456';
@@ -15,9 +15,11 @@ function coreObject(value: unknown): { object: unknown } {
 
 class MockCoreClient {
   core = this;
+  dynamicFieldCalls: Array<{ parentId: string; name: { type: string; bcs: Uint8Array } }> = [];
   constructor(
     private readonly objectMap: Record<string, unknown> = {},
     private readonly ownedObjects: unknown[] = [],
+    private readonly dynamicFields: Record<string, unknown> = {},
   ) {}
 
   async getObject(params: { objectId: string }): Promise<unknown> {
@@ -30,6 +32,13 @@ class MockCoreClient {
       hasNextPage: false,
       cursor: null,
     };
+  }
+
+  async getDynamicField(params: { parentId: string; name: { type: string; bcs: Uint8Array } }): Promise<unknown> {
+    this.dynamicFieldCalls.push(params);
+    const response = this.dynamicFields[params.parentId];
+    if (!response) throw new Error(`No dynamic field fixture for ${params.parentId}.`);
+    return response;
   }
 
   async signAndExecuteTransaction(): Promise<unknown> {
@@ -86,13 +95,15 @@ function getMoveCallTarget(tx: { getData: () => unknown }): string {
 function assertMoveTarget(
   tx: { getData: () => unknown },
   expectedFunction: string,
+  expectedModule = 'entry',
 ): void {
-  assert.equal(getMoveCallTarget(tx), `${TARGET_PREFIX}${expectedFunction}`);
+  assert.equal(getMoveCallTarget(tx), `${TARGET_PREFIX.replace('::entry::', `::${expectedModule}::`)}${expectedFunction}`);
 }
 
 const moveCallCases: Array<{
   name: string;
   expectedFunction: string;
+  expectedModule?: string;
   build: (sdk: FractalMindSDK) => { getData: () => unknown };
 }> = [
   {
@@ -102,6 +113,36 @@ const moveCallCases: Array<{
       sdk.organization.createOrganization({
         name: 'Root Org',
         description: 'Root description',
+      }),
+  },
+  {
+    name: 'identity.createAgentPairing',
+    expectedFunction: 'create_agent_pairing',
+    expectedModule: 'identity',
+    build: (sdk) =>
+      sdk.identity.createAgentPairing({
+        humanId: '0x81',
+        organizationId: '0x82',
+        signingPublicKey: new Uint8Array(32),
+        encryptionPublicKey: new Uint8Array(32),
+        deviceName: 'Agent CLI',
+        platform: 'macos',
+      }),
+  },
+  {
+    name: 'identity.approveAgentOperator',
+    expectedFunction: 'approve_agent_operator',
+    expectedModule: 'identity',
+    build: (sdk) =>
+      sdk.identity.approveAgentOperator({
+        identityRegistryId: '0x91',
+        humanId: '0x92',
+        grantId: '0x93',
+        requestId: '0x94',
+        organizationId: '0x95',
+        actions: ['read', 'operate'],
+        expiresAtMs: 1_000_000n,
+        label: 'Agent CLI',
       }),
   },
   {
@@ -433,9 +474,44 @@ for (const c of moveCallCases) {
   test(`${c.name} builds expected move target`, () => {
     const sdk = newSdk();
     const tx = c.build(sdk);
-    assertMoveTarget(tx, c.expectedFunction);
+    assertMoveTarget(tx, c.expectedFunction, c.expectedModule);
   });
 }
+
+test('identity.approveAgentOperator rejects permissions beyond read and operate', () => {
+  const sdk = newSdk();
+  const input = {
+    identityRegistryId: '0x91', humanId: '0x92', grantId: '0x93', requestId: '0x94',
+    organizationId: '0x95', expiresAtMs: 1_000_000n, label: 'Agent CLI',
+  };
+  assert.throws(() => sdk.identity.approveAgentOperator({ ...input, actions: [] }), /read and\/or operate/);
+  assert.throws(() => sdk.identity.approveAgentOperator({ ...input, actions: ['approve'] }), /read and\/or operate/);
+  assert.throws(() => sdk.identity.approveAgentOperator({ ...input, actions: ['read', 'manage_hosts'] }), /read and\/or operate/);
+});
+
+test('identity.getAgentOperator reads the additive grant dynamic field', async () => {
+  const sdk = newSdk();
+  const grantId = '0x777';
+  const approvedBy = '0x888';
+  const mockClient = new MockCoreClient({}, [], {
+    [grantId]: {
+      dynamicField: {
+        value: {
+          type: `${sdk.client.packageId}::identity::AgentOperator`,
+          bcs: AgentOperatorBcs.serialize({ label: 'Agent CLI', approved_by: approvedBy }).toBytes(),
+        },
+      },
+    },
+  });
+  const metadata = await newSdk(mockClient).identity.getAgentOperator(grantId);
+
+  assert.equal(metadata.label, 'Agent CLI');
+  assert.equal(metadata.approved_by, '0x0000000000000000000000000000000000000000000000000000000000000888');
+  assert.equal(mockClient.dynamicFieldCalls.length, 1);
+  assert.equal(mockClient.dynamicFieldCalls[0].parentId, grantId);
+  assert.equal(mockClient.dynamicFieldCalls[0].name.type, `${sdk.client.packageId}::identity::AgentOperatorKey`);
+  assert.deepEqual(Array.from(mockClient.dynamicFieldCalls[0].name.bcs), [0]);
+});
 
 test('organization.getOrganization parses move object fields', async () => {
   const mockClient = new MockCoreClient({

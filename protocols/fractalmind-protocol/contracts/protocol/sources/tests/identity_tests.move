@@ -284,6 +284,146 @@ module fractalmind_protocol::identity_tests {
         ts::return_shared(request); ts::return_shared(c); ts::return_shared(org);
         ts::return_shared(root); ts::return_shared(human); ts::return_shared(registry);
     }
+    fun agent_pairing_sender(): address { identity::signing_address(&key(10)) }
+    fun request_agent_pairing(s: &mut Scenario) {
+        ts::next_tx(s, agent_pairing_sender());
+        let human = ts::take_shared<HumanIdentity>(s); let org = ts::take_shared<Organization>(s);
+        let c = ts::take_shared<Clock>(s);
+        identity::create_agent_pairing(&human, &org, key(10), key(11), string::utf8(b"Agent CLI"), string::utf8(b"macos"), &c, ts::ctx(s));
+        ts::return_shared(c); ts::return_shared(org); ts::return_shared(human);
+        ts::next_tx(s, DESKTOP);
+    }
+    fun approve_agent_pairing(s: &mut Scenario, actions: vector<u8>, expires_at_ms: u64) {
+        let mut registry = ts::take_shared<IdentityRegistry>(s);
+        let mut human = ts::take_shared<HumanIdentity>(s);
+        let root = ts::take_shared_by_id<DeviceGrant>(s, identity::grants(&human)[0]);
+        let org = ts::take_shared<Organization>(s); let c = ts::take_shared<Clock>(s);
+        let mut request = ts::take_shared<DevicePairingRequest>(s);
+        identity::approve_agent_operator(&mut registry, &mut human, &root, &mut request, &org, actions,
+            expires_at_ms, string::utf8(b"Agent CLI"), &c, ts::ctx(s));
+        ts::return_shared(request); ts::return_shared(c); ts::return_shared(org);
+        ts::return_shared(root); ts::return_shared(human); ts::return_shared(registry);
+    }
+    #[test]
+    fun agent_operator_approval_marks_a_scoped_read_grant() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, vector[identity::read_action()], 2592000000);
+        ts::next_tx(&mut s, agent_pairing_sender());
+        let human = ts::take_shared<HumanIdentity>(&s); let org = ts::take_shared<Organization>(&s);
+        let request = ts::take_shared<DevicePairingRequest>(&s);
+        let grant = ts::take_shared_by_id<DeviceGrant>(&s, *option::borrow(&identity::pairing_grant(&request)));
+        let c = ts::take_shared<Clock>(&s);
+        assert!(identity::is_agent_pairing(&request), 0);
+        assert!(identity::is_agent_operator(&grant), 1);
+        assert!(identity::grant_scope(&grant) == option::some(sui::object::id(&org)), 2);
+        assert!(identity::grant_actions(&grant) == vector[identity::read_action()], 3);
+        assert!(*identity::agent_operator_label(&grant) == string::utf8(b"Agent CLI"), 4);
+        assert!(identity::agent_operator_approved_by(&grant) == identity::grants(&human)[0], 5);
+        identity::assert_can(&human, &grant, &org, identity::read_action(), &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(grant); ts::return_shared(request); ts::return_shared(org); ts::return_shared(human); ts::end(s);
+    }
+    #[test]
+    fun agent_operator_approval_allows_read_and_operate() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, vector[identity::read_action(), identity::operate_action()], 2592000000);
+        ts::next_tx(&mut s, agent_pairing_sender());
+        let human = ts::take_shared<HumanIdentity>(&s); let org = ts::take_shared<Organization>(&s);
+        let grant = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[1]); let c = ts::take_shared<Clock>(&s);
+        identity::assert_can(&human, &grant, &org, identity::read_action(), &c, ts::ctx(&mut s));
+        identity::assert_can(&human, &grant, &org, identity::operate_action(), &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(grant); ts::return_shared(org); ts::return_shared(human); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9008, location = fractalmind_protocol::identity)]
+    fun agent_operator_rejects_approve_action() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, vector[identity::approve_action()], 2592000000); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9008, location = fractalmind_protocol::identity)]
+    fun agent_operator_rejects_manage_hosts_action() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, vector[identity::manage_hosts_action()], 2592000000); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9006, location = fractalmind_protocol::identity)]
+    fun agent_operator_rejects_empty_actions() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, vector[], 2592000000); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9002, location = fractalmind_protocol::identity)]
+    fun agent_operator_rejects_expiry_over_thirty_days() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, vector[identity::read_action()], 2592000001); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9004, location = fractalmind_protocol::identity)]
+    fun agent_operator_rejects_another_organization() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        let mut protocol = ts::take_shared<ProtocolRegistry>(&s); let mut human = ts::take_shared<HumanIdentity>(&s);
+        let root = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[0]); let c = ts::take_shared<Clock>(&s);
+        identity::create_organization(&mut protocol, &mut human, &root, string::utf8(b"OtherOrg"), string::utf8(b""), &c, ts::ctx(&mut s));
+        let other_id = identity::organizations(&human)[1];
+        ts::return_shared(c); ts::return_shared(root); ts::return_shared(human); ts::return_shared(protocol);
+        ts::next_tx(&mut s, DESKTOP);
+        let mut registry = ts::take_shared<IdentityRegistry>(&s); let mut human = ts::take_shared<HumanIdentity>(&s);
+        let root = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[0]); let other = ts::take_shared_by_id<Organization>(&s, other_id);
+        let c = ts::take_shared<Clock>(&s); let mut request = ts::take_shared<DevicePairingRequest>(&s);
+        identity::approve_agent_operator(&mut registry, &mut human, &root, &mut request, &other, vector[identity::read_action()],
+            2592000000, string::utf8(b"Agent CLI"), &c, ts::ctx(&mut s));
+        ts::return_shared(request); ts::return_shared(c); ts::return_shared(other); ts::return_shared(root); ts::return_shared(human); ts::return_shared(registry); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9001, location = fractalmind_protocol::identity)]
+    fun agent_operator_requires_an_approving_authorizer() {
+        let mut s = setup(); add_phone(&mut s); request_agent_pairing(&mut s);
+        ts::next_tx(&mut s, PHONE);
+        let mut registry = ts::take_shared<IdentityRegistry>(&s); let mut human = ts::take_shared<HumanIdentity>(&s);
+        let phone = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[1]); let org = ts::take_shared<Organization>(&s);
+        let c = ts::take_shared<Clock>(&s); let mut request = ts::take_shared<DevicePairingRequest>(&s);
+        identity::approve_agent_operator(&mut registry, &mut human, &phone, &mut request, &org, vector[identity::read_action()],
+            2592000000, string::utf8(b"Agent CLI"), &c, ts::ctx(&mut s));
+        ts::return_shared(request); ts::return_shared(c); ts::return_shared(org); ts::return_shared(phone); ts::return_shared(human); ts::return_shared(registry); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9008, location = fractalmind_protocol::identity)]
+    fun change_device_permissions_cannot_escalate_an_agent_operator() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, vector[identity::read_action()], 2592000000);
+        ts::next_tx(&mut s, DESKTOP);
+        let human = ts::take_shared<HumanIdentity>(&s); let root = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[0]);
+        let mut agent = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[1]); let org = ts::take_shared<Organization>(&s); let c = ts::take_shared<Clock>(&s);
+        identity::change_device_permissions(&human, &root, &mut agent, &org, vector[identity::read_action(), identity::approve_action()], 2592000000, &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(org); ts::return_shared(agent); ts::return_shared(root); ts::return_shared(human); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9002, location = fractalmind_protocol::identity)]
+    fun change_device_permissions_cannot_extend_an_agent_operator_past_thirty_days() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, vector[identity::read_action()], 2592000000);
+        ts::next_tx(&mut s, DESKTOP);
+        let human = ts::take_shared<HumanIdentity>(&s); let root = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[0]);
+        let mut agent = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[1]); let org = ts::take_shared<Organization>(&s); let c = ts::take_shared<Clock>(&s);
+        identity::change_device_permissions(&human, &root, &mut agent, &org, vector[identity::read_action()], 2592000001, &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(org); ts::return_shared(agent); ts::return_shared(root); ts::return_shared(human); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9003, location = fractalmind_protocol::identity)]
+    fun revoked_agent_operator_is_rejected_by_assert_can() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, vector[identity::read_action()], 2592000000);
+        ts::next_tx(&mut s, DESKTOP);
+        let human = ts::take_shared<HumanIdentity>(&s); let root = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[0]);
+        let mut agent = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[1]); let c = ts::take_shared<Clock>(&s);
+        identity::revoke_device(&human, &root, &mut agent, &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(agent); ts::return_shared(root); ts::return_shared(human);
+        ts::next_tx(&mut s, agent_pairing_sender());
+        let human = ts::take_shared<HumanIdentity>(&s); let agent = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[1]);
+        let org = ts::take_shared<Organization>(&s); let c = ts::take_shared<Clock>(&s);
+        identity::assert_can(&human, &agent, &org, identity::read_action(), &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(org); ts::return_shared(agent); ts::return_shared(human); ts::end(s);
+    }
     #[test]
     fun pairing_approval_is_scoped_read_only_without_data_keys() {
         let mut s = setup(); request_pairing(&mut s); approve_pairing(&mut s);

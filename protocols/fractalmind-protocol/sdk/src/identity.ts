@@ -41,6 +41,12 @@ export const DevicePairingRequestBcs = bcs.struct('DevicePairingRequest', {
   signing_public_key: Bytes, encryption_public_key: Bytes, device_name: bcs.string(),
   platform: bcs.string(), expires_at_ms: bcs.u64(), status: bcs.u8(), grant_id: bcs.option(ID),
 });
+// Agent Operator metadata is an additive dynamic field on DeviceGrant. This
+// keeps the stable DeviceGrant layout compatible with already-published data.
+export const AgentOperatorKeyBcs = bcs.struct('AgentOperatorKey', { dummy_field: bcs.bool() });
+export const AgentOperatorBcs = bcs.struct('AgentOperator', {
+  label: bcs.string(), approved_by: ID,
+});
 type TxInput = { tx?: Transaction };
 type DeviceKeys = { device: string; deviceEncryptionKey: Uint8Array; encryptedDeviceKeys: Uint8Array };
 type RecoveryKeys = { recoverySigningKey: Uint8Array; recoveryEncryptionKey: Uint8Array; encryptedBackup: Uint8Array };
@@ -92,11 +98,28 @@ export class IdentityApi {
     const tx = this.fm.useTransaction(input.tx);
     return this.call('create_device_pairing', tx, [tx.object(input.humanId), tx.object(input.organizationId), tx.pure.vector('u8', input.signingPublicKey), tx.pure.vector('u8', input.encryptionPublicKey), tx.pure.string(input.deviceName), tx.pure.string(input.platform), tx.object('0x6')]);
   }
+  createAgentPairing(input: TxInput & { humanId: string; organizationId: string; signingPublicKey: Uint8Array; encryptionPublicKey: Uint8Array; deviceName: string; platform: 'macos' | 'windows' | 'ubuntu' | 'ios' | 'android' }): Transaction {
+    const tx = this.fm.useTransaction(input.tx);
+    return this.call('create_agent_pairing', tx, [tx.object(input.humanId), tx.object(input.organizationId), tx.pure.vector('u8', input.signingPublicKey), tx.pure.vector('u8', input.encryptionPublicKey), tx.pure.string(input.deviceName), tx.pure.string(input.platform), tx.object('0x6')]);
+  }
   approveDevicePairing(input: TxInput & Authorized & { identityRegistryId: string; organizationId: string; requestId: string; actions: DeviceAction[]; expiresAtMs: bigint | string | number }): Transaction {
     const actions = input.actions.map(action => DEVICE_ACTIONS[action]);
     if (!actions.includes(DEVICE_ACTIONS.read) || new Set(actions).size !== actions.length || actions.some(action => !action)) throw new Error('Invalid pairing actions.');
     const tx = this.fm.useTransaction(input.tx);
     return this.call('approve_device_pairing', tx, [tx.object(input.identityRegistryId), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.organizationId), tx.object(input.requestId), tx.pure.vector('u8', actions), tx.pure.u64(toBigInt(input.expiresAtMs)), tx.object('0x6')]);
+  }
+  /** Build the only P0 Agent Operator approval transaction. On-chain code
+   * binds scope to the pairing request and rechecks the 30-day clock limit. */
+  approveAgentOperator(input: TxInput & Authorized & { identityRegistryId: string; organizationId: string; requestId: string; actions: DeviceAction[]; expiresAtMs: bigint | string | number; label: string }): Transaction {
+    const actions = input.actions.map(action => DEVICE_ACTIONS[action]);
+    if (actions.length < 1 || actions.length > 2 || new Set(actions).size !== actions.length
+      || actions.some(action => action !== DEVICE_ACTIONS.read && action !== DEVICE_ACTIONS.operate)) {
+      throw new Error('Agent Operator actions must be read and/or operate.');
+    }
+    const labelBytes = new TextEncoder().encode(input.label);
+    if (labelBytes.length < 1 || labelBytes.length > 128) throw new Error('Agent Operator label must be 1 to 128 bytes.');
+    const tx = this.fm.useTransaction(input.tx);
+    return this.call('approve_agent_operator', tx, [tx.object(input.identityRegistryId), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.requestId), tx.object(input.organizationId), tx.pure.vector('u8', actions), tx.pure.u64(toBigInt(input.expiresAtMs)), tx.pure.string(input.label), tx.object('0x6')]);
   }
   rejectDevicePairing(input: TxInput & Authorized & { organizationId: string; requestId: string }): Transaction {
     const tx = this.fm.useTransaction(input.tx);
@@ -155,6 +178,16 @@ export class IdentityApi {
   async getDeviceGrant(grantId: string) { return DeviceGrantBcs.parse(await this.content(grantId, 'DeviceGrant')); }
   async getRecoveryRecord(recordId: string) { return RecoveryRecordBcs.parse(await this.content(recordId, 'RecoveryRecord')); }
   async getDevicePairing(requestId: string) { return DevicePairingRequestBcs.parse(await this.content(requestId, 'DevicePairingRequest')); }
+  async getAgentOperator(grantId: string) {
+    const keyType = this.typesPackageId ? `${this.typesPackageId}::identity::AgentOperatorKey` : await this.fm.coreType('identity', 'AgentOperatorKey');
+    const operatorType = this.typesPackageId ? `${this.typesPackageId}::identity::AgentOperator` : await this.fm.coreType('identity', 'AgentOperator');
+    const field = await this.fm.client.core.getDynamicField({
+      parentId: grantId,
+      name: { type: keyType, bcs: AgentOperatorKeyBcs.serialize({ dummy_field: false }).toBytes() },
+    });
+    if (field.dynamicField.value.type !== operatorType) throw new Error('Unexpected Agent Operator metadata type.');
+    return AgentOperatorBcs.parse(field.dynamicField.value.bcs);
+  }
   async getRegistry(registryId: string) { return IdentityRegistryBcs.parse(await this.content(registryId, 'IdentityRegistry')); }
   async resolveRegistry(protocolRegistryId?: string): Promise<string> {
     const protocolId = this.fm.resolveRegistryId(protocolRegistryId);
