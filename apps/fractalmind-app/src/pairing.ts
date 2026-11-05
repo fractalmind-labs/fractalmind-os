@@ -7,6 +7,8 @@ import {
   HumanIdentityBcs,
   IdentityRegistryBcs,
   DeviceGrantBcs,
+  pairingCode,
+  pairingFingerprint,
   SelfPayTransactionManager,
   type DeviceAction,
   type TransactionJournal,
@@ -52,33 +54,7 @@ type Plan = {
   grantId?: string;
   technicalId: string;
 };
-/** Both ends compare this public fingerprint. It binds chain, request, identity,
- * organization, generation, device and both keys; it grants no authority. */
-export async function pairingFingerprint(
-  chainIdentifier: string,
-  request: PairingRequest,
-) {
-  const bytes = new TextEncoder().encode(
-    JSON.stringify([
-      "fractalmind.pairing.v1",
-      chainIdentifier,
-      request.id,
-      request.human_id,
-      request.organization_id,
-      request.generation,
-      request.device,
-      toBase64(Uint8Array.from(request.signing_public_key)),
-      toBase64(Uint8Array.from(request.encryption_public_key)),
-      request.expires_at_ms,
-      request.device_name,
-      request.platform,
-    ]),
-  );
-  return Array.from(
-    new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
-    (n) => n.toString(16).padStart(2, "0"),
-  ).join("");
-}
+export { pairingFingerprint };
 /** All pairing state is read from Sui. The journal contains only original
  * transaction metadata. No public request or cached profile authorizes a device. */
 export class DevicePairing {
@@ -260,6 +236,7 @@ export class DevicePairing {
       if (grant.encrypted_keys.length) data = "wrapped";
     }
     await this.chain.checkNetwork();
+    const fingerprint = await pairingFingerprint(base.chainIdentifier, request);
     return {
       request,
       base,
@@ -267,7 +244,8 @@ export class DevicePairing {
       superseded,
       grant,
       data,
-      fingerprint: await pairingFingerprint(base.chainIdentifier, request),
+      fingerprint,
+      pairingCode: pairingCode(fingerprint),
       pin: JSON.stringify([base.pin, object.version, grant]),
     };
   }

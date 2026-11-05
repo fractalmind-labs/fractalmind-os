@@ -1,6 +1,6 @@
 import { bcs } from '@mysten/sui/bcs';
 import type { Transaction } from '@mysten/sui/transactions';
-import { normalizeSuiAddress } from '@mysten/sui/utils';
+import { normalizeSuiAddress, toBase64 } from '@mysten/sui/utils';
 import { FractalMindClient, toBigInt } from './client.js';
 import { recoveryKeys } from './identity-crypto.js';
 import { bytesArgument } from './wire-bytes.js';
@@ -47,6 +47,31 @@ export const AgentOperatorKeyBcs = bcs.struct('AgentOperatorKey', { dummy_field:
 export const AgentOperatorBcs = bcs.struct('AgentOperator', {
   label: bcs.string(), approved_by: ID,
 });
+
+export type PairingRequestData = ReturnType<typeof DevicePairingRequestBcs.parse>;
+
+/**
+ * Public, human-comparable pairing fingerprint.  It deliberately binds the
+ * chain and every piece of request state that a person sees before approving
+ * a key.  It conveys no authority and contains no secret material.
+ */
+export async function pairingFingerprint(chainIdentifier: string, request: PairingRequestData): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify([
+    'fractalmind.pairing.v1', chainIdentifier, request.id, request.human_id,
+    request.organization_id, request.generation, request.device,
+    toBase64(Uint8Array.from(request.signing_public_key)),
+    toBase64(Uint8Array.from(request.encryption_public_key)), request.expires_at_ms,
+    request.device_name, request.platform,
+  ]));
+  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
+    value => value.toString(16).padStart(2, '0')).join('');
+}
+
+/** A short comparison code derived from the complete public fingerprint. */
+export function pairingCode(fingerprint: string): string {
+  if (!/^[0-9a-f]{64}$/i.test(fingerprint)) throw new Error('Invalid pairing fingerprint.');
+  return (Number.parseInt(fingerprint.slice(0, 8), 16) % 1_000_000).toString().padStart(6, '0');
+}
 type TxInput = { tx?: Transaction };
 type DeviceKeys = { device: string; deviceEncryptionKey: Uint8Array; encryptedDeviceKeys: Uint8Array };
 type RecoveryKeys = { recoverySigningKey: Uint8Array; recoveryEncryptionKey: Uint8Array; encryptedBackup: Uint8Array };

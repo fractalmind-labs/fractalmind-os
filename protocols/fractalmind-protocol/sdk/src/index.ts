@@ -61,8 +61,8 @@ export { HostApi, CONTROLLABLE_RUNTIMES, HostInviteBcs, HostMembershipBcs, Manag
   HostIndexBcs, AuthorityBindingBcs, HostJoinIntentBcs, createHostInviteMaterial,
   encodeHostInviteCode, parseHostInviteCode } from './host.js';
 export type { ManagedRuntime } from './host.js';
-export { IdentityApi, IdentityRegistryBcs, RecoveryLocationBcs, HumanIdentityBcs, DeviceGrantBcs, RecoveryRecordBcs, DevicePairingRequestBcs, AgentOperatorKeyBcs, AgentOperatorBcs, DEVICE_ACTIONS } from './identity.js';
-export type { DeviceAction } from './identity.js';
+export { IdentityApi, IdentityRegistryBcs, RecoveryLocationBcs, HumanIdentityBcs, DeviceGrantBcs, RecoveryRecordBcs, DevicePairingRequestBcs, AgentOperatorKeyBcs, AgentOperatorBcs, DEVICE_ACTIONS, pairingFingerprint, pairingCode } from './identity.js';
+export type { DeviceAction, PairingRequestData } from './identity.js';
 export { ProductRecordApi, PRODUCT_RECORD_KINDS, EncryptedRecordBcs, recordContext } from './product-record.js';
 export type { ProductRecordKind } from './product-record.js';
 export { createRecoveryCode, parseRecoveryCode, recoveryKeys, createDeviceEncryptionKeys,

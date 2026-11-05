@@ -556,7 +556,13 @@ export default function PairingFlow({
                   <code className="long-id">{state.request.device}</code>
                 </dd>
                 <dt>
-                  {t("两端核对指纹", "Fingerprint to compare on both ends")}
+                  {t("6 位配对码", "Six-digit pairing code")}
+                </dt>
+                <dd>
+                  <code>{state.pairingCode}</code>
+                </dd>
+                <dt>
+                  {t("两端核对完整指纹", "Full fingerprint to compare on both ends")}
                 </dt>
                 <dd>
                   <code className="long-id">{state.fingerprint}</code>
