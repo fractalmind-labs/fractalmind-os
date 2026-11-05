@@ -4,6 +4,7 @@ import {
   IndexedDbTransactionJournal,
   type SelfPayFeeQuote,
   type SelfPayTransactionOutcome,
+  type OrganizationData,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { ChainReadSession } from "../chain";
 import { clockNow } from "../domain";
@@ -11,6 +12,7 @@ import { NativeDeviceError, NativeDeviceSigner } from "../native-device";
 import {
   OrganizationCreation,
   OrganizationCreateError,
+  recoverMissingOrganizationJournal,
   organizationCreationFailure,
   organizationNameAvailability,
   organizationOutcomeFailure,
@@ -18,6 +20,7 @@ import {
   restrictedDevices,
   rootGrantForDevice,
   rootGrants,
+  shouldClearOrganizationAttemptOnClose,
   type OrganizationNameAvailability,
   validateOrganization,
 } from "../organization-create";
@@ -31,8 +34,9 @@ type Attempt = {
   humanId: string;
   beforeOrganizationIds: string[];
 };
-type Phase = "form" | "checking" | "quoting" | "ready" | "signing" | "unknown" | "created";
+type Phase = "form" | "checking" | "quoting" | "ready" | "signing" | "unknown" | "not-visible" | "choose" | "created";
 type NameCheck = OrganizationNameAvailability | { state: "checking"; name: string };
+type HumanDirectory = Awaited<ReturnType<ChainReadSession["human"]>>;
 
 function key(network: string, chainIdentifier: string | undefined, humanId: string, profile: string) {
   return `fractalmind.app.org-create.v1:${JSON.stringify([network, chainIdentifier ?? "", humanId, profile])}`;
@@ -78,8 +82,12 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
   const [quote, setQuote] = useState<SelfPayFeeQuote | null>(null);
   const [outcome, setOutcome] = useState<SelfPayTransactionOutcome | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [notice, setNotice] = useState<"not_submitted" | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [created, setCreated] = useState<{ name: string; restricted: string[] } | null>(null);
+  const [candidates, setCandidates] = useState<OrganizationData[]>([]);
+  const [candidateIdentity, setCandidateIdentity] = useState<HumanDirectory | null>(null);
+  const [digestCopied, setDigestCopied] = useState(false);
   const [nameCheck, setNameCheck] = useState<NameCheck | null>(null);
   const flow = useRef<OrganizationCreation | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
@@ -174,33 +182,75 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
     return flow.current;
   }
 
-  async function reconcile(current: Attempt) {
-    const currentFlow = await openFlow();
-    const visible = await currentFlow.awaitCreated(current.beforeOrganizationIds);
-    const organization = visible.identity.organizations.find((item) => item.objectId === visible.organizationId);
+  function complete(identity: HumanDirectory, organizationId: string) {
+    const organization = identity.organizations.find((item) => item.objectId === organizationId);
     if (!organization) throw new OrganizationCreateError("organization_not_visible");
     const unavailable = restrictedDevices(
-      visible.identity.grants.value,
-      visible.identity.human.generation,
-      visible.identity.clockMs,
-      visible.organizationId,
+      identity.grants.value,
+      identity.human.generation,
+      identity.clockMs,
+      organizationId,
     ).map((grant) => grant.device);
     if (storageKey) clearAttempt(storageKey);
-    app.selectOrganization(visible.organizationId);
+    setAttempt(null);
+    app.selectOrganization(organizationId);
     app.refresh();
     setCreated({ name: organization.name, restricted: unavailable });
     setPhase("created");
     go("workbench");
   }
 
+  function offerCandidates(identity: HumanDirectory, organizationIds: readonly string[]) {
+    const ids = new Set(organizationIds);
+    setCandidates(identity.organizations.filter((organization) => ids.has(organization.objectId)));
+    setCandidateIdentity(identity);
+    setPhase("choose");
+  }
+
+  async function reconcile(current: Attempt, confirmed?: SelfPayTransactionOutcome | null) {
+    const currentFlow = await openFlow();
+    const visible = await currentFlow.awaitCreated(current.beforeOrganizationIds, {
+      outcome: confirmed,
+      name,
+    });
+    if (visible.state === "choose") {
+      offerCandidates(visible.identity, visible.organizationIds);
+      return;
+    }
+    complete(visible.identity, visible.organizationId);
+  }
+
+  async function recoverMissingJournal(current: Attempt) {
+    // A null journal is not a transaction result. Read the Human exactly once:
+    // this recovers a real receipt lost with IndexedDB without inventing a submission.
+    const identity = await (await openFlow()).chain.human();
+    const recovery = recoverMissingOrganizationJournal(
+      current.beforeOrganizationIds,
+      identity.organizations,
+    );
+    if (recovery.state === "created") {
+      complete(identity, recovery.organizationId);
+      return;
+    }
+    if (storageKey) clearAttempt(storageKey);
+    setAttempt(null);
+    setOutcome(null);
+    setNotice(recovery.notice);
+    setPhase(recovery.phase);
+  }
+
   async function queryOriginal(current: Attempt) {
     setPhase("checking");
     setFailure(null);
+    let result: SelfPayTransactionOutcome | null = null;
     try {
-      const result = await (await openFlow()).query(current.requestId);
-      if (!result) throw new OrganizationCreateError("organization_not_visible");
+      result = await (await openFlow()).query(current.requestId) ?? null;
+      if (!result) {
+        await recoverMissingJournal(current);
+        return;
+      }
       setOutcome(result);
-      if (result.status === "confirmed") await reconcile(current);
+      if (result.status === "confirmed") await reconcile(current, result);
       else if (result.status === "unknown") setPhase("unknown");
       else {
         if (storageKey) clearAttempt(storageKey);
@@ -215,8 +265,23 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       }
     } catch (error) {
       if (!live.current) return;
-      setFailure(failureCode(error));
-      setPhase("unknown");
+      const value = failureCode(error);
+      setFailure(value);
+      setPhase(value === "organization_not_visible" && result?.status === "confirmed" ? "not-visible" : "unknown");
+    }
+  }
+
+  async function recheckConfirmed(current: Attempt) {
+    if (outcome?.status !== "confirmed") return;
+    setPhase("checking");
+    setFailure(null);
+    try {
+      await reconcile(current, outcome);
+    } catch (error) {
+      if (!live.current) return;
+      const value = failureCode(error);
+      setFailure(value);
+      setPhase(value === "organization_not_visible" ? "not-visible" : "unknown");
     }
   }
 
@@ -299,6 +364,7 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       setAttempt(current);
       setQuote(null);
       setFailure(null);
+      setNotice(null);
       setPhase("quoting");
       const result = await (await openFlow()).prepare({
         requestId: current.requestId,
@@ -310,7 +376,7 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       if (!live.current) return;
       if ("status" in result) {
         setOutcome(result);
-        if (result.status === "confirmed") await reconcile(current);
+        if (result.status === "confirmed") await reconcile(current, result);
         else if (result.status === "unknown") setPhase("unknown");
         else {
           clearAttempt(storageKey);
@@ -346,7 +412,7 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       if (!live.current) return;
       setOutcome(result);
       setQuote(null);
-      if (result.status === "confirmed") await reconcile(attempt);
+      if (result.status === "confirmed") await reconcile(attempt, result);
       else if (result.status === "unknown") setPhase("unknown");
       else {
         if (storageKey) clearAttempt(storageKey);
@@ -373,6 +439,24 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
           `Another device · ${shortId(address, 10)}`,
         );
   const busy = ["checking", "quoting", "signing", "unknown"].includes(phase);
+  const notSubmittedNote =
+    notice === "not_submitted"
+      ? t(
+          "上次的创建没有提交，什么都没有发生，可以重新创建。",
+          "The last attempt was never submitted; nothing happened. You can create the organization again.",
+        )
+      : null;
+  const close = () => {
+    if (
+      (phase === "quoting" || phase === "ready") &&
+      shouldClearOrganizationAttemptOnClose(phase)
+    ) {
+      if (storageKey) clearAttempt(storageKey);
+      setAttempt(null);
+      setQuote(null);
+    }
+    onClose();
+  };
 
   if (created)
     return (
@@ -415,13 +499,15 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       title={t("新建组织", "New organization")}
       sub={t("为另一件事单独开一个组织：OKR、主机、Agent、记忆和权限都会和现有组织分开。", "A separate organization for something else: its OKRs, Hosts, Agents, memory and permissions stay separate from your other organizations.")}
       size="sm"
-      onClose={onClose}
+      onClose={close}
       footer={
         <>
-          <Btn label={t("取消", "Cancel")} onClick={onClose} disabled={busy} />
-          {phase === "unknown" ? (
+          <Btn label={t("取消", "Cancel")} onClick={close} disabled={phase === "signing" || phase === "unknown"} />
+          {phase === "not-visible" ? (
+            <Btn kind="primary" label={t("重新检查", "Recheck")} onClick={() => attempt && void recheckConfirmed(attempt)} />
+          ) : phase === "unknown" ? (
             <Btn kind="primary" label={t("查询原交易", "Check original transaction")} onClick={() => attempt && void queryOriginal(attempt)} />
-          ) : (
+          ) : phase === "choose" ? null : (
             <Btn
               kind="primary"
               disabled={!isTauri() || busy || activeNameCheck?.state === "taken"}
@@ -447,11 +533,47 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
         </>
       }
     >
+      {notSubmittedNote && <div className="note"><Icon name="info" /><div>{notSubmittedNote}</div></div>}
       {nonNameFailureText && <div className="note warn" role="alert"><Icon name="alert" /><div>{nonNameFailureText}</div></div>}
+      {phase === "not-visible" && outcome?.status === "confirmed" && (
+        <div className="note warn">
+          <Icon name="alert" />
+          <div>
+            <div>{t("已确认的交易仍在等待索引。", "The confirmed transaction is still waiting for indexing.")}</div>
+            <div className="small mt-4 mono">{shortId(outcome.digest, 10)}</div>
+            <Btn
+              size="sm"
+              className="mt-8"
+              icon="copy"
+              label={digestCopied ? t("已复制", "Copied") : t("复制交易摘要", "Copy transaction digest")}
+              onClick={() => void navigator.clipboard.writeText(outcome.digest).then(() => setDigestCopied(true)).catch(() => setDigestCopied(false))}
+            />
+          </div>
+        </div>
+      )}
+      {phase === "choose" && candidateIdentity && (
+        <div className="note warn">
+          <Icon name="help" />
+          <div>
+            <div>{t("发现多个新组织。请选择要打开的组织：", "More than one new organization was found. Choose one to open:")}</div>
+            <div className="mt-8">
+              {candidates.map((organization) => (
+                <Btn
+                  key={organization.objectId}
+                  size="sm"
+                  className="mr-8"
+                  label={`${organization.name || shortId(organization.objectId, 10)} · ${shortId(organization.objectId, 8)}`}
+                  onClick={() => complete(candidateIdentity, organization.objectId)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {outcome?.status === "unknown" && <div className="note warn"><Icon name="help" /><div>{t("结果未知：只会查询原交易，不会重放或再次提交。", "Result unknown: only the original transaction will be queried; it will not be replayed or submitted again.")}</div></div>}
       <div className="field">
         <label htmlFor="organization-name">{t("组织名称", "Name")}</label>
-        <input ref={nameInput} id="organization-name" className={`input${nameFieldError ? " err" : ""}`} value={name} disabled={busy || phase === "ready"} onChange={(event) => setName(event.target.value)} placeholder={t("例如：家里的事、Meeru Labs", "e.g. Family, Meeru Labs")} />
+        <input ref={nameInput} id="organization-name" className={`input${nameFieldError ? " err" : ""}`} value={name} disabled={busy || phase === "ready" || phase === "choose"} onChange={(event) => setName(event.target.value)} placeholder={t("例如：家里的事、Meeru Labs", "e.g. Family, Meeru Labs")} />
         {!validation.ok && name && <div className="err-t"><Icon name="x" size="xs" />{text(validation.code)}</div>}
         {validation.ok && !nameFieldError && <div className="small muted">{t("组织名称在整个网络里不能重复，建好后其他人在开放网络里也会看到它。", "Organization names are unique across the network. Other people will be able to see this one on the open network after it is created.")}</div>}
         {!nameFieldError && activeNameCheck?.state === "checking" && <div className="small muted">{t("正在查这个名字…", "Checking this name…")}</div>}
@@ -460,7 +582,7 @@ export function OrganizationCreateDialog({ onClose }: { onClose: () => void }) {
       </div>
       <div className="field">
         <label htmlFor="organization-description">{t("简介（可选）", "Description (optional)")}</label>
-        <textarea id="organization-description" className="input" rows={2} value={description} disabled={busy || phase === "ready"} onChange={(event) => setDescription(event.target.value)} />
+        <textarea id="organization-description" className="input" rows={2} value={description} disabled={busy || phase === "ready" || phase === "choose"} onChange={(event) => setDescription(event.target.value)} />
       </div>
       <ul className="small muted" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
         <li>{t("新组织从空开始：没有 OKR、Agent、主机和记忆，你是唯一的管理员。", "It starts empty: no OKRs, Agents, Hosts or memory; you are its only administrator.")}</li>

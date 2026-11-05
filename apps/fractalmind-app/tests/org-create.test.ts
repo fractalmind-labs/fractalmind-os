@@ -4,11 +4,16 @@ import { DEVICE_ACTIONS, TransactionPreflightError } from "@fractalmind-labs/fra
 import {
   addedOrganizationId,
   isRootGrant,
+  OrganizationCreation,
+  organizationIdsCreatedBy,
   organizationCreationFailure,
   organizationNameAvailability,
   organizationOutcomeFailure,
   organizationKind,
+  recoverMissingOrganizationJournal,
+  resolveAddedOrganization,
   restrictedDevices,
+  shouldClearOrganizationAttemptOnClose,
   validateOrganization,
 } from "../src/organization-create";
 
@@ -131,6 +136,154 @@ test("the post-transaction directory difference identifies exactly one new organ
     addedOrganizationId(["0xpersonal"], [{ objectId: "0xpersonal" }, { objectId: "0xa" }, { objectId: "0xb" }] as never),
     null,
   );
+});
+
+test("journal miss with no new organization clears the attempt and returns the form with a neutral notice", () => {
+  assert.deepEqual(
+    recoverMissingOrganizationJournal(
+      ["0xpersonal"],
+      [{ objectId: "0xpersonal", name: "Personal" }] as never,
+    ),
+    {
+      state: "not_submitted",
+      clearAttempt: true,
+      phase: "form",
+      notice: "not_submitted",
+    },
+  );
+});
+
+test("journal miss with one new organization reconciles it without submitting another transaction", () => {
+  assert.deepEqual(
+    recoverMissingOrganizationJournal(
+      ["0xpersonal"],
+      [
+        { objectId: "0xpersonal", name: "Personal" },
+        { objectId: "0xnew", name: "New organization" },
+      ] as never,
+    ),
+    { state: "created", organizationId: "0xnew" },
+  );
+});
+
+test("journal miss with more than one new organization clears the unsubmitted locator instead of guessing", () => {
+  assert.deepEqual(
+    recoverMissingOrganizationJournal(
+      ["0xpersonal"],
+      [
+        { objectId: "0xpersonal", name: "Personal" },
+        { objectId: "0xfirst", name: "First" },
+        { objectId: "0xsecond", name: "Second" },
+      ] as never,
+    ),
+    {
+      state: "not_submitted",
+      clearAttempt: true,
+      phase: "form",
+      notice: "not_submitted",
+    },
+  );
+});
+
+test("a confirmed receipt with no readable organization remains retryable instead of becoming a false success", () => {
+  const outcome = {
+    status: "confirmed",
+    digest: "digest",
+    transaction: { effects: { changedObjects: [] }, objectTypes: {} },
+  } as never;
+  assert.deepEqual(
+    resolveAddedOrganization(["0xpersonal"], [{ objectId: "0xpersonal", name: "Personal" }] as never, { outcome }),
+    { state: "not_visible" },
+  );
+});
+
+test("a confirmed indexing recheck only rereads the Human directory until its organization is visible", async () => {
+  let reads = 0;
+  const creation = new OrganizationCreation(
+    {
+      human: async () => {
+        reads++;
+        return {
+          organizations:
+            reads === 1
+              ? [{ objectId: "0xpersonal", name: "Personal" }]
+              : [
+                  { objectId: "0xpersonal", name: "Personal" },
+                  { objectId: "0xnew", name: "New organization" },
+                ],
+          } as never;
+      },
+      sdk: { client: { client: {} } },
+      profile: { network: "localnet" },
+    } as never,
+    {} as never,
+    {} as never,
+  );
+  const result = await creation.awaitCreated(["0xpersonal"], {
+    outcome: { status: "confirmed", digest: "digest" } as never,
+    attempts: 2,
+    delayMs: 0,
+  });
+  assert.equal(result.state, "created");
+  if (result.state === "created") assert.equal(result.organizationId, "0xnew");
+  assert.equal(reads, 2);
+});
+
+test("two new organizations choose the confirmed receipt's Organization write, then offer a list rather than hanging", () => {
+  const organizations = [
+    { objectId: "0xpersonal", name: "Personal" },
+    { objectId: "0xfirst", name: "First" },
+    { objectId: "0xsecond", name: "Second" },
+  ] as never;
+  const outcome = {
+    digest: "confirmed-digest",
+    transaction: {
+      digest: "confirmed-digest",
+      effects: {
+        changedObjects: [
+          { objectId: "0xsecond", outputState: "ObjectWrite" },
+          { objectId: "0xother", outputState: "ObjectWrite" },
+        ],
+      },
+      objectTypes: {
+        "0xsecond": "0xpackage::organization::Organization",
+        "0xother": "0xpackage::identity::DeviceGrant",
+      },
+    },
+  } as never;
+  assert.deepEqual(organizationIdsCreatedBy(outcome), ["0xsecond"]);
+  assert.deepEqual(
+    resolveAddedOrganization(["0xpersonal"], organizations, { outcome }),
+    { state: "created", organizationId: "0xsecond" },
+  );
+  assert.deepEqual(
+    resolveAddedOrganization(["0xpersonal"], organizations, {
+      outcome: {
+        digest: "confirmed-digest",
+        transaction: {
+          digest: "a-different-receipt",
+          effects: { changedObjects: [{ objectId: "0xsecond", outputState: "ObjectWrite" }] },
+          objectTypes: { "0xsecond": "0xpackage::organization::Organization" },
+        },
+      } as never,
+    }),
+    { state: "choose", organizationIds: ["0xfirst", "0xsecond"] },
+  );
+  assert.deepEqual(
+    resolveAddedOrganization(["0xpersonal"], organizations),
+    { state: "choose", organizationIds: ["0xfirst", "0xsecond"] },
+  );
+  assert.deepEqual(
+    resolveAddedOrganization(["0xpersonal"], organizations, { name: "Second" }),
+    { state: "created", organizationId: "0xsecond" },
+  );
+});
+
+test("closing a quote before signing clears its pre-submit attempt", () => {
+  assert.equal(shouldClearOrganizationAttemptOnClose("quoting"), true);
+  assert.equal(shouldClearOrganizationAttemptOnClose("ready"), true);
+  assert.equal(shouldClearOrganizationAttemptOnClose("signing"), false);
+  assert.equal(shouldClearOrganizationAttemptOnClose("unknown"), false);
 });
 
 test("only valid devices scoped to another organization are listed as restricted", () => {

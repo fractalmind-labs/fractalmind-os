@@ -234,11 +234,92 @@ export function addedOrganizationId(
   beforeOrganizationIds: readonly string[],
   organizations: readonly Pick<OrganizationData, "objectId">[],
 ) {
+  const added = addedOrganizations(beforeOrganizationIds, organizations);
+  return added.length === 1 ? added[0].objectId : null;
+}
+
+/** Everything added since the request's pre-submit Human directory snapshot.
+ * The Human vector is ordered, so the final matching entry is the newest. */
+export function addedOrganizations<T extends Pick<OrganizationData, "objectId">>(
+  beforeOrganizationIds: readonly string[],
+  organizations: readonly T[],
+) {
   const previous = new Set(beforeOrganizationIds);
-  const added = organizations
-    .map((organization) => organization.objectId)
-    .filter((organizationId) => !previous.has(organizationId));
-  return added.length === 1 ? added[0] : null;
+  return organizations.filter((organization) => !previous.has(organization.objectId));
+}
+
+export type OrganizationDirectoryResolution =
+  | { state: "not_visible" }
+  | { state: "created"; organizationId: string }
+  | { state: "choose"; organizationIds: string[] };
+
+/** The SelfPay manager verifies that a confirmed receipt is for its exact
+ * journal digest. Its created Organization write is therefore the strongest
+ * way to choose one directory candidate when two requests raced. */
+export function organizationIdsCreatedBy(
+  outcome: Pick<SelfPayTransactionOutcome, "digest" | "transaction"> | null | undefined,
+) {
+  const transaction = outcome?.transaction;
+  const digest = outcome?.digest;
+  if (!transaction?.effects || !transaction.objectTypes || !digest || transaction.digest !== digest)
+    return [];
+  return transaction.effects.changedObjects
+    .filter(
+      (change) =>
+        change.outputState === "ObjectWrite" &&
+        transaction.objectTypes?.[change.objectId]?.endsWith("::organization::Organization"),
+    )
+    .map((change) => change.objectId);
+}
+
+/** Resolve a changed Human directory without guessing or silently discarding a
+ * second organization. A confirmed journal receipt wins; otherwise an exact
+ * typed-name match wins; any remaining candidates are offered to the user. */
+export function resolveAddedOrganization(
+  beforeOrganizationIds: readonly string[],
+  organizations: readonly Pick<OrganizationData, "objectId" | "name">[],
+  options: {
+    outcome?: Pick<SelfPayTransactionOutcome, "digest" | "transaction"> | null;
+    name?: string;
+  } = {},
+): OrganizationDirectoryResolution {
+  const added = addedOrganizations(beforeOrganizationIds, organizations);
+  if (!added.length) return { state: "not_visible" };
+
+  const receiptIds = new Set(organizationIdsCreatedBy(options.outcome));
+  const receiptMatch = added.find((organization) => receiptIds.has(organization.objectId));
+  if (receiptMatch) return { state: "created", organizationId: receiptMatch.objectId };
+
+  const name = options.name?.trim();
+  const nameMatches = name ? added.filter((organization) => organization.name === name) : [];
+  if (nameMatches.length)
+    return { state: "created", organizationId: nameMatches[nameMatches.length - 1].objectId };
+
+  if (added.length === 1) return { state: "created", organizationId: added[0].objectId };
+  return { state: "choose", organizationIds: added.map((organization) => organization.objectId) };
+}
+
+export type MissingJournalRecovery =
+  | { state: "not_submitted"; clearAttempt: true; phase: "form"; notice: "not_submitted" }
+  | { state: "created"; organizationId: string };
+
+/** A localStorage locator without an IndexedDB journal entry is not a receipt.
+ * One directory read can still recover a real submission whose journal was
+ * lost; otherwise returning to the form is safe because nothing was sent. */
+export function recoverMissingOrganizationJournal(
+  beforeOrganizationIds: readonly string[],
+  organizations: readonly Pick<OrganizationData, "objectId" | "name">[],
+): MissingJournalRecovery {
+  const added = addedOrganizations(beforeOrganizationIds, organizations);
+  return added.length === 1
+    ? { state: "created", organizationId: added[0].objectId }
+    : { state: "not_submitted", clearAttempt: true, phase: "form", notice: "not_submitted" };
+}
+
+/** A quote has not claimed the durable transaction journal or broadcast a
+ * transaction. Closing at either pre-signing phase must discard its locator. */
+export function shouldClearOrganizationAttemptOnClose(phase: "quoting" | "ready" | "signing" | "unknown") {
+  return phase === "quoting" || phase === "ready";
 }
 
 /** Devices with a currently-valid, organization-scoped grant for some other
@@ -336,19 +417,28 @@ export class OrganizationCreation {
   }
 
   /** Polling this method only reads the Human directory; it cannot submit or
-   * replay a transaction. */
+   * replay a transaction. Confirmed indexing may lag a full checkpoint, so it
+   * intentionally waits 30 seconds rather than issuing a rapid burst of RPC
+   * reads. */
   async awaitCreated(
     beforeOrganizationIds: readonly string[],
-    attempts = 50,
-    delayMs = 100,
+    options: {
+      outcome?: Pick<SelfPayTransactionOutcome, "digest" | "transaction"> | null;
+      name?: string;
+      attempts?: number;
+      delayMs?: number;
+    } = {},
   ) {
+    const attempts = options.attempts ?? 30;
+    const delayMs = options.delayMs ?? 1_000;
     for (let attempt = 0; attempt < attempts; attempt++) {
       const identity = await this.chain.human();
-      const organizationId = addedOrganizationId(
+      const resolution = resolveAddedOrganization(
         beforeOrganizationIds,
         identity.organizations,
+        { outcome: options.outcome, name: options.name },
       );
-      if (organizationId) return { organizationId, identity };
+      if (resolution.state !== "not_visible") return { ...resolution, identity };
       if (attempt + 1 < attempts)
         await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
