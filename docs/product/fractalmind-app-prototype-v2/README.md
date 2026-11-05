@@ -25,6 +25,10 @@ python3 -m http.server 4181 --bind 127.0.0.1 --directory docs/product
 | `?lang=en`、`?theme=dark` | 语言与外观 |
 | `?reset=1` | 重置演示数据（不影响语言与外观偏好） |
 
+## 新建组织（FR-02a，2026-11-04）
+
+「我的组织」右上角和左上角的组织切换菜单都有「新建组织」。主设备（演示中的 MacBook Pro 14）填名称后签名，经待确认 → 已确认后切到新组织，弹层列出还不能使用它的设备（限定在个人组织上的手机）。在限定组织的设备上点入口，只说明原因和可用的主设备。模型规则见 `js/model.js` 的 `canCreateOrg` / `validateOrg` / `createOrg`，`verify.cjs` 有对应检查。
+
 ## v2 改了什么
 
 v1 对 PRD 的覆盖非常全面；v2 保留同样的产品模型，重点改进“评审时能不能一眼看懂、能不能持续迭代”。

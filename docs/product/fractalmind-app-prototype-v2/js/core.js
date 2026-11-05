@@ -330,6 +330,7 @@
 
   const TX_LABEL = {
     'identity.create': ['创建身份与个人组织', 'Create identity and personal organization'],
+    'org.create': ['新建组织', 'Create an organization'],
     'okr.activate': ['激活 OKR', 'Activate OKR'],
     'okr.update': ['确认新的执行约定', 'Confirm a new agreement'],
     'okr.archive': ['归档 OKR', 'Archive OKR'],
@@ -366,6 +367,7 @@
     stale: ['确认页已过期，请重新核对', 'This confirmation is stale; review again'],
     not_pending: ['状态已变化', 'The state changed'],
     role_insufficient: ['角色不包含该操作', 'Role does not include this action'],
+    org_name_taken: ['这个名字已经有组织在用了，换一个吧', 'An organization already uses this name; pick another'],
   };
   const txErr = code => { const t = TX_ERR[code] || PERM_TEXT[code]; return t ? T(t[0], t[1]) : code; };
 

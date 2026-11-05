@@ -822,6 +822,36 @@ check('page', 'index.html loads only local files that exist', () => {
   });
 });
 
+check('org', 'a main device creates an empty organization; scoped devices need authorizing', () => {
+  const p = F.createDemoProfile(T0, M);
+  p.wallet.balance = 10 * M.MIST;
+  assert.equal(M.canCreateOrg(p, 'dev-mbp').ok, true);
+  assert.equal(M.canCreateOrg(p, 'dev-iphone').code, 'not_root_device');
+  assert.equal(M.validateOrg(p, { name: '  ' }).code, 'org_name_empty');
+  assert.equal(M.validateOrg(p, { name: 'x'.repeat(M.ORG_NAME_MAX + 1) }).code, 'org_name_long');
+  // Names are unique network-wide: your own, and anyone's in the registry.
+  assert.equal(M.validateOrg(p, { name: 'FractalMind Labs' }).code, 'org_name_taken');
+  assert.equal(M.validateOrg(p, { name: 'Sui Tooling Guild' }, ['Sui Tooling Guild']).code, 'org_name_taken');
+  const raced = M.beginTx(p, { kind: 'org.create', orgId: null, payload: { name: '抢先', description: '', deviceId: 'dev-mbp', takenAtCommit: ['抢先'], data: F.emptyOrgData() } }, T0);
+  assert.equal(M.commitTx(p, raced.tx.id, T0 + MIN, null).code, 'org_name_taken');
+  const before = p.orgs.length;
+  const begun = M.beginTx(p, { kind: 'org.create', orgId: null, payload: { name: '家里的事', description: '', deviceId: 'dev-mbp', data: F.emptyOrgData() } }, T0);
+  assert.equal(begun.ok, true);
+  const res = M.commitTx(p, begun.tx.id, T0 + MIN, null);
+  assert.equal(res.ok, true);
+  assert.equal(p.orgs.length, before + 1);
+  const org = M.find(p.orgs, res.orgId);
+  assert.equal(org.kind, 'org');
+  assert.equal(org.role, 'admin');
+  assert.equal(p.data[res.orgId].okrs.length, 0);
+  assert.ok(M.find(p.devices, 'dev-mbp').grant.scopes.some(s => s.orgId === res.orgId));
+  assert.ok(!M.find(p.devices, 'dev-iphone').grant.scopes.some(s => s.orgId === res.orgId));
+  assert.ok(res.scoped.includes('dev-iphone'));
+  // From a scoped device the transaction fails at commit, even if a stale page sent it.
+  const bad = M.beginTx(p, { kind: 'org.create', orgId: null, payload: { name: 'B', description: '', deviceId: 'dev-iphone', data: F.emptyOrgData() } }, T0);
+  assert.equal(M.commitTx(p, bad.tx.id, T0 + MIN, null).code, 'not_root_device');
+});
+
 check('page', 'every script index.html loads parses', () => {
   const vm = require('node:vm');
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');

@@ -5,6 +5,8 @@ import { useApp } from "../store";
 import { go } from "../router";
 import { Btn, ComingSoon, date, Empty, Icon, shortId, until, useLang, useT } from "../ui";
 import { decisions, okrTitle } from "../model";
+import { useDialogs } from "../dialogs";
+import { organizationKind, organizationKindText } from "../../organization-create";
 
 function Head({ title, sub, children }: { title: string; sub: string; children?: React.ReactNode }) {
   return (
@@ -134,6 +136,7 @@ export function Identity() {
     approve: ["审批", "Approve"],
     manage_hosts: ["管理主机", "Manage hosts"],
   };
+  const organizations = app.identity?.organizations ?? [];
   return (
     <>
       <Head title={t("我的身份", "My identity")} sub={t("稳定的 Human ID、逐设备授权与恢复。", "A stable Human ID, per-device grants and recovery.")} />
@@ -187,6 +190,24 @@ export function Identity() {
               ))}
             </tbody>
           </table>
+        </div>
+      </section>
+      <section className="sec">
+        <div className="sec-h">
+          <h2>{t("组织关系", "Organization relationships")}</h2>
+          <span className="small muted">{organizations.length}</span>
+        </div>
+        <div className="list card">
+          {organizations.map((organization) => (
+            <div className="item" key={organization.objectId}>
+              <Icon name="layers" />
+              <span className="grow">
+                <span className="strong" style={{ display: "block" }}>{organization.name}</span>
+                <span className="small muted">{t(...organizationKindText(organizationKind(organization, organizations)))}</span>
+              </span>
+              <span className="mono tiny">{shortId(organization.objectId, 8)}</span>
+            </div>
+          ))}
         </div>
       </section>
     </>
@@ -257,10 +278,13 @@ export function Settings() {
 export function Orgs() {
   const app = useApp();
   const t = useT();
+  const dialogs = useDialogs();
   const orgs = app.identity?.organizations ?? [];
   return (
     <>
-      <Head title={t("我的组织", "My organizations")} sub={t("组织关系与切换；从个人组织逐步走向团队与联邦。", "Your organizations; grow from personal to team and federation.")} />
+      <Head title={t("我的组织", "My organizations")} sub={t("组织关系与切换；从个人组织逐步走向团队与联邦。", "Your organizations; grow from personal to team and federation.")}>
+        <Btn label={t("新建组织", "New organization")} icon="plus" kind="primary" onClick={() => dialogs.open({ kind: "organization-create" })} />
+      </Head>
       <div className="list card">
         {orgs.map((o) => (
           <button
@@ -277,7 +301,9 @@ export function Orgs() {
               <span className="strong" style={{ display: "block" }}>
                 {o.name}
               </span>
-              <span className="tiny muted mono">{shortId(o.objectId, 8)}</span>
+              <span className="tiny muted">
+                {t(...organizationKindText(organizationKind(o, orgs)))} · <span className="mono">{shortId(o.objectId, 8)}</span>
+              </span>
             </span>
             {o.objectId === app.organizationId ? <span className="chip ok">{t("当前", "Current")}</span> : <Icon name="right" size="sm" />}
           </button>

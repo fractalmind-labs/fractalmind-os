@@ -11,6 +11,7 @@ import { NativeDeviceSigner, type NativeInvoke } from "./native-device";
 import { NativeRecoverySigner, revealRecoveryCode } from "./native-onboarding";
 import {
   IdentityCreation,
+  identityOrganizationOutcomeFailure,
   normalizeDeployment,
   identityCreationFailure,
   validateCreationDeployment,
@@ -96,7 +97,15 @@ export default function CreateIdentity({
     [found, setFound] =
       useState<Awaited<ReturnType<IdentityCreation["locate"]>>>(null);
   const mounted = useRef(true),
-    flight = useRef(false);
+    flight = useRef(false),
+    organizationNameInput = useRef<HTMLInputElement>(null);
+  const [nameCheck, setNameCheck] = useState<
+    Awaited<ReturnType<IdentityCreation["organizationNameAvailability"]>> | { state: "checking"; name: string } | null
+  >(null);
+  const activeNameCheck =
+    stage === "organization" && name.trim() && nameCheck?.name === name.trim()
+      ? nameCheck
+      : null;
   useEffect(() => {
     mounted.current = true;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -105,6 +114,26 @@ export default function CreateIdentity({
       mounted.current = false;
     };
   }, []);
+  /** A stale response is harmless because it carries the trimmed input it
+   * checked. Preparing repeats this query immediately before making a quote. */
+  useEffect(() => {
+    if (stage !== "organization" || !session || !name.trim()) {
+      setNameCheck(null);
+      return;
+    }
+    const checkedName = name.trim();
+    let cancelled = false;
+    setNameCheck({ state: "checking", name: checkedName });
+    const timer = setTimeout(() => {
+      void session.organizationNameAvailability(checkedName).then((result) => {
+        if (!cancelled) setNameCheck(result);
+      });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [stage, session, name]);
   // An unfinished setup on this device resumes without re-entering anything.
   const resumed = useRef(false);
   useEffect(() => {
@@ -222,7 +251,17 @@ export default function CreateIdentity({
         ? await session.prepareIdentity()
         : await session.prepareOrganization(name);
     if (!mounted.current) return;
-    if ("status" in result) setOutcome(result);
+    if ("status" in result) {
+      setOutcome(result);
+      const failed = identityOrganizationOutcomeFailure(
+        result,
+        session.deployment.packageId,
+      );
+      if (failed) {
+        setError(failed);
+        setTimeout(() => organizationNameInput.current?.focus(), 0);
+      }
+    }
     else setQuote(result);
     setFailedAttempts(session.failedTransactions);
   }
@@ -247,6 +286,15 @@ export default function CreateIdentity({
     if (result.status === "confirmed") {
       await session.awaitVisible(stage === "organization");
       await read(session);
+    } else {
+      const failed = identityOrganizationOutcomeFailure(
+        result,
+        session.deployment.packageId,
+      );
+      if (failed) {
+        setError(failed);
+        setTimeout(() => organizationNameInput.current?.focus(), 0);
+      }
     }
   }
   if (!isTauri())
@@ -523,6 +571,8 @@ export default function CreateIdentity({
                   "Organization name (public on chain)",
                 )}
                 <input
+                  ref={organizationNameInput}
+                  id="onboarding-organization-name"
                   value={name}
                   maxLength={128}
                   placeholder={t("例如：Ada 的个人组织", "e.g. Ada's organization")}
@@ -532,7 +582,37 @@ export default function CreateIdentity({
                     setQuote(null);
                   }}
                 />
+                <p className="small muted">
+                  {t(
+                    "组织名称在整个网络里不能重复，建好后其他人在开放网络里也会看到它。",
+                    "Organization names are unique across the network. Other people will be able to see this one on the open network after it is created.",
+                  )}
+                </p>
+                {activeNameCheck?.state === "checking" && (
+                  <p className="small muted">{t("正在查这个名字…", "Checking this name…")}</p>
+                )}
+                {activeNameCheck?.state === "taken" && (
+                  <p className="notice" role="alert">
+                    {t(
+                      "这个名字已经有组织在用了：组织名称在整个网络里不能重复，换一个吧。",
+                      "This name is already used by an organization. Organization names are unique across the network; choose another one.",
+                    )}
+                  </p>
+                )}
+                {activeNameCheck?.state === "unavailable" && (
+                  <p className="notice">
+                    {t(
+                      "暂时查不到这个名字有没有被占用，签名后如果重名会失败，手续费不退。",
+                      "The name cannot be checked right now. If it is taken, signing can fail and the fee is not refunded.",
+                    )}
+                  </p>
+                )}
               </label>
+              <ul className="small muted" style={{ margin: "0 0 12px", paddingLeft: 18, lineHeight: 1.7 }}>
+                <li>{t("个人组织从空开始，你是唯一管理员。", "Your personal organization starts empty and you are its only administrator.")}</li>
+                <li>{t("邀请他人加入将在后续版本（P3）开放。", "Inviting people will arrive in a later release (P3).")}</li>
+                <li>{t("费用会在签名前按当前自付费报价计算。", "The current self-pay quote is calculated before signing.")}</li>
+              </ul>
             </>
           )}
           {!quote && !outcome && (
@@ -543,7 +623,7 @@ export default function CreateIdentity({
                   busy ||
                   !savedCode ||
                   (stage === "identity" && !funded) ||
-                  (stage === "organization" && !name.trim())
+                  (stage === "organization" && (!name.trim() || activeNameCheck?.state === "taken"))
                 }
                 onClick={() => void action(prepare)}
               >

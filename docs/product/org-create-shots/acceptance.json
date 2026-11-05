@@ -1,0 +1,45 @@
+{
+  "format": 1,
+  "recordedAt": "2026-11-04T04:40:58.300Z",
+  "network": "localnet",
+  "browser": "Chrome headless through CDP",
+  "viewportSets": [
+    "1280x800",
+    "390x844"
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "screenshots": [
+    "01-orgs-entry-light-desktop-1280x800.png",
+    "01-orgs-entry-light-phone-390x844.png",
+    "01-orgs-entry-dark-desktop-1280x800.png",
+    "01-orgs-entry-dark-phone-390x844.png",
+    "02-org-menu-entry-light-desktop-1280x800.png",
+    "02-org-menu-entry-light-phone-390x844.png",
+    "02-org-menu-entry-dark-desktop-1280x800.png",
+    "02-org-menu-entry-dark-phone-390x844.png",
+    "03-root-form-name-taken-light-desktop-1280x800.png",
+    "03-root-form-name-taken-light-phone-390x844.png",
+    "03-root-form-name-taken-dark-desktop-1280x800.png",
+    "03-root-form-name-taken-dark-phone-390x844.png",
+    "04-fee-quote-light-desktop-1280x800.png",
+    "04-fee-quote-light-phone-390x844.png",
+    "04-fee-quote-dark-desktop-1280x800.png",
+    "04-fee-quote-dark-phone-390x844.png",
+    "05-pending-light-desktop-1280x800.png",
+    "05-pending-light-phone-390x844.png",
+    "05-pending-dark-desktop-1280x800.png",
+    "05-pending-dark-phone-390x844.png",
+    "06-confirmed-workbench-light-desktop-1280x800.png",
+    "06-confirmed-workbench-light-phone-390x844.png",
+    "06-confirmed-workbench-dark-desktop-1280x800.png",
+    "06-confirmed-workbench-dark-phone-390x844.png",
+    "07-non-root-explanation-light-desktop-1280x800.png",
+    "07-non-root-explanation-light-phone-390x844.png",
+    "07-non-root-explanation-dark-desktop-1280x800.png",
+    "07-non-root-explanation-dark-phone-390x844.png"
+  ],
+  "privateKeysInReport": false
+}

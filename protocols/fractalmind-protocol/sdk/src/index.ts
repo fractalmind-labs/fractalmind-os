@@ -73,6 +73,7 @@ export { commandResultKey, commandResultWrapContext, encryptCommandResult, decry
 export { ObjectiveApi } from './objective.js';
 export { OkrApi, OkrBcs, OkrMetricBcs, OkrObservationBcs, OKR_STATES, metricProgress, weightedProgress } from './okr.js';
 export { OrganizationApi } from './organization.js';
+export type { OrganizationNameLookup } from './organization.js';
 export { AgentApi } from './agent.js';
 export { AgentPolicyApi } from './agent-policy.js';
 export { TaskApi } from './task.js';
