@@ -26,6 +26,18 @@ module fractalmind_protocol::execution_extension {
 
     public fun register_source<W: drop>(org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, family: u8, _witness: &W, clock: &Clock, ctx: &mut TxContext) {
         identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
+        register_source_checked(org, family, _witness, ctx);
+    }
+    /// Agent-created OKR drafts may establish the same sealed source binding,
+    /// but only an explicitly marked Agent Operator with OPERATE may do so.
+    /// The witness still fixes the source module, so this opens no generic
+    /// extension writer to devices or other packages.
+    public fun register_agent_source<W: drop>(org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, family: u8, _witness: &W, clock: &Clock, ctx: &mut TxContext) {
+        identity::assert_can(human, grant, org, identity::operate_action(), clock, ctx);
+        assert!(identity::is_agent_operator(grant), E_SOURCE);
+        register_source_checked(org, family, _witness, ctx);
+    }
+    fun register_source_checked<W: drop>(org: &mut Organization, family: u8, _witness: &W, ctx: &mut TxContext) {
         assert!(family <= 1, E_SOURCE);
         let source = type_name::with_original_ids<W>();
         if (!df::exists_(organization::borrow_uid(org), IndexKey { family }))
@@ -71,7 +83,9 @@ module fractalmind_protocol::execution_extension {
         assert_source(org, family, witness);
         assert!((family == 0 && (kind == 2 || kind == 3 || kind == 6)) || (family == 1 && (kind == 1 || kind == 2 || kind == 4)), E_RECORD);
         let action = if (family == 0 && (kind == 6 || (kind == 3 && revision == 0))) identity::read_action()
-            else if (family == 1 && kind == 2 && revision > 0) identity::operate_action() else identity::approve_action();
+            else if ((family == 1 && kind == 1 && identity::is_agent_operator(grant))
+                || (family == 1 && kind == 2 && revision > 0)) identity::operate_action()
+            else identity::approve_action();
         identity::assert_can(human, grant, org, action, clock, ctx);
         product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
             kind, logical_id, revision, key_version, encrypted, clock, ctx)

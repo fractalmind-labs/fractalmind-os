@@ -30,6 +30,7 @@ module fractalmind_okr::okr {
     const E_STALE: u64 = 9408;
     const E_BUDGET: u64 = 9409;
     const E_HANDOVER_REQUIRED: u64 = 9410;
+    const E_AGENT_OPERATOR: u64 = 9411;
     const DRAFT: u8 = 0;
     const ACTIVE: u8 = 1;
     const PAUSED: u8 = 2;
@@ -133,11 +134,36 @@ module fractalmind_okr::okr {
         key_version: u64, encrypted_spec: vector<u8>, clock: &Clock, ctx: &mut TxContext,
     ): ID {
         identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
+        extension::register_source(org, human, grant, 1, &Witness {}, clock, ctx);
+        create_draft_authorized(org, human, grant, logical_id, priority, deadline_ms,
+            baselines, targets, weights, max_ages_ms, key_version, encrypted_spec, clock, ctx)
+    }
+
+    /// Agent Operators can propose an immutable DRAFT only.  Every transition
+    /// out of DRAFT continues through the existing human APPROVE paths.
+    public fun create_draft_by_agent(
+        org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        logical_id: String, priority: u8, deadline_ms: u64,
+        baselines: vector<u64>, targets: vector<u64>, weights: vector<u64>, max_ages_ms: vector<u64>,
+        key_version: u64, encrypted_spec: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ): ID {
+        identity::assert_can(human, grant, org, identity::operate_action(), clock, ctx);
+        assert!(identity::is_agent_operator(grant), E_AGENT_OPERATOR);
+        extension::register_agent_source(org, human, grant, 1, &Witness {}, clock, ctx);
+        create_draft_authorized(org, human, grant, logical_id, priority, deadline_ms,
+            baselines, targets, weights, max_ages_ms, key_version, encrypted_spec, clock, ctx)
+    }
+
+    fun create_draft_authorized(
+        org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        logical_id: String, priority: u8, deadline_ms: u64,
+        baselines: vector<u64>, targets: vector<u64>, weights: vector<u64>, max_ages_ms: vector<u64>,
+        key_version: u64, encrypted_spec: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ): ID {
         assert!(string::length(&logical_id) > 0 && string::length(&logical_id) <= 64 && priority <= 2 && deadline_ms > clock::timestamp_ms(clock), E_INPUT);
         let measured = metrics(baselines, targets, weights, max_ages_ms);
         let intent = DraftIntent { human_id: object::id(human), priority, deadline_ms, metrics: measured, key_version, encrypted_spec };
         let fingerprint = hash::sha2_256(bcs::to_bytes(&intent));
-        extension::register_source(org, human, grant, 1, &Witness {}, clock, ctx);
         let registry = index(org, ctx);
         if (table::contains(&registry.records, logical_id)) {
             let previous = table::borrow(&registry.records, logical_id);
@@ -188,7 +214,7 @@ module fractalmind_okr::okr {
         budget_asset: String, budget_limit: u64, expires_at_ms: u64,
         expected_record_revision: u64, key_version: u64, encrypted_agreement: vector<u8>, clock: &Clock, ctx: &mut TxContext,
     ) {
-        identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
+        assert_activation_approval(human, grant, org, clock, ctx);
         assert_version(okr, org, expected_version);
         assert!(okr.state == DRAFT || okr.state == PAUSED, E_STATE);
         host::assert_member(org, member, binding, clock);
@@ -211,6 +237,15 @@ module fractalmind_okr::okr {
         okr.agreement_record = option::some(record); okr.agreement_version = okr.agreement_version + 1;
         okr.activated_at_ms = clock::timestamp_ms(clock); okr.state = ACTIVE;
         changed(okr);
+    }
+    fun assert_activation_approval(human: &HumanIdentity, grant: &DeviceGrant, org: &Organization, clock: &Clock, ctx: &TxContext) {
+        identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
+    }
+    /// Exposes the exact activation authorization gate to the Move scenario
+    /// tests without adding a production activation shortcut.
+    #[test_only]
+    public fun assert_activation_approval_for_testing(human: &HumanIdentity, grant: &DeviceGrant, org: &Organization, clock: &Clock, ctx: &TxContext) {
+        assert_activation_approval(human, grant, org, clock, ctx);
     }
     /// Assigns the OKR to an agent-manager Agent imported with control (#70,
     /// #75). It runs no bounded task FractalMind could hand over, so there is

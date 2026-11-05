@@ -28,28 +28,22 @@ test('new command arguments are checked before any chain access', async () => {
   assert.equal(await run(['task', 'create'], io), 2);
 });
 
-test('a blocked draft reports a machine-readable human approval request', async () => {
+test('draft input is validated before any Agent authorization or transaction', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'fm-cli-test-'));
   const file = join(dir, 'draft.json'), errors: string[] = [];
   try {
     await writeFile(file, JSON.stringify({ objective: 'A draft' }));
     const code = await run(['okr', 'draft', 'create', '--file', file], { out: () => {}, err: line => errors.push(line) });
-    assert.equal(code, 8);
-    assert.deepEqual(JSON.parse(errors[0]!), {
-      error: 'needs_approval', code: 8,
-      detail: 'The deployed okr::create_draft entry point requires an APPROVE grant. Agent Operators are permanently limited to READ+OPERATE.',
-      approval: { status: 'not_filed', requestedBy: 'agent_operator_grant', action: 'okr.draft.create', title: 'A draft', body: 'Create the supplied OKR draft; the Agent cannot activate it.' },
-      how_to_file: 'Ask a human with an APPROVE device grant to create and approve this request in the FractalMind App.',
-    });
+    assert.equal(code, 2);
+    assert.equal(JSON.parse(errors[0]!).error, 'usage');
+    assert.match(JSON.parse(errors[0]!).detail, /priority/);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
-test('generic approval requests describe the contract-bound human handoff', async () => {
+test('approval requests now require an authorized Agent Operator rather than returning an unsent handoff', async () => {
   const errors: string[] = [];
   const code = await run(['approval', 'request', 'okr.activate', '--title', 'Activate', '--body', 'Please review'], { out: () => {}, err: line => errors.push(line) });
-  assert.equal(code, 8);
+  assert.equal(code, 4);
   const error = JSON.parse(errors[0]!);
-  assert.equal(error.error, 'needs_approval');
-  assert.equal(error.approval.action, 'approval.request.okr.activate');
-  assert.equal(error.approval.status, 'not_filed');
+  assert.equal(error.error, 'not_authorized');
 });

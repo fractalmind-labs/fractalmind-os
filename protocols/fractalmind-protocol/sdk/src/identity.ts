@@ -135,16 +135,17 @@ export class IdentityApi {
   }
   /** Build the only P0 Agent Operator approval transaction. On-chain code
    * binds scope to the pairing request and rechecks the 30-day clock limit. */
-  approveAgentOperator(input: TxInput & Authorized & { identityRegistryId: string; organizationId: string; requestId: string; actions: DeviceAction[]; expiresAtMs: bigint | string | number; label: string }): Transaction {
+  approveAgentOperator(input: TxInput & Authorized & { identityRegistryId: string; organizationId: string; requestId: string; actions: DeviceAction[]; expiresAtMs: bigint | string | number; encryptedKeys: Uint8Array; label: string }): Transaction {
     const actions = input.actions.map(action => DEVICE_ACTIONS[action]);
     if (actions.length < 1 || actions.length > 2 || new Set(actions).size !== actions.length
       || actions.some(action => action !== DEVICE_ACTIONS.read && action !== DEVICE_ACTIONS.operate)) {
       throw new Error('Agent Operator actions must be read and/or operate.');
     }
+    if (input.encryptedKeys.length > 65536) throw new Error('Agent organization-key envelope must be at most 64 KiB.');
     const labelBytes = new TextEncoder().encode(input.label);
     if (labelBytes.length < 1 || labelBytes.length > 128) throw new Error('Agent Operator label must be 1 to 128 bytes.');
     const tx = this.fm.useTransaction(input.tx);
-    return this.call('approve_agent_operator', tx, [tx.object(input.identityRegistryId), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.requestId), tx.object(input.organizationId), tx.pure.vector('u8', actions), tx.pure.u64(toBigInt(input.expiresAtMs)), tx.pure.string(input.label), tx.object('0x6')]);
+    return this.call('approve_agent_operator', tx, [tx.object(input.identityRegistryId), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.requestId), tx.object(input.organizationId), tx.pure.vector('u8', actions), tx.pure.u64(toBigInt(input.expiresAtMs)), bytesArgument(tx, this.fm.packageId, input.encryptedKeys), tx.pure.string(input.label), tx.object('0x6')]);
   }
   rejectDevicePairing(input: TxInput & Authorized & { organizationId: string; requestId: string }): Transaction {
     const tx = this.fm.useTransaction(input.tx);

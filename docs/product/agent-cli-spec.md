@@ -32,6 +32,7 @@
 3. 合约新入口 `approve_agent_operator`：
    - 校验批准设备有 `APPROVE`；
    - 强制动作 ⊆ {READ, OPERATE}、期限 ≤ 30 天、`org_scope` = 该组织；
+   - 将当前组织数据钥匙用请求的 encryption public key 包装后，连同 grant 一起写入；Agent 只能解开自己获准的组织钥匙，不能从 App 或负责人设备取得明文；
    - 在 grant 上挂动态字段 `AgentOperator { label, approved_by_grant }`。
 4. App 里同一页可看到每个 Agent 的最近操作、余额，以及撤销、续期和充值按钮。
 
@@ -68,12 +69,18 @@
 | P2 | 写入：OKR 草稿、KR 进展/证据、任务、直接对话、暂停、审批请求；App 的审批请求收件箱 | localnet + 测试网各一遍 |
 | P3 | 经链上命令队列的远程执行，受 `RemoteCapability` 约束 | 一条命令端到端 + 越权被拒 |
 
+### P0b 已定边界
+
+- `okr::create_draft_by_agent` 只接受带 AgentOperator 标记的 `OPERATE` grant，并且只创建 `DRAFT`。所有离开 DRAFT 的既有路径仍要求人的 `APPROVE`。
+- `product_record::save_agent_request` 只接受 approval kind 和 `agent-request:` 逻辑 ID；稳定的 `EncryptedRecord.grant_id` 记录请求 Agent，因而不能覆写普通人类审批记录。
+- `fm okr show` 与 `fm approval show` 使用 Agent 自己 grant 的已包装钥匙解密记录。无钥匙的 Agent 不能把密文当作可读内容。
+
 ## 7. 待核实的风险
 
 - **同一系统用户的威胁**：Agent 与 App 以同一系统用户运行。设备钥匙核查见 §8：当前签名**不要求用户在场**，因此 P1 之前不能把 App 已解锁的设备会话当作 Agent 隔离边界。
 - **普通配对伪装**：Agent 仍能以未标记的普通设备提交配对请求；合约无法从公钥判断操作者是不是 Agent。缓解措施是 App 必须同时显示配对码、请求者平台和名称，负责人只批准自己实际持有的设备，不把普通设备配对当作 Agent 授权入口。
 - 合约升级在测试网由协调人执行。主网需负责人单独确认。
-- `product_record` 的 approval 类型目前用于 OKR 审批，需要确认能承载通用审批请求，否则在 P2 扩一个子类型。
+- `agent-request:` 是 product_record approval kind 的受限命名空间；人类的审批决定不使用该命名空间，且 Agent 入口不提供决定或激活能力。
 
 ## 8. 设备钥匙核查
 

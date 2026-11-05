@@ -9,6 +9,7 @@ import {
   DeviceGrantBcs,
   pairingCode,
   pairingFingerprint,
+  wrapKeys,
   SelfPayTransactionManager,
   type DeviceAction,
   type TransactionJournal,
@@ -55,6 +56,30 @@ type Plan = {
   technicalId: string;
 };
 export { pairingFingerprint };
+
+/** Wrap an already-authorized organization keyring for an Agent Operator's
+ * pairing encryption key. This is deliberately pure: the approval UI remains
+ * responsible for obtaining keyring bytes from the native device boundary and
+ * for showing the human the recipient it is about to authorize. */
+export async function wrapOrgKeysForAgent(
+  keyring: Uint8Array,
+  recipientEncryptionPublicKey: Uint8Array,
+  network: "localnet" | "testnet",
+  recipientAddress: string,
+) {
+  if (
+    !keyring.length ||
+    keyring.length > 65536 ||
+    recipientEncryptionPublicKey.length !== 32 ||
+    !id.test(recipientAddress)
+  )
+    throw new PairingError("invalid_input");
+  return wrapKeys(
+    keyring,
+    recipientEncryptionPublicKey,
+    `fractalmind.device-keys.v1:${network}:${recipientAddress.toLowerCase()}`,
+  );
+}
 /** All pairing state is read from Sui. The journal contains only original
  * transaction metadata. No public request or cached profile authorizes a device. */
 export class DevicePairing {

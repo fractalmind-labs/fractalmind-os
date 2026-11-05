@@ -142,7 +142,29 @@ const moveCallCases: Array<{
         organizationId: '0x95',
         actions: ['read', 'operate'],
         expiresAtMs: 1_000_000n,
+        encryptedKeys: new Uint8Array([1, 2, 3]),
         label: 'Agent CLI',
+      }),
+  },
+  {
+    name: 'okr.createDraftByAgent',
+    expectedFunction: 'create_draft_by_agent',
+    expectedModule: 'okr',
+    build: (sdk) =>
+      sdk.okr.createDraftByAgent({
+        organizationId: '0xa1', humanId: '0xa2', grantId: '0xa3', logicalId: 'agent-draft',
+        priority: 1, deadlineMs: 10_000n, baselines: [0n], targets: [1n], weights: [1n], maxAgesMs: [1_000n],
+        keyVersion: 1n, encryptedBody: new Uint8Array([70, 77, 69, 49, ...new Array(32).fill(0)]),
+      }),
+  },
+  {
+    name: 'productRecord.saveAgentRequest',
+    expectedFunction: 'save_agent_request',
+    expectedModule: 'product_record',
+    build: (sdk) =>
+      sdk.productRecord.saveAgentRequest({
+        organizationId: '0xb1', humanId: '0xb2', grantId: '0xb3', logicalId: 'agent-request:okr.activate:one',
+        expectedRevision: 0n, keyVersion: 1n, encryptedBody: new Uint8Array([70, 77, 69, 49, ...new Array(32).fill(0)]),
       }),
   },
   {
@@ -482,7 +504,7 @@ test('identity.approveAgentOperator rejects permissions beyond read and operate'
   const sdk = newSdk();
   const input = {
     identityRegistryId: '0x91', humanId: '0x92', grantId: '0x93', requestId: '0x94',
-    organizationId: '0x95', expiresAtMs: 1_000_000n, label: 'Agent CLI',
+    organizationId: '0x95', expiresAtMs: 1_000_000n, encryptedKeys: new Uint8Array([1]), label: 'Agent CLI',
   };
   assert.throws(() => sdk.identity.approveAgentOperator({ ...input, actions: [] }), /read and\/or operate/);
   assert.throws(() => sdk.identity.approveAgentOperator({ ...input, actions: ['approve'] }), /read and\/or operate/);

@@ -179,7 +179,7 @@ function isKeyring(value: unknown): value is AgentKeyring {
     && typeof (value as Record<string, unknown>).historicalKeys === 'object';
 }
 
-async function organizationKey(auth: Authorization, encryptionSecret: string) {
+export async function organizationKey(auth: Authorization, encryptionSecret: string) {
   if (!auth.grant.encrypted_keys.length) {
     approvalRequired({
       action: 'agent.message',
@@ -204,6 +204,153 @@ async function organizationKey(auth: Authorization, encryptionSecret: string) {
     if (error instanceof FmError) throw error;
     throw new FmError(EXIT.not_authorized, 'not_authorized', 'The Agent organization-key envelope is invalid or cannot be opened.');
   } finally { plain?.fill(0); }
+}
+
+type AgentDraft = {
+  logicalId: string;
+  priority: number;
+  deadlineMs: string;
+  baselines: string[];
+  targets: string[];
+  weights: string[];
+  maxAgesMs: string[];
+  plaintext: Record<string, unknown>;
+};
+
+function uint(value: unknown, noun: string, minimum = 0n, maximum = 18446744073709551615n) {
+  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/.test(value))
+    throw new FmError(EXIT.usage, 'usage', `${noun} must be an unsigned integer string.`);
+  const parsed = BigInt(value);
+  if (parsed < minimum || parsed > maximum)
+    throw new FmError(EXIT.usage, 'usage', `${noun} is out of range.`);
+  return value;
+}
+
+/** The chain deliberately stores only the measurable parts of a draft in the
+ * clear. Everything else in the input JSON is encrypted as its spec. */
+export function agentDraft(input: Record<string, unknown>, fallbackLogicalId: string): AgentDraft {
+  const logicalId = input.logicalId === undefined ? fallbackLogicalId : input.logicalId;
+  if (typeof logicalId !== 'string' || !logicalId || new TextEncoder().encode(logicalId).length > 64)
+    throw new FmError(EXIT.usage, 'usage', 'draft.logicalId must be a non-empty UTF-8 string up to 64 bytes.');
+  if (!Number.isInteger(input.priority) || (input.priority as number) < 0 || (input.priority as number) > 2)
+    throw new FmError(EXIT.usage, 'usage', 'draft.priority must be 0, 1, or 2.');
+  const deadlineMs = uint(input.deadlineMs, 'draft.deadlineMs', 1n);
+  if (!Array.isArray(input.krs) || input.krs.length < 1 || input.krs.length > 3)
+    throw new FmError(EXIT.usage, 'usage', 'draft.krs must contain one to three KRs.');
+  const rows = input.krs.map((row, index) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row))
+      throw new FmError(EXIT.usage, 'usage', `draft.krs[${index}] must be an object.`);
+    const value = row as Record<string, unknown>;
+    const baseline = uint(value.baseline, `draft.krs[${index}].baseline`);
+    const target = uint(value.target, `draft.krs[${index}].target`);
+    const weight = uint(value.weight, `draft.krs[${index}].weight`, 1n, 1000000n);
+    const maxAgeMs = uint(value.maxAgeMs, `draft.krs[${index}].maxAgeMs`, 1n, 2592000000n);
+    if (baseline === target) throw new FmError(EXIT.usage, 'usage', `draft.krs[${index}] baseline and target must differ.`);
+    return { baseline, target, weight, maxAgeMs };
+  });
+  return {
+    logicalId,
+    priority: input.priority as number,
+    deadlineMs,
+    baselines: rows.map(row => row.baseline), targets: rows.map(row => row.target),
+    weights: rows.map(row => row.weight), maxAgesMs: rows.map(row => row.maxAgeMs),
+    plaintext: { ...input, logicalId },
+  };
+}
+
+async function keyVersion(auth: Authorization) {
+  try { return (await auth.sdk.productRecord.listCurrent(auth.profile.organizationId, null, 1)).keyVersion; }
+  catch (error) {
+    if (error && typeof error === 'object' && 'reason' in error && error.reason === 'notFound') return '1';
+    throw error;
+  }
+}
+
+async function storedOrganizationKey(auth: Authorization) {
+  const stored = await loadKey(auth.profile.keyRef);
+  if (!stored.key) throw new FmError(EXIT.not_authorized, 'not_authorized', 'The local Agent key is unavailable; run fm auth login again.');
+  return organizationKey(auth, stored.key.encryptionSecret);
+}
+
+/** Decrypt through the Agent's own grant envelope. Callers never receive the
+ * organization key, and it is zeroed as soon as the SDK has authenticated the
+ * record's context. */
+export async function decryptAgentRecord(auth: Authorization, recordId: string) {
+  const key = await storedOrganizationKey(auth);
+  try {
+    const { record, plaintext } = await auth.sdk.productRecord.decryptRecord(recordId, key);
+    try { return { record, value: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(plaintext)) as unknown }; }
+    finally { plaintext.fill(0); }
+  } catch (error) {
+    if (error instanceof FmError) throw error;
+    throw new FmError(EXIT.conflict, 'conflict', 'Encrypted organization record could not be decrypted with this Agent grant.');
+  } finally { key.fill(0); }
+}
+
+/** Creates only an immutable DRAFT through the Agent-only Move entry point.
+ * A conflicting logical ID is intentionally left to the chain's fingerprint
+ * check; an Agent must never silently replace someone else's proposal. */
+export async function createOkrDraft(network: string, input: Record<string, unknown>, options: WriteOptions, forcedLogicalId?: string) {
+  const fallback = forcedLogicalId ?? `agent-${randomUUID()}`;
+  const draft = agentDraft(input, fallback);
+  return submitWrite(network, 'okr-draft-create', options, async auth => {
+    const key = await storedOrganizationKey(auth);
+    let plaintext: Uint8Array | undefined;
+    try {
+      const version = await keyVersion(auth);
+      if (BigInt(draft.deadlineMs) <= auth.now)
+        throw new FmError(EXIT.conflict, 'conflict', 'Draft deadline has already passed.');
+      plaintext = new TextEncoder().encode(JSON.stringify(draft.plaintext));
+      if (plaintext.length > 65504) throw new FmError(EXIT.usage, 'usage', 'Draft plaintext exceeds the encrypted record capacity.');
+      const encryptedBody = await encryptContent(plaintext, key, recordContext(auth.profile.organizationId, 'okr', `okr-${draft.logicalId}-spec`, 1, version));
+      return {
+        transaction: auth.sdk.okr.createDraftByAgent({
+          organizationId: auth.profile.organizationId, humanId: auth.profile.humanId, grantId: auth.grant.id,
+          logicalId: draft.logicalId, priority: draft.priority, deadlineMs: draft.deadlineMs,
+          baselines: draft.baselines, targets: draft.targets, weights: draft.weights, maxAgesMs: draft.maxAgesMs,
+          keyVersion: version, encryptedBody,
+        }),
+        effect: { action: 'create_okr_draft', logicalId: draft.logicalId, state: 'draft_only' },
+      };
+    } finally { plaintext?.fill(0); key.fill(0); }
+  });
+}
+
+/** Draft objects are immutable proposals. The Agent-only contract has no
+ * replacement writer, so "update" reuses the draft's logical ID and lets the
+ * on-chain fingerprint guard reject any changed proposal rather than silently
+ * mutating it. A human APPROVE device remains responsible for replacements. */
+export async function updateOkrDraft(network: string, okrId: string, input: Record<string, unknown>, options: WriteOptions) {
+  const auth = await authorize(network, 'operate');
+  const okr = await auth.sdk.okr.getOkr(okrId);
+  if (okr.org_id !== normalizeSuiAddress(auth.profile.organizationId))
+    throw new FmError(EXIT.not_found, 'not_found', 'OKR belongs to another organization.');
+  if (okr.state !== 0)
+    throw new FmError(EXIT.conflict, 'conflict', 'Only DRAFT OKRs can be proposed again.');
+  return createOkrDraft(network, { ...input, logicalId: okr.logical_id }, options, okr.logical_id);
+}
+
+/** File a constrained encrypted approval request.  It is explicitly not an
+ * approval decision and its reserved namespace is enforced again on chain. */
+export async function requestApproval(network: string, kind: string, title: string, body: string, ref: string | undefined, options: WriteOptions) {
+  const logicalId = `agent-request:${kind}:${randomUUID()}`;
+  return submitWrite(network, 'approval-request', options, async auth => {
+    const key = await storedOrganizationKey(auth);
+    let plaintext: Uint8Array | undefined;
+    try {
+      const version = await keyVersion(auth);
+      plaintext = new TextEncoder().encode(JSON.stringify({ schema: 'fractalmind.agent-approval-request.v1', kind, title, body, ...(ref ? { ref } : {}), status: 'pending' }));
+      if (plaintext.length > 65504) throw new FmError(EXIT.usage, 'usage', 'Approval request plaintext exceeds the encrypted record capacity.');
+      const encryptedBody = await encryptContent(plaintext, key, recordContext(auth.profile.organizationId, 'approval', logicalId, 1, version));
+      return {
+        transaction: auth.sdk.productRecord.saveAgentRequest({
+          organizationId: auth.profile.organizationId, humanId: auth.profile.humanId, grantId: auth.grant.id,
+          logicalId, expectedRevision: 0, keyVersion: version, encryptedBody,
+        }),
+        effect: { action: 'file_approval_request', kind, logicalId, status: 'pending' },
+      };
+    } finally { plaintext?.fill(0); key.fill(0); }
+  });
 }
 
 async function managedAgent(auth: Authorization, target: string) {

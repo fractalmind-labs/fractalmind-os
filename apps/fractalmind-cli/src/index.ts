@@ -5,7 +5,7 @@ import { EXIT, emitError, FmError, render } from './output.js';
 import { approvalList, approvalShow, agentList, agentShow, eventPage, hostList, hostShow, okrList, okrShow, orgShow, runList, runShow, schema, whoami } from './readers.js';
 import { loadDeployment } from './storage.js';
 import type { ParsedArgs } from './types.js';
-import { approvalRequired, messageAgent, pauseRun, type WriteOptions } from './writers.js';
+import { approvalRequired, createOkrDraft, messageAgent, pauseRun, requestApproval, updateOkrDraft, type WriteOptions } from './writers.js';
 
 export function parse(argv: string[]): ParsedArgs {
   const command: string[] = [], values: Record<string, string | boolean> = {};
@@ -122,24 +122,12 @@ export async function run(argv: string[], io: { out?: (line: string) => void; er
       output(await pauseRun(net, object(third, 'Run id'), writeOptions(parsed.values))); return EXIT.ok;
     }
     if (first === 'okr' && second === 'draft' && third === 'create') {
-      writeOptions(parsed.values);
       const draft = await draftFile(optionalText(parsed.values, 'file'));
-      approvalRequired({
-        action: 'okr.draft.create',
-        reason: 'The deployed okr::create_draft entry point requires an APPROVE grant. Agent Operators are permanently limited to READ+OPERATE.',
-        title: typeof draft.objective === 'string' ? draft.objective : 'Create OKR draft',
-        body: 'Create the supplied OKR draft; the Agent cannot activate it.',
-      });
+      output(await createOkrDraft(net, draft, writeOptions(parsed.values))); return EXIT.ok;
     }
     if (first === 'okr' && second === 'draft' && third === 'update') {
-      writeOptions(parsed.values);
       const okrId = object(parsed.command[3], 'OKR id');
-      await draftFile(optionalText(parsed.values, 'file'));
-      approvalRequired({
-        action: 'okr.draft.update',
-        reason: 'The deployed OKR replacement path requires an APPROVE grant. Agent Operators are permanently limited to READ+OPERATE.',
-        title: 'Update OKR draft', body: 'Update the supplied draft only; activation remains a human approval.', ref: okrId,
-      });
+      output(await updateOkrDraft(net, okrId, await draftFile(optionalText(parsed.values, 'file')), writeOptions(parsed.values))); return EXIT.ok;
     }
     if (first === 'kr' && second === 'progress' && third) {
       writeOptions(parsed.values);
@@ -162,12 +150,11 @@ export async function run(argv: string[], io: { out?: (line: string) => void; er
       output(await messageAgent(net, target, message, writeOptions(parsed.values))); return EXIT.ok;
     }
     if (first === 'approval' && second === 'request' && third) {
-      writeOptions(parsed.values);
       const kind = third;
       if (!/^[a-z][a-z0-9._-]{0,63}$/.test(kind)) throw new FmError(EXIT.usage, 'usage', '<kind> must be a lowercase identifier up to 64 characters.');
       const title = text(parsed.values, 'title'), body = text(parsed.values, 'body'), ref = optionalText(parsed.values, 'ref');
       if (ref) object(ref, '--ref');
-      approvalRequired({ action: `approval.request.${kind}`, reason: 'product_record::save requires an APPROVE grant for every kind, including approval. An Agent Operator cannot file this record without violating its on-chain privilege bound.', title, body, ref });
+      output(await requestApproval(net, kind, title, body, ref, writeOptions(parsed.values))); return EXIT.ok;
     }
     if (first === 'events' && !second && flag(parsed.values, 'follow') === true) {
       let cursor: string | null = null;

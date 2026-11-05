@@ -300,10 +300,18 @@ module fractalmind_protocol::identity_tests {
         let org = ts::take_shared<Organization>(s); let c = ts::take_shared<Clock>(s);
         let mut request = ts::take_shared<DevicePairingRequest>(s);
         identity::approve_agent_operator(&mut registry, &mut human, &root, &mut request, &org, actions,
-            expires_at_ms, string::utf8(b"Agent CLI"), &c, ts::ctx(s));
+            expires_at_ms, b"agent wrapped keys", string::utf8(b"Agent CLI"), &c, ts::ctx(s));
         ts::return_shared(request); ts::return_shared(c); ts::return_shared(org);
         ts::return_shared(root); ts::return_shared(human); ts::return_shared(registry);
     }
+    /// Shared fixture for downstream packages testing the bounded Agent
+    /// Operator entry points. It returns with the Agent as transaction sender.
+    public fun agent_operator(actions: vector<u8>): Scenario {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        approve_agent_pairing(&mut s, actions, 2592000000);
+        ts::next_tx(&mut s, agent_pairing_sender()); s
+    }
+    public fun agent_operator_address(): address { agent_pairing_sender() }
     #[test]
     fun agent_operator_approval_marks_a_scoped_read_grant() {
         let mut s = setup(); request_agent_pairing(&mut s);
@@ -319,6 +327,7 @@ module fractalmind_protocol::identity_tests {
         assert!(identity::grant_actions(&grant) == vector[identity::read_action()], 3);
         assert!(*identity::agent_operator_label(&grant) == string::utf8(b"Agent CLI"), 4);
         assert!(identity::agent_operator_approved_by(&grant) == identity::grants(&human)[0], 5);
+        assert!(identity::grant_keys(&grant) == b"agent wrapped keys", 6);
         identity::assert_can(&human, &grant, &org, identity::read_action(), &c, ts::ctx(&mut s));
         ts::return_shared(c); ts::return_shared(grant); ts::return_shared(request); ts::return_shared(org); ts::return_shared(human); ts::end(s);
     }
@@ -382,7 +391,7 @@ module fractalmind_protocol::identity_tests {
         let root = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[0]); let other = ts::take_shared_by_id<Organization>(&s, other_id);
         let c = ts::take_shared<Clock>(&s); let mut request = ts::take_shared<DevicePairingRequest>(&s);
         identity::approve_agent_operator(&mut registry, &mut human, &root, &mut request, &other, vector[identity::read_action()],
-            2592000000, string::utf8(b"Agent CLI"), &c, ts::ctx(&mut s));
+            2592000000, b"agent wrapped keys", string::utf8(b"Agent CLI"), &c, ts::ctx(&mut s));
         ts::return_shared(request); ts::return_shared(c); ts::return_shared(other); ts::return_shared(root); ts::return_shared(human); ts::return_shared(registry); ts::end(s);
     }
     #[test]
@@ -394,7 +403,7 @@ module fractalmind_protocol::identity_tests {
         let phone = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[1]); let org = ts::take_shared<Organization>(&s);
         let c = ts::take_shared<Clock>(&s); let mut request = ts::take_shared<DevicePairingRequest>(&s);
         identity::approve_agent_operator(&mut registry, &mut human, &phone, &mut request, &org, vector[identity::read_action()],
-            2592000000, string::utf8(b"Agent CLI"), &c, ts::ctx(&mut s));
+            2592000000, b"agent wrapped keys", string::utf8(b"Agent CLI"), &c, ts::ctx(&mut s));
         ts::return_shared(request); ts::return_shared(c); ts::return_shared(org); ts::return_shared(phone); ts::return_shared(human); ts::return_shared(registry); ts::end(s);
     }
     #[test]

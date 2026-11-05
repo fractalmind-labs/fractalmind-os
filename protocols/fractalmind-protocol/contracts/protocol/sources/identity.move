@@ -237,7 +237,7 @@ module fractalmind_protocol::identity {
     public fun approve_agent_operator(
         registry: &mut IdentityRegistry, human: &mut HumanIdentity, authorizer: &DeviceGrant,
         request: &mut DevicePairingRequest, org: &Organization, actions: vector<u8>,
-        expires_at_ms: u64, label: String, clock: &Clock, ctx: &mut TxContext,
+        expires_at_ms: u64, encrypted_keys: vector<u8>, label: String, clock: &Clock, ctx: &mut TxContext,
     ) {
         assert_can(human, authorizer, org, APPROVE, clock, ctx);
         assert_pairing(human, org, request, clock);
@@ -246,9 +246,13 @@ module fractalmind_protocol::identity {
         check_agent_expiry(expires_at_ms, clock);
         let label_len = vector::length(string::as_bytes(&label));
         assert!(label_len > 0 && label_len <= 128, E_INPUT);
+        // This envelope is wrapped to request.encryption_public_key by the
+        // approving human.  Validate its bounded storage just like ordinary
+        // key distribution; the Agent never supplies its own readable data.
+        check_backup(&encrypted_keys);
         let approved_by = object::id(authorizer);
         let grant_id = new_grant(registry, human, request.device, option::some(object::id(org)), actions,
-            expires_at_ms, request.encryption_public_key, vector[],
+            expires_at_ms, request.encryption_public_key, encrypted_keys,
             option::some(AgentOperator { label, approved_by }), ctx);
         request.status = 1;
         request.grant_id = option::some(grant_id);

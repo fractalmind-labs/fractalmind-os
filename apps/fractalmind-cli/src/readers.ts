@@ -4,6 +4,7 @@ import { PRODUCT_RECORD_KINDS, type DeviceAction } from '@fractalmind-labs/fract
 import { authorize, readableActions, type Authorization } from './auth.js';
 import { EXIT, FmError } from './output.js';
 import { readCache, writeCache } from './storage.js';
+import { decryptAgentRecord } from './writers.js';
 
 const objectId = /^0x[0-9a-fA-F]+$/;
 const cacheKey = (parts: string[]) => createHash('sha256').update(parts.join('\0')).digest('hex');
@@ -83,11 +84,15 @@ export async function okrList(network: string) {
 
 export async function okrShow(network: string, value: string | undefined) {
   const okrId = id(value, 'OKR id');
-  return readAuthorized(network, `okr:show:${okrId}`, async ({ sdk, profile }) => {
+  return readAuthorized(network, `okr:show:${okrId}`, async auth => {
+    const { sdk, profile } = auth;
     let okr;
     try { okr = await sdk.okr.getOkr(okrId); } catch (error) { notFound(error, 'OKR'); }
     if (!same(okr.org_id, profile.organizationId)) throw new FmError(EXIT.not_found, 'not_found', 'OKR belongs to another organization.');
-    return okr;
+    const decrypted = await decryptAgentRecord(auth, okr.spec_record);
+    if (decrypted.record.organization_id !== profile.organizationId || decrypted.record.kind !== PRODUCT_RECORD_KINDS.okr || decrypted.record.logical_id !== `okr-${okr.logical_id}-spec`)
+      throw new FmError(EXIT.conflict, 'conflict', 'OKR draft record does not match its chain-owned pointer.');
+    return { ...okr, spec: decrypted.value };
   });
 }
 
@@ -174,12 +179,14 @@ export async function approvalList(network: string) {
 
 export async function approvalShow(network: string, value: string | undefined) {
   const recordId = id(value, 'Approval record id');
-  return readAuthorized(network, `approval:show:${recordId}`, async ({ sdk, profile }) => {
+  return readAuthorized(network, `approval:show:${recordId}`, async auth => {
+    const { sdk, profile } = auth;
     let record;
     try { record = await sdk.productRecord.getRecord(recordId); } catch (error) { notFound(error, 'Approval record'); }
     if (!same(record.organization_id, profile.organizationId) || record.kind !== PRODUCT_RECORD_KINDS.approval)
       throw new FmError(EXIT.not_found, 'not_found', 'Approval record belongs to another organization or is not an approval.');
-    return record;
+    const decrypted = await decryptAgentRecord(auth, recordId);
+    return { ...record, request: decrypted.value };
   });
 }
 
@@ -204,5 +211,5 @@ export const schema = {
     utility: ['schema'],
   },
   exits: { 0: 'ok', 2: 'usage', 3: 'needs_funding', 4: 'not_authorized', 5: 'revoked_or_expired', 6: 'chain_unreachable', 7: 'not_found', 8: 'needs_approval', 9: 'fee_exceeds_limit', 10: 'conflict' },
-  rules: ['All writes recheck an on-chain OPERATE Agent Operator grant before quoting and before submission.', 'Use --dry-run before any write that could spend SUI.', 'A write journal persists its original digest before broadcast; retry with the same --request-id never re-submits.', 'Approvals are always performed by a human in the App. Current contract approval-record and OKR-draft writers require APPROVE, so those commands return exit 8 with filing instructions.'],
+  rules: ['All writes recheck an on-chain OPERATE Agent Operator grant before quoting and before submission.', 'Use --dry-run before any write that could spend SUI.', 'A write journal persists its original digest before broadcast; retry with the same --request-id never re-submits.', 'Agent Operators can create encrypted DRAFT proposals and file encrypted agent-request approvals, but cannot activate an OKR or create an approval decision.'],
 };
