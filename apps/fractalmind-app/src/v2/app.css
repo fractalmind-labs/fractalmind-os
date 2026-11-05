@@ -13,7 +13,10 @@ a.item:hover { background: var(--hover); }
 .agent-operators > .sec-h { align-items: flex-start; }
 .operator-section { margin-top: 18px; }
 .operator-section h3 { font-size: 15px; }
-.operator-card { min-width: 0; }
+.operator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; min-width: 0; }
+.operator-card { width: 100%; max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.operator-card-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; min-width: 0; }
+.operator-card-header > :first-child { min-width: 0; }
 .operator-request-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
 .operator-activity { border-top: 1px solid var(--border); padding-top: 11px; }
 .operator-activity ul { list-style: none; padding: 0; margin: 7px 0 0; display: grid; gap: 6px; }
@@ -30,6 +33,8 @@ a.item:hover { background: var(--hover); }
 .dialog .note { min-width: 0; }
 .dialog .note > div { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; word-break: break-all; }
 @media (max-width: 680px) {
+  .operator-grid { grid-template-columns: minmax(0, 1fr); }
+  .operator-card { overflow: hidden; }
   .operator-activity li { grid-template-columns: 75px minmax(0, 1fr); }
   .operator-activity li span:last-child { grid-column: 2; }
 }

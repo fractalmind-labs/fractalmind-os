@@ -64,6 +64,45 @@ type TransactionLike = {
 };
 export type AgentActivity = { digest: string; at: number | null; function: string };
 
+export type AgentActivityKind =
+  | "draft_okr"
+  | "add_evidence"
+  | "send_message"
+  | "pause_run"
+  | "request_approval"
+  | "other";
+
+/** Convert only the small, documented Agent CLI write surface into a human
+ * activity label. A new or unrecognized Move call must stay visibly generic. */
+export function agentActivityKind(functionName: string): AgentActivityKind {
+  switch (functionName) {
+    case "okr::draft":
+    case "okr::create_draft":
+    case "okr::update_draft":
+      return "draft_okr";
+    case "evidence::create":
+    case "evidence::add":
+      return "add_evidence";
+    case "agent::message":
+    case "agent::send_message":
+    case "direct_agent::send_message":
+      return "send_message";
+    case "node_execution::request_stop":
+    case "node_execution::request_stop_with_budget":
+    case "node_execution::request_stop_with_budget_v2":
+    case "node_execution::request_stop_with_contract":
+    case "node_execution::request_stop_with_contract_v2":
+    case "okr::request_stop_v2":
+      return "pause_run";
+    case "approval::request":
+    case "product_record::request_approval":
+    case "review::create_review":
+      return "request_approval";
+    default:
+      return "other";
+  }
+}
+
 /** Parse only public receipt fields; malformed items do not become activity. */
 export function parseAgentActivity(rows: readonly TransactionLike[], limit = 10): AgentActivity[] {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new RangeError("Invalid activity limit.");

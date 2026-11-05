@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { DEVICE_ACTIONS } from "@fractalmind-labs/fractalmind-sdk";
 import {
   AGENT_OPERATOR_MAX_DAYS,
+  agentActivityKind,
   allowedActionLabel,
   isNearExpiry,
   isOrdinaryDevicePairing,
@@ -55,4 +56,14 @@ test("activity parsing keeps receipt time, digest and Move function only", () =>
       { digest: "bad", at: null, function: "—" },
     ],
   );
+});
+
+test("operator activity labels expose only the documented human actions", () => {
+  assert.equal(agentActivityKind("okr::draft"), "draft_okr");
+  assert.equal(agentActivityKind("evidence::create"), "add_evidence");
+  assert.equal(agentActivityKind("agent::send_message"), "send_message");
+  assert.equal(agentActivityKind("node_execution::request_stop_with_budget_v2"), "pause_run");
+  assert.equal(agentActivityKind("okr::request_stop_v2"), "pause_run");
+  assert.equal(agentActivityKind("approval::request"), "request_approval");
+  assert.equal(agentActivityKind("identity::approve_agent_operator"), "other");
 });
