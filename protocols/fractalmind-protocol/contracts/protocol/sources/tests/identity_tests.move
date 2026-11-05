@@ -335,6 +335,17 @@ module fractalmind_protocol::identity_tests {
     }
     #[test]
     #[expected_failure(abort_code = 9008, location = fractalmind_protocol::identity)]
+    fun agent_pairing_cannot_be_approved_as_an_ordinary_device() {
+        let mut s = setup(); request_agent_pairing(&mut s);
+        let mut registry = ts::take_shared<IdentityRegistry>(&s); let mut human = ts::take_shared<HumanIdentity>(&s);
+        let root = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[0]); let org = ts::take_shared<Organization>(&s);
+        let c = ts::take_shared<Clock>(&s); let mut request = ts::take_shared<DevicePairingRequest>(&s);
+        identity::approve_device_pairing(&mut registry, &mut human, &root, &org, &mut request,
+            vector[identity::read_action(), identity::approve_action()], 2592000000, &c, ts::ctx(&mut s));
+        ts::return_shared(request); ts::return_shared(c); ts::return_shared(org); ts::return_shared(root); ts::return_shared(human); ts::return_shared(registry); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9008, location = fractalmind_protocol::identity)]
     fun agent_operator_rejects_approve_action() {
         let mut s = setup(); request_agent_pairing(&mut s);
         approve_agent_pairing(&mut s, vector[identity::approve_action()], 2592000000); ts::end(s);

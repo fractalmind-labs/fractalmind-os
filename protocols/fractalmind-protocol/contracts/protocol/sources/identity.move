@@ -216,6 +216,10 @@ module fractalmind_protocol::identity {
     ) {
         assert_can(human, authorizer, org, APPROVE, clock, ctx);
         assert_pairing(human, org, request, clock);
+        // An agent-marked request may only produce its bounded grant through
+        // approve_agent_operator; normal device approval must never strip that
+        // invariant by selecting broader ordinary-device actions.
+        assert!(!is_agent_pairing(request), E_AGENT_OPERATOR);
         check_actions(&actions);
         // Data access needs read permission; later explicit changes may remove it.
         let read = READ;
@@ -255,12 +259,15 @@ module fractalmind_protocol::identity {
         human: &HumanIdentity, authorizer: &DeviceGrant, org: &Organization,
         request: &mut DevicePairingRequest, clock: &Clock, ctx: &TxContext,
     ) {
+        // Rejecting either pairing kind creates no grant, so this intentionally
+        // remains available for AgentPairingKey requests too.
         assert_can(human, authorizer, org, APPROVE, clock, ctx);
         assert_pairing(human, org, request, clock);
         request.status = 2;
         event::emit(DevicePairingResolved { request_id: object::id(request), status: 2, grant_id: option::none() });
     }
     public fun cancel_device_pairing(request: &mut DevicePairingRequest, ctx: &TxContext) {
+        // Requesters may cancel either kind; cancellation only resolves it.
         assert!(request.device == tx_context::sender(ctx), E_PERMISSION);
         assert!(request.status == 0, E_INPUT);
         request.status = 3;
