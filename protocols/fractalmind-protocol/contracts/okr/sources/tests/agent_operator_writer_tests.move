@@ -71,4 +71,13 @@ module fractalmind_okr::agent_operator_writer_tests {
         okr::assert_activation_approval_for_testing(&human, &grant, &org, &c, ts::ctx(&mut s));
         ts::return_shared(c); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(org); ts::end(s);
     }
+    #[test]
+    #[expected_failure(abort_code = 9001, location = fractalmind_protocol::identity)]
+    fun agent_operator_cannot_replace_a_kind_one_spec_record() {
+        let mut s = identity_tests::agent_operator(vector[identity::read_action(), identity::operate_action()]); let _ = draft(&mut s);
+        ts::next_tx(&mut s, identity_tests::agent_operator_address());
+        let mut org = ts::take_shared<Organization>(&s); let human = ts::take_shared<HumanIdentity>(&s); let grant = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[1]); let c = ts::take_shared<Clock>(&s);
+        let _ = okr::save_spec_revision_for_testing(&mut org, &human, &grant, string::utf8(b"agent-draft-spec"), 1, 1, body(), &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(org); ts::end(s);
+    }
 }

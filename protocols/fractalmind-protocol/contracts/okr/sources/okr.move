@@ -247,6 +247,17 @@ module fractalmind_okr::okr {
     public fun assert_activation_approval_for_testing(human: &HumanIdentity, grant: &DeviceGrant, org: &Organization, clock: &Clock, ctx: &TxContext) {
         assert_activation_approval(human, grant, org, clock, ctx);
     }
+    /// Exercises the sealed kind-1 record path directly so tests lock the
+    /// extension boundary: only revision-zero Agent proposals use OPERATE.
+    #[test_only]
+    public fun save_spec_revision_for_testing(
+        org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        logical_id: String, revision: u64, key_version: u64, encrypted_spec: vector<u8>,
+        clock: &Clock, ctx: &mut TxContext,
+    ): ID {
+        extension::save_record(org, human, grant, 1, &Witness {}, 1,
+            logical_id, revision, key_version, encrypted_spec, clock, ctx)
+    }
     /// Assigns the OKR to an agent-manager Agent imported with control (#70,
     /// #75). It runs no bounded task FractalMind could hand over, so there is
     /// no Host review: FractalMind delivers the goal to its Home, stops it on

@@ -83,7 +83,7 @@ module fractalmind_protocol::execution_extension {
         assert_source(org, family, witness);
         assert!((family == 0 && (kind == 2 || kind == 3 || kind == 6)) || (family == 1 && (kind == 1 || kind == 2 || kind == 4)), E_RECORD);
         let action = if (family == 0 && (kind == 6 || (kind == 3 && revision == 0))) identity::read_action()
-            else if ((family == 1 && kind == 1 && identity::is_agent_operator(grant))
+            else if ((family == 1 && kind == 1 && revision == 0 && identity::is_agent_operator(grant))
                 || (family == 1 && kind == 2 && revision > 0)) identity::operate_action()
             else identity::approve_action();
         identity::assert_can(human, grant, org, action, clock, ctx);
