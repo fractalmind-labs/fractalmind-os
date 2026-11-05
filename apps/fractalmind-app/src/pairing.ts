@@ -19,6 +19,7 @@ import { ChainReadSession, missingIndex } from "./chain";
 import { DeviceIdentityVerifier, OrganizationBcs } from "./device-identity";
 import { NativeDeviceSigner, call, type NativeInvoke } from "./native-device";
 import { wrappedEnvelope } from "./native-onboarding";
+import { isAgentPairing } from "./agent-operator-chain";
 
 export class PairingError extends Error {
   constructor(
@@ -32,7 +33,8 @@ export class PairingError extends Error {
       | "invalid_quote"
       | "invalid_input"
       | "sync_pending"
-      | "data_pending",
+      | "data_pending"
+      | "agent_request",
   ) {
     super(code);
   }
@@ -213,6 +215,7 @@ export class DevicePairing {
     )
       throw new PairingError("invalid_source");
     const base = await this.base(request.organization_id);
+    const agentPairing = await isAgentPairing(this.chain, requestId);
     const expired = BigInt(request.expires_at_ms) <= base.clockMs;
     const superseded = request.generation !== base.human.generation;
     let grant = null;
@@ -244,12 +247,16 @@ export class DevicePairing {
       superseded,
       grant,
       data,
+      agentPairing,
       fingerprint,
       pairingCode: pairingCode(fingerprint),
       pin: JSON.stringify([base.pin, object.version, grant]),
     };
   }
   private pending(state: Awaited<ReturnType<DevicePairing["inspect"]>>) {
+    // Agent requests have a different, deliberately narrower approval entry
+    // point. Ordinary device pairing must never show or approve one.
+    if (state.agentPairing) throw new PairingError("agent_request");
     if (state.superseded) throw new PairingError("state_changed");
     if (state.request.status !== 0) throw new PairingError("not_pending");
     if (state.expired) throw new PairingError("expired");
@@ -409,6 +416,7 @@ export class DevicePairing {
     const state = await this.inspect(requestId),
       org = state.request.organization_id;
     if (
+      state.agentPairing ||
       state.superseded ||
       state.request.status !== 1 ||
       !state.grant ||
@@ -532,6 +540,7 @@ export class DevicePairing {
   }
   async verifyRequester(requestId: string) {
     const state = await this.inspect(requestId);
+    if (state.agentPairing) throw new PairingError("agent_request");
     if (
       state.request.device !== this.device.device.address ||
       toBase64(Uint8Array.from(state.request.encryption_public_key)) !==
