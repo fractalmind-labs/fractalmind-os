@@ -10,6 +10,7 @@ import { agentName, hostName } from "../../display";
 import { matchLocal, useLocalSessions } from "../local-agents";
 import { ChatDrawer } from "../Chat";
 import { useState } from "react";
+import AgentOperators from "./AgentOperators";
 import type { AgentDefinition } from "../../agents";
 import { definitionName } from "../../agents";
 import type { Agent } from "../../domain";
@@ -224,6 +225,7 @@ export default function Agents() {
           </div>
         </section>
       )}
+      <AgentOperators />
       {chat && <ChatDrawer name={chat.name} def={chat.def} onClose={() => setChat(null)} />}
     </>
   );
