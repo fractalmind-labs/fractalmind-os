@@ -167,16 +167,29 @@ def preempt_main_delivery(deps: Any, *, agent_id: str, launcher: str, message: s
 
 
 def uses_native_enter(launcher: str) -> bool:
-    """Cursor, Grok, and Codex need a real Enter key; a pasted newline does not submit.
+    """Cursor, Grok, Codex, and the DSH bridge need a real Enter key to submit.
 
     These TUIs turn tmux paste-buffer payloads into composer paste chips. The
     send_keys newline fallback then looks successful (the chip UI changed)
     without submitting the turn. Cursor Agent has the same native-Enter
     requirement as Codex/Grok: a pasted newline stays in the composer until
-    a real keypress Enter submits.
+    a real keypress Enter submits. The DSH bridge holds bracketed multi-line
+    pastes until a native Enter, so a pasted newline must not be mistaken for
+    task submission there either.
     """
     lowered = (launcher or '').lower()
-    return 'codex' in lowered or 'grok' in lowered or 'cursor' in lowered
+    return (
+        'codex' in lowered
+        or 'grok' in lowered
+        or 'cursor' in lowered
+        or 'dsh_repl.py' in lowered
+        or 'deepseek-harness' in lowered
+    )
+
+
+def default_dsh_state_file(repo_root: Path, agent_id: str) -> Path:
+    """Return the bridge-owned DSH session state location for one worker."""
+    return repo_root / '.claude' / 'state' / 'agent-manager' / 'dsh' / f'{agent_id}.json'
 
 
 def complete_grok_send_now(
@@ -427,6 +440,13 @@ def cmd_start(args, *, deps: Any):
     launcher_args = list(agent_config.get('launcher_args', []) or [])
 
     provider_key = get_provider_key(launcher)
+    if provider_key == 'deepseek-harness' and '--state-file' not in launcher_args:
+        # dsh_repl owns its DSH session id rather than trying to discover the
+        # harness-global session store.  Keep that small state file with the
+        # rest of this workspace's agent-manager runtime data, where a restart
+        # can deterministically resume it.
+        dsh_state = default_dsh_state_file(repo_root, agent_id)
+        launcher_args.extend(['--state-file', str(dsh_state)])
     launcher_exists = getattr(deps, 'launcher_binary_exists', None)
     if provider_key == 'grok':
         exists = True

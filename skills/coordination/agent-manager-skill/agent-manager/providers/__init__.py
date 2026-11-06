@@ -478,6 +478,51 @@ PROVIDERS: Dict[str, Dict] = {
             ],
         },
     },
+    'deepseek-harness': {
+        'name': 'DeepSeek Harness',
+        # dsh_repl.py is intentionally line-oriented rather than a TUI.  Keep
+        # the prefix stable so tmux readiness can distinguish it from DSH's
+        # streamed output.
+        'prompt_patterns': ['dsh❯'],
+        'startup_wait': 0,
+        'description': 'DeepSeek Harness headless bridge',
+        'launch_command': 'dsh_repl.py',
+        'system_prompt': {
+            # DSH headless has no system-role CLI flag.  The bridge stores this
+            # text in the first persisted task, once per durable DSH session.
+            'mode': 'cli_append',
+            'flag': '--system-prompt',
+        },
+        'agents_md': {
+            # The headless agent does not promise automatic AGENTS.md loading.
+            # Agent-manager therefore keeps its role/skill bootstrap in the
+            # first persisted task even when the worktree has AGENTS.md.
+            'mode': 'disabled',
+        },
+        'mcp_config': {
+            # DSH profile composition owns MCP.  There is no stable one-shot
+            # JSON flag on the headless CLI.
+            'mode': 'unsupported',
+        },
+        'session_restore': {
+            # The bridge persists DSH's NDJSON session id alongside the
+            # agent-manager runtime state and supplies it on its next run.
+            'mode': 'repl_state',
+        },
+        'runtime': {
+            'busy_patterns': [
+                'DSH busy…',
+                'DSH busy...',
+            ],
+            'blocked_patterns': [
+                'DSH error: approval required',
+                'DSH error: permission',
+                'DSH error: authentication',
+            ],
+            'stuck_after_seconds': 180,
+            'context_left_patterns': [],
+        },
+    },
 }
 
 
@@ -485,6 +530,9 @@ def get_provider_key(launcher: str) -> str:
     """Get provider key based on launcher path/name."""
     launcher_lower = (launcher or "").lower()
 
+    launcher_name = Path(launcher_lower).name
+    if 'deepseek-harness' in launcher_lower or 'dsh' in launcher_name:
+        return 'deepseek-harness'
     if 'cursor' in launcher_lower:
         return 'cursor'
     if Path(launcher_lower).name in {'grok', 'grok-cli', 'grok-build', 'xai-grok-pager'}:
@@ -517,6 +565,15 @@ def resolve_launcher_command(launcher: str) -> str:
     launcher = (launcher or "").strip()
     if not launcher:
         return launcher
+
+    launcher_name = Path(launcher).name.lower()
+    if 'deepseek-harness' in launcher.lower() or 'dsh' in launcher_name:
+        # The bridge is shipped with this skill and uses the installed DSH CLI
+        # only for the short-lived headless child process.  Returning a path
+        # keeps start commands independent of a caller's Python PATH. Treat a
+        # configured full path to `dsh` the same way: launching it directly
+        # would run one headless task and exit instead of exposing the REPL.
+        return str(Path(__file__).resolve().with_name('dsh_repl.py'))
 
     # If launcher already looks like a path, don't rewrite it.
     if "/" in launcher or launcher.startswith("."):
