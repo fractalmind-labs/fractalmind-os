@@ -342,6 +342,7 @@ def cmd_start(args, *, deps: Any):
     build_start_command = deps.build_start_command
     write_system_prompt_file = deps.write_system_prompt_file
     write_start_command_script = deps.write_start_command_script
+    remove_start_command_script = deps.remove_start_command_script
     start_session_with_layout = deps.start_session_with_layout
     start_session = deps.start_session
     wait_for_prompt = deps.wait_for_prompt
@@ -566,7 +567,12 @@ def cmd_start(args, *, deps: Any):
         and launcher_config_mode == 'cli_config_kv'
         and launcher_config_flag
     )
-    command = build_start_command(working_dir, launcher, launcher_args)
+    command = build_start_command(
+        working_dir,
+        launcher,
+        launcher_args,
+        env_file=str(agent_config.get('env_file') or ''),
+    )
 
     if use_launcher_config:
         for key, value in launcher_config_overrides.items():
@@ -593,6 +599,8 @@ def cmd_start(args, *, deps: Any):
     if len(command) > 6000:
         command_script = write_start_command_script(repo_root, agent_id, command)
         command = shlex.quote(str(command_script))
+    else:
+        remove_start_command_script(repo_root, agent_id)
 
     if mcp_config_json and not did_provider_restore:
         if mcp_config_mode == 'cli_json' and mcp_config_flag:
