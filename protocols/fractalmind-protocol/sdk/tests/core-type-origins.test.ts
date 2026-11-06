@@ -11,6 +11,7 @@ const origins = [
   ['organization', 'Organization', old], ['organization', 'ProtocolRegistry', old],
   ['remote_authority', 'RemoteCapability', old], ['remote_authority', 'BoundBudgetKey', current],
   ['identity', 'RegistryBinding', current], ['identity', 'IdentityRegistry', current],
+  ['identity', 'AgentOperatorKey', current], ['identity', 'AgentOperator', current],
 ].map(([moduleName, datatypeName, packageId]) => ({ moduleName, datatypeName, package: packageId }));
 function envelope(table = origins) {
   return bcs.Object.serialize({
@@ -43,14 +44,18 @@ function fixture(table = origins) {
 test('upgrade reads the exact immutable type table, including new types in an existing module', async () => {
   const f = fixture();
   assert.throws(() => f.sdk.client.coreTypeTag('identity', 'RegistryBinding'), /unavailable/);
-  const [capability, budget, registry] = await Promise.all([
+  const [capability, budget, registry, operatorKey, operator] = await Promise.all([
     f.sdk.client.coreType('remote_authority', 'RemoteCapability'),
     f.sdk.client.coreType('remote_authority', 'BoundBudgetKey'),
     f.sdk.identity.resolveRegistry(),
+    f.sdk.client.coreType('identity', 'AgentOperatorKey'),
+    f.sdk.client.coreType('identity', 'AgentOperator'),
   ]);
   assert.equal(capability, `${old}::remote_authority::RemoteCapability`);
   assert.equal(budget, `${current}::remote_authority::BoundBudgetKey`);
   assert.equal(registry, identity);
+  assert.equal(operatorKey, `${current}::identity::AgentOperatorKey`);
+  assert.equal(operator, `${current}::identity::AgentOperator`);
   assert.equal(f.reads(), 1);
   assert.equal(await f.sdk.identity.resolveRegistry(), identity);
   assert.equal(f.reads(), 1);
