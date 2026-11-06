@@ -10,7 +10,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 if str(SCRIPTS_DIR.parent) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR.parent))
 
-from providers import get_context_left_patterns, get_prompt_patterns  # noqa: E402
+from providers import get_context_left_patterns, get_prompt_patterns, get_runtime_config  # noqa: E402
 
 
 class ProviderContextPatternsTests(unittest.TestCase):
@@ -26,6 +26,18 @@ class ProviderContextPatternsTests(unittest.TestCase):
         prompts = get_prompt_patterns('ccc')
         self.assertIn('❯', prompts)
         self.assertIn('›', prompts)
+
+    def test_claude_code_runtime_patterns_include_current_activity_verbs(self):
+        busy_patterns = get_runtime_config('ccc').get('busy_patterns', [])
+        self.assertIn('Churning…', busy_patterns)
+        self.assertIn('Mulling…', busy_patterns)
+        self.assertIn('Perambulating…', busy_patterns)
+
+    def test_generic_claude_runtime_patterns_include_current_activity_verbs(self):
+        busy_patterns = get_runtime_config('claude').get('busy_patterns', [])
+        self.assertIn('Churning…', busy_patterns)
+        self.assertIn('Mulling…', busy_patterns)
+        self.assertIn('Perambulating…', busy_patterns)
 
     def test_unknown_launcher_falls_back_to_generic_patterns(self):
         patterns = get_context_left_patterns('unknown-provider-launcher')
