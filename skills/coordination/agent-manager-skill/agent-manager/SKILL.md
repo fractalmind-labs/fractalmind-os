@@ -84,6 +84,7 @@ You are the Dev Agent...
 - `launcher`: Full path OR provider name
 - `launcher_args`: Arguments for launcher
 - `launcher_config`: Optional launcher/provider-specific startup config
+- `env_file`: Optional shell environment file to source with exported variables before launch
 - `skills`: Array of skill names from `.agents/skills/` (optional, injected at start)
 - `schedules`: Array of scheduled jobs (optional, see Scheduling section)
 - `tmux`: Optional tmux layout metadata (layout + target pane)
@@ -150,6 +151,11 @@ launcher_config:
 ```
 
 `launcher_config` is the generic escape hatch for launcher/provider-specific startup config. Each CLI provider adapts this flat mapping into its own startup flags (for Codex, each entry becomes `-c key=value`).
+
+`env_file` is sourced with `set -a` before the launcher starts, so variables it
+defines are exported to the launcher without placing their values in agent YAML
+or generated command text. Store only a path in the profile; keep the file
+private and outside version control.
 
 **Provider name**: Kimi Code CLI
 ```yaml
