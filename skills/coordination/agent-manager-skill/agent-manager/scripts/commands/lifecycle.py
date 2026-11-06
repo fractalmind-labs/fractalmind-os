@@ -566,7 +566,12 @@ def cmd_start(args, *, deps: Any):
         and launcher_config_mode == 'cli_config_kv'
         and launcher_config_flag
     )
-    command = build_start_command(working_dir, launcher, launcher_args)
+    command = build_start_command(
+        working_dir,
+        launcher,
+        launcher_args,
+        env_file=str(agent_config.get('env_file') or ''),
+    )
 
     if use_launcher_config:
         for key, value in launcher_config_overrides.items():

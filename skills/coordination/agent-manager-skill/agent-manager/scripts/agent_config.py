@@ -405,6 +405,7 @@ def _build_main_agent_config(
         'launcher': launcher,
         'launcher_args': launcher_args,
         'launcher_config': {},
+        'env_file': '',
         'skills': [],
         'schedules': [],
         'mcps': {},
@@ -433,7 +434,7 @@ def _build_main_agent_config(
                 override = expand_config_env_vars(override)
                 for key in ('heartbeat', 'schedules', 'skills', 'mcps', 'description', 'role_definition',
                             'launcher', 'launcher_args', 'launcher_config', 'working_directory',
-                            'namespace', 'tmux'):
+                            'namespace', 'tmux', 'env_file'):
                     val = override.get(key)
                     if val is not None:
                         base[key] = val

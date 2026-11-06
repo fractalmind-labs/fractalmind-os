@@ -2629,14 +2629,31 @@ def cleanup_old_logs(repo_root: Path, days: int = 7) -> int:
     return removed
 
 
-def build_start_command(working_dir: str, launcher: str, launcher_args: list[str]) -> str:
+def _shell_env_file_part(env_file: str) -> str:
+    """Return a shell fragment that exports values from an agent env file."""
+    if not env_file:
+        return ""
+    return f"set -a && . {shlex.quote(expand_env_vars(env_file))} && set +a"
+
+
+def build_start_command(
+    working_dir: str,
+    launcher: str,
+    launcher_args: list[str],
+    env_file: str = "",
+) -> str:
     # Cron/tmux often runs with a minimal PATH; include common user-local bin dirs so
     # launchers like `ccc` can find `claude` (usually installed under ~/.local/bin).
     env_part = 'export PATH="$HOME/.cursor/bin:$HOME/.local/bin:$HOME/bin:$PATH"'
+    env_file_part = _shell_env_file_part(env_file)
     cd_part = f"cd {shlex.quote(working_dir)}"
     cmd_parts = [launcher] + list(launcher_args or [])
     exec_part = " ".join(shlex.quote(str(part)) for part in cmd_parts if part is not None and str(part) != "")
-    return f"{env_part} && {cd_part} && {exec_part}".strip()
+    parts = [env_part]
+    if env_file_part:
+        parts.append(env_file_part)
+    parts.extend([cd_part, exec_part])
+    return " && ".join(parts).strip()
 
 
 def get_agent_id(config: dict) -> str:
