@@ -160,6 +160,64 @@ launcher_args:
 
 Kimi Code provider notes: session restore uses `--session <id>`; system prompt injection currently uses tmux paste fallback; MCP config is not injected at launch time.
 
+**DeepSeek Harness provider** (DSH headless bridge):
+
+```yaml
+launcher: deepseek-harness
+launcher_args:
+  # Use a normal, user-owned headless profile rather than a desktop-managed
+  # profile.
+  - --profile
+  - my-worker-profile
+  # Deployment-owned routes, aliases, and reasoning settings live in an
+  # ordinary DSH overlay, passed through unchanged (repeat --patch as needed).
+  - --patch
+  - /absolute/path/to/route-and-reasoning.patch.yml
+  # Full access is an explicit operator opt-in. Omit both lines to retain
+  # DSH's normal workspace-write + ask policy.
+  - --permission-mode
+  - danger-full-access
+```
+
+`deepseek-harness` resolves to the skill's `providers/dsh_repl.py`, not to a
+DSH TUI. The bridge runs the supported non-interactive form
+`dsh --profile <name> --json --session-id <id> -` once for each submitted task,
+then returns a stable `dsh❯` prompt for agent-manager. It persists the returned
+DSH session id at
+`.claude/state/agent-manager/dsh/<agent-id>.json`, so a restarted tmux bridge
+continues the same DSH conversation. The state file and generated overlay carry
+no credentials.
+
+DSH headless does not expose a system-role flag. Agent-manager therefore passes
+its generated role/skill bootstrap to the bridge, which prefixes it to the first
+persisted DSH task exactly once. This is deliberately not a post-start tmux
+paste: a line-oriented bridge can safely receive multiline bracketed pastes and
+the bootstrap remains part of the session that is later resumed. DSH does not
+promise automatic `AGENTS.md` loading, so the manager bootstrap is retained even
+when that file is present in the working tree.
+
+`--patch FILE` is repeatable and passed straight to `dsh --patch`; put provider
+routes, aliases, reasoning controls, and any adapter-specific schema in those
+user-owned files. The bridge never edits a shared profile. Optionally,
+`--provider my-provider --model my-model` creates one minimal ephemeral overlay
+for DSH's built-in `agent-default-model` entry. Both options are required
+together. Reasoning effort is intentionally **not** a bridge argument: DSH's
+generic default-model config has no reasoning-effort field, so a route-specific
+patch is the portable, explicit place to configure it.
+
+MCP configuration is intentionally unsupported at launch: compose servers in
+the DSH profile instead. DSH resolves credentials from its normal credential
+store/environment; never put credentials in `launcher_args`, agent YAML,
+generated patches, tmux output, or logs. The provider's permission escape hatch
+is explicit:
+`--permission-mode danger-full-access` sets DSH's native
+`DSH_PERMISSION_MODE` preset, which pairs the unrestricted sandbox with approval
+policy `never`. It must be specified only for a workspace the operator has
+approved; there is no implicit bypass.
+
+See `examples/agent-configs/deepseek-harness-agent.yaml` for a generic worker
+configuration.
+
 **Cursor CLI provider**:
 
 ```yaml

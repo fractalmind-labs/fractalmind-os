@@ -11,6 +11,8 @@ This folder contains ready-to-adapt YAML templates for common `agent-manager` us
 - `deployment-assistant-agent.yaml`: Release readiness and rollout support
 - `monitoring-alert-agent.yaml`: SLO/error-budget alert triage and on-call support
 - `data-analysis-agent.yaml`: Log/KPI analysis and weekly insights reporting
+- `deepseek-harness-agent.yaml`: DeepSeek Harness headless worker with a
+  user-owned profile, overlay, and explicit permissions
 
 ## How To Use
 
