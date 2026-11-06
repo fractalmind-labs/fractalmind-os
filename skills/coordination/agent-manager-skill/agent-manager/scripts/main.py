@@ -820,6 +820,17 @@ def write_start_command_script(repo_root: Path, agent_id: str, command: str) -> 
     return script_path
 
 
+def remove_start_command_script(repo_root: Path, agent_id: str) -> None:
+    """Remove an obsolete generated start-command wrapper, if one exists."""
+    script_path = repo_root / '.claude' / 'state' / 'agent-manager' / 'start-commands' / f"{agent_id}.sh"
+    try:
+        script_path.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        pass
+
+
 def _to_toml_literal(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
