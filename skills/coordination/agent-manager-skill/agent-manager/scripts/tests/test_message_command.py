@@ -168,6 +168,27 @@ class MessageCommandTests(unittest.TestCase):
         self.assertTrue(send_kwargs['clear_input'])
         self.assertIn('tmux accepted', output.getvalue())
 
+    def test_send_to_claude_uses_native_enter(self):
+        calls = []
+        target = {'name': 'qa', 'file_id': 'EMP_0017', 'launcher': '/home/test/.agent/bin/claude-code-claudeai'}
+        deps = _deps(
+            resolve_agent=lambda value: target if value == 'EMP_0017' else None,
+            send_keys=lambda *args, **kwargs: calls.append((args, kwargs)) or True,
+        )
+        args = argparse.Namespace(
+            message_command='send', agent='EMP_0017', from_agent='main',
+            body='Please acknowledge.', footer=None, id='msg_fixed',
+        )
+
+        with redirect_stdout(io.StringIO()):
+            rc = cmd_message(args, deps=deps)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(calls[0][1]['enter_via_key'])
+        self.assertFalse(calls[0][1]['clear_input'])
+        self.assertFalse(calls[0][1]['escape_first'])
+
     def test_send_preempts_grok_main_and_send_nows_when_busy(self):
         interrupts = []
         calls = []

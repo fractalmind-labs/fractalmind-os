@@ -85,6 +85,8 @@ class ShouldPreemptMainDeliveryTests(unittest.TestCase):
         self.assertFalse(should_preempt_main_delivery('EMP_0002', '/usr/bin/grok', owner))
 
     def test_uses_native_enter(self):
+        self.assertTrue(uses_native_enter('claude'))
+        self.assertTrue(uses_native_enter('/home/test/.agent/bin/claude-code-claudeai'))
         self.assertTrue(uses_native_enter('/home/test/.local/bin/grok'))
         self.assertTrue(uses_native_enter('codex'))
         self.assertTrue(uses_native_enter('/home/test/.cursor/bin/cursor-agent'))
