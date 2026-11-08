@@ -27,6 +27,7 @@ The repository shorthand points to this monorepo; `--skill` selects one skill:
 | Team Chat | `skills/interfaces/team-chat-skill` | `team-chat` |
 | FractalBot | `skills/interfaces/use-fractalbot-skill` | `use-fractalbot` |
 | Browser | `skills/interfaces/agent-browser-skill` | `use-agent-browser` |
+| Slack Admin | `skills/interfaces/slack-admin-skill` | `slack-admin` |
 
 For a direct source URL, point at one skill directory and omit `--skill` because
 each directory here contains one skill. Preview discovery without installing:
