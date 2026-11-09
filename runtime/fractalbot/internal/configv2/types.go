@@ -16,9 +16,10 @@ const Version = 2
 
 // Runtime names.
 const (
-	RuntimeClaudeDesktop = "claudeDesktop"
-	RuntimeCodexApp      = "codexApp"
-	RuntimeAgentManager  = "agentManager"
+	RuntimeClaudeDesktop   = "claudeDesktop"
+	RuntimeCodexApp        = "codexApp"
+	RuntimeDeepSeekHarness = "deepseekHarness"
+	RuntimeAgentManager    = "agentManager"
 )
 
 // Channel types.
@@ -184,9 +185,10 @@ type Demail struct {
 // Runtimes tunes how each runtime delivers. A runtime is used when an agent
 // names it; this section only changes defaults.
 type Runtimes struct {
-	ClaudeDesktop ClaudeDesktopRuntime `yaml:"claudeDesktop,omitempty"`
-	CodexApp      CodexAppRuntime      `yaml:"codexApp,omitempty"`
-	AgentManager  AgentManagerRuntime  `yaml:"agentManager,omitempty"`
+	ClaudeDesktop   ClaudeDesktopRuntime   `yaml:"claudeDesktop,omitempty"`
+	CodexApp        CodexAppRuntime        `yaml:"codexApp,omitempty"`
+	DeepSeekHarness DeepSeekHarnessRuntime `yaml:"deepseekHarness,omitempty"`
+	AgentManager    AgentManagerRuntime    `yaml:"agentManager,omitempty"`
 }
 
 // ClaudeDesktopRuntime delivers through the agent's inbox, which the relay in
@@ -199,6 +201,19 @@ type ClaudeDesktopRuntime struct {
 type CodexAppRuntime struct {
 	// Codex is the codex executable. Default: `codex` on PATH.
 	Codex                  string `yaml:"codex,omitempty"`
+	DeliveryTimeoutSeconds int    `yaml:"deliveryTimeoutSeconds,omitempty"`
+}
+
+// DeepSeekHarnessRuntime delivers to an explicitly configured DeepSeek Harness
+// Desktop session through its locally exposed Chromium DevTools endpoint. The
+// app must be launched with a loopback remote-debugging port; FractalBot never
+// enables remote debugging itself.
+type DeepSeekHarnessRuntime struct {
+	// CDPEndpoint is the local Chromium DevTools endpoint, for example
+	// http://127.0.0.1:9224.
+	CDPEndpoint string `yaml:"cdpEndpoint,omitempty"`
+	// TargetSelector optionally matches the DeepSeek Harness page title or URL.
+	TargetSelector         string `yaml:"targetSelector,omitempty"`
 	DeliveryTimeoutSeconds int    `yaml:"deliveryTimeoutSeconds,omitempty"`
 }
 
