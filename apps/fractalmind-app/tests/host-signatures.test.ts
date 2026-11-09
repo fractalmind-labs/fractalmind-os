@@ -219,7 +219,7 @@ async function fixture(mode = "valid") {
   const chain = {
     profile: { humanId: human },
     checkNetwork: async () => "TestChain",
-    human: async () => ({
+    identity: async () => ({
       human: { organizations: [org] },
       clockMs: BigInt(mode === "expired" ? now + 60001 : now),
       loadedAtMs: Date.now(),

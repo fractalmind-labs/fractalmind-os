@@ -75,7 +75,7 @@ async function fixture(mode = "valid", commandMode = false, direct = false) {
   const chain = {
     profile: { humanId: human },
     checkNetwork: async () => "Test1",
-    human: async () => ({
+    identity: async () => ({
       human: { organizations: [org] },
       clockMs: BigInt(Date.now()),
       loadedAtMs: Date.now(),

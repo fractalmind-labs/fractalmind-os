@@ -339,7 +339,7 @@ async function fixture() {
   const chain = {
     profile: { network: "localnet", humanId: human },
     checkNetwork: async () => "fixture",
-    human: async () => ({
+    identity: async () => ({
       human: { organizations: [org] },
       clockMs,
       loadedAtMs: Date.now(),

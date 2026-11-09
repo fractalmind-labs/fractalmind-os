@@ -473,6 +473,14 @@ button.item { width: 100%; border: 0; border-radius: 8px; background: none; text
 .direct-message-text {white-space:pre-wrap;overflow-wrap:anywhere;}
 @media (max-width:700px) {.direct-layout {grid-template-columns:1fr;} .direct-agent-dialog {padding:16px;} .direct-thread-list {max-height:180px;}}
 .host-actions {display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
+.host-access {width:min(560px,calc(100vw - 24px));}
+.host-access .host-quick {margin:20px 0;}
+.host-access .host-primary {width:100%;padding:12px 16px;}
+.host-access .host-progress {padding:12px;border-radius:var(--r-sm);background:var(--surface-2);}
+.host-access > details {margin-top:20px;box-shadow:none;}
+.host-access summary {cursor:pointer;}
+.host-access .long-id {overflow-wrap:anywhere;}
+.host-access .host-fingerprint {font-variant-numeric:tabular-nums;letter-spacing:.08em;}
 .host-access .host-confirm {display:flex;align-items:flex-start;gap:8px;}
 .host-access .host-confirm input {width:auto;margin:4px 0;}
 .host-row {padding:12px 0;border-bottom:1px solid var(--border);}

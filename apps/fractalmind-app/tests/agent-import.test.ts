@@ -365,7 +365,7 @@ async function fixture(
   const chain = {
     profile: { network: "localnet", humanId: human },
     checkNetwork: async () => "TestChain",
-    human: async () => ({
+    identity: async () => ({
       human: { organizations: [org] },
       clockMs: BigInt(now),
       loadedAtMs: Date.now(),
