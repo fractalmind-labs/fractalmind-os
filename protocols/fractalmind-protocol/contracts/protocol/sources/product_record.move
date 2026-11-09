@@ -17,6 +17,7 @@ module fractalmind_protocol::product_record {
     const E_INPUT: u64 = 9101;
     const E_VERSION: u64 = 9102;
     const MAX_BODY: u64 = 65536;
+    const APPROVAL: u8 = 3;
     // Fixed v0.2.0 kinds: OKR, contract, approval, evidence, checkpoint,
     // direct message, key backup. No generic Memory/storage platform API.
     public struct IndexBinding has copy, drop, store {}
@@ -54,6 +55,35 @@ module fractalmind_protocol::product_record {
         identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
         save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
             kind, logical_id, expected_revision, key_version, encrypted_body, clock, ctx);
+    }
+
+    /// An Agent Operator can file an encrypted approval *request*, never a
+    /// canonical approval.  The reserved namespace prevents this constrained
+    /// writer from replacing ordinary human approval records.  `grant_id` on
+    /// EncryptedRecord is the durable requesting-grant attribution; its stable
+    /// layout deliberately remains unchanged.
+    public fun save_agent_request(
+        org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        kind: u8, logical_id: String, expected_revision: u64, key_version: u64,
+        encrypted_body: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ): ID {
+        identity::assert_can(human, grant, org, identity::operate_action(), clock, ctx);
+        assert!(identity::is_agent_operator(grant), E_INPUT);
+        assert!(kind == APPROVAL && agent_request_name(&logical_id), E_INPUT);
+        save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+            kind, logical_id, expected_revision, key_version, encrypted_body, clock, ctx)
+    }
+
+    fun agent_request_name(logical_id: &String): bool {
+        let prefix = b"agent-request:";
+        let bytes = string::as_bytes(logical_id);
+        if (vector::length(bytes) <= vector::length(&prefix)) return false;
+        let mut i = 0;
+        while (i < vector::length(&prefix)) {
+            if (bytes[i] != prefix[i]) return false;
+            i = i + 1;
+        };
+        true
     }
 
     public(package) fun save_authorized(
@@ -134,5 +164,6 @@ module fractalmind_protocol::product_record {
     }
     public fun record_organization(record: &EncryptedRecord): ID { record.organization_id }
     public fun record_revision(record: &EncryptedRecord): u64 { record.revision }
+    public fun record_grant_id(record: &EncryptedRecord): ID { record.grant_id }
     public fun record_body(record: &EncryptedRecord): vector<u8> { record.encrypted_body }
 }

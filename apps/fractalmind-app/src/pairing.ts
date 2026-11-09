@@ -7,6 +7,9 @@ import {
   HumanIdentityBcs,
   IdentityRegistryBcs,
   DeviceGrantBcs,
+  pairingCode,
+  pairingFingerprint,
+  wrapKeys,
   SelfPayTransactionManager,
   type DeviceAction,
   type TransactionJournal,
@@ -17,6 +20,7 @@ import { ChainReadSession, missingIndex } from "./chain";
 import { DeviceIdentityVerifier, OrganizationBcs } from "./device-identity";
 import { NativeDeviceSigner, call, type NativeInvoke } from "./native-device";
 import { wrappedEnvelope } from "./native-onboarding";
+import { isAgentPairing } from "./agent-operator-chain";
 
 export class PairingError extends Error {
   constructor(
@@ -30,7 +34,8 @@ export class PairingError extends Error {
       | "invalid_quote"
       | "invalid_input"
       | "sync_pending"
-      | "data_pending",
+      | "data_pending"
+      | "agent_request",
   ) {
     super(code);
   }
@@ -52,32 +57,76 @@ type Plan = {
   grantId?: string;
   technicalId: string;
 };
-/** Both ends compare this public fingerprint. It binds chain, request, identity,
- * organization, generation, device and both keys; it grants no authority. */
-export async function pairingFingerprint(
-  chainIdentifier: string,
-  request: PairingRequest,
+export { pairingFingerprint };
+
+export type NativeAgentOrgKeyWrap = Readonly<{
+  invoke: NativeInvoke;
+  profile: string;
+  network: "localnet" | "testnet";
+  organizationId: string;
+  keyVersion: string;
+  organizationCount: number;
+  encryptedKeys: string;
+  recipientAddress: string;
+  signingPublicKey: Uint8Array;
+  encryptionPublicKey: Uint8Array;
+}>;
+
+/** Wrap an already-authorized organization keyring for an Agent Operator's
+ * pairing encryption key. The byte overload is deliberately pure for the
+ * CLI/localnet flow. The native overload keeps a desktop owner's keyring in
+ * the vault, which selects one organization and produces the same
+ * recipient-bound envelope without exporting any key material to the WebView. */
+export async function wrapOrgKeysForAgent(
+  keyring: Uint8Array,
+  recipientEncryptionPublicKey: Uint8Array,
+  network: "localnet" | "testnet",
+  recipientAddress: string,
+): Promise<Uint8Array>;
+export async function wrapOrgKeysForAgent(
+  input: NativeAgentOrgKeyWrap,
+): Promise<Uint8Array>;
+export async function wrapOrgKeysForAgent(
+  keyringOrNative: Uint8Array | NativeAgentOrgKeyWrap,
+  recipientEncryptionPublicKey?: Uint8Array,
+  network?: "localnet" | "testnet",
+  recipientAddress?: string,
 ) {
-  const bytes = new TextEncoder().encode(
-    JSON.stringify([
-      "fractalmind.pairing.v1",
-      chainIdentifier,
-      request.id,
-      request.human_id,
-      request.organization_id,
-      request.generation,
-      request.device,
-      toBase64(Uint8Array.from(request.signing_public_key)),
-      toBase64(Uint8Array.from(request.encryption_public_key)),
-      request.expires_at_ms,
-      request.device_name,
-      request.platform,
-    ]),
+  if (!(keyringOrNative instanceof Uint8Array)) {
+    const input = keyringOrNative;
+    const envelope = wrappedEnvelope(
+      await call(input.invoke, "fm_device_wrap_organization_keys", {
+        profile: input.profile,
+        request: JSON.stringify({
+          network: input.network,
+          organizationId: input.organizationId,
+          keyVersion: input.keyVersion,
+          organizationCount: input.organizationCount,
+          encryptedKeys: input.encryptedKeys,
+          recipientAddress: input.recipientAddress,
+          signingPublicKey: toBase64(input.signingPublicKey),
+          encryptionPublicKey: toBase64(input.encryptionPublicKey),
+        }),
+      }),
+    );
+    const wrapped = fromBase64(envelope);
+    if (wrapped.length > 65536) throw new PairingError("invalid_source");
+    return wrapped;
+  }
+  if (!recipientEncryptionPublicKey || !network || !recipientAddress)
+    throw new PairingError("invalid_input");
+  if (
+    !keyringOrNative.length ||
+    keyringOrNative.length > 65536 ||
+    recipientEncryptionPublicKey.length !== 32 ||
+    !id.test(recipientAddress)
+  )
+    throw new PairingError("invalid_input");
+  return wrapKeys(
+    keyringOrNative,
+    recipientEncryptionPublicKey,
+    `fractalmind.device-keys.v1:${network}:${recipientAddress.toLowerCase()}`,
   );
-  return Array.from(
-    new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
-    (n) => n.toString(16).padStart(2, "0"),
-  ).join("");
 }
 /** All pairing state is read from Sui. The journal contains only original
  * transaction metadata. No public request or cached profile authorizes a device. */
@@ -237,6 +286,7 @@ export class DevicePairing {
     )
       throw new PairingError("invalid_source");
     const base = await this.base(request.organization_id);
+    const agentPairing = await isAgentPairing(this.chain, requestId);
     const expired = BigInt(request.expires_at_ms) <= base.clockMs;
     const superseded = request.generation !== base.human.generation;
     let grant = null;
@@ -260,6 +310,7 @@ export class DevicePairing {
       if (grant.encrypted_keys.length) data = "wrapped";
     }
     await this.chain.checkNetwork();
+    const fingerprint = await pairingFingerprint(base.chainIdentifier, request);
     return {
       request,
       base,
@@ -267,11 +318,16 @@ export class DevicePairing {
       superseded,
       grant,
       data,
-      fingerprint: await pairingFingerprint(base.chainIdentifier, request),
+      agentPairing,
+      fingerprint,
+      pairingCode: pairingCode(fingerprint),
       pin: JSON.stringify([base.pin, object.version, grant]),
     };
   }
   private pending(state: Awaited<ReturnType<DevicePairing["inspect"]>>) {
+    // Agent requests have a different, deliberately narrower approval entry
+    // point. Ordinary device pairing must never show or approve one.
+    if (state.agentPairing) throw new PairingError("agent_request");
     if (state.superseded) throw new PairingError("state_changed");
     if (state.request.status !== 0) throw new PairingError("not_pending");
     if (state.expired) throw new PairingError("expired");
@@ -412,25 +468,13 @@ export class DevicePairing {
     });
   }
   private async keyVersion(organizationId: string) {
-    const index = await this.sdk.productRecord
-      .listCurrent(organizationId, null, 1)
-      .catch(async (error) => {
-        if (
-          missingIndex(
-            error,
-            organizationId,
-            await this.sdk.client.coreType("product_record", "IndexBinding"),
-          )
-        )
-          return { keyVersion: "1" };
-        throw error;
-      });
-    return index.keyVersion;
+    return organizationKeyVersion(this.chain, organizationId);
   }
   private async shareSource(requestId: string, grantId: string) {
     const state = await this.inspect(requestId),
       org = state.request.organization_id;
     if (
+      state.agentPairing ||
       state.superseded ||
       state.request.status !== 1 ||
       !state.grant ||
@@ -554,6 +598,7 @@ export class DevicePairing {
   }
   async verifyRequester(requestId: string) {
     const state = await this.inspect(requestId);
+    if (state.agentPairing) throw new PairingError("agent_request");
     if (
       state.request.device !== this.device.device.address ||
       toBase64(Uint8Array.from(state.request.encryption_public_key)) !==
@@ -575,4 +620,27 @@ export class DevicePairing {
       data: state.data,
     };
   }
+}
+
+/** Read the public product-record key version that authorizes a scoped key
+ * envelope. Ordinary device sharing and Agent approval share this source so
+ * neither path can wrap stale organization material. */
+export async function organizationKeyVersion(
+  chain: ChainReadSession,
+  organizationId: string,
+) {
+  const index = await chain.sdk.productRecord
+    .listCurrent(organizationId, null, 1)
+    .catch(async (error) => {
+      if (
+        missingIndex(
+          error,
+          organizationId,
+          await chain.sdk.client.coreType("product_record", "IndexBinding"),
+        )
+      )
+        return { keyVersion: "1" };
+      throw error;
+    });
+  return index.keyVersion;
 }
