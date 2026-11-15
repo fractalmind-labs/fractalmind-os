@@ -1,3 +1,8 @@
+---
+name: fractalmind-cli
+description: Help manage a FractalMind organization through the fm Agent CLI, within an on-chain Agent Operator grant. Use when reading an organization's OKRs, hosts, agents, runs or approvals, or when drafting an OKR, pausing a run, filing an approval request or messaging an agent on the owner's behalf. Writes that spend SUI are dry-run first; activating OKRs and approving requests stay human decisions.
+---
+
 # FractalMind Agent CLI
 
 Use `fm` only with an Agent Operator grant for the organization in question.
