@@ -42,7 +42,12 @@ async function encryptedRead(keyRef: string, phrase: string): Promise<StoredKey 
 /** keytar maps to Keychain/Credential Manager/Secret Service.  macOS Keychain
  * maintains application access controls itself; an unfamiliar application
  * asking for this item is mediated by the system prompt. */
-async function systemStore() { return import('keytar'); }
+// keytar is CommonJS: imported as a module only getPassword is a named export (Node's static
+// detection misses the rest), so take the whole module object from `default`.
+async function systemStore() {
+  const loaded = await import('keytar') as unknown as { default?: typeof import('keytar') } & typeof import('keytar');
+  return loaded.default ?? loaded;
+}
 
 export async function saveKey(keyRef: string, key: StoredKey): Promise<{ weaker: boolean }> {
   const phrase = passphrase();
