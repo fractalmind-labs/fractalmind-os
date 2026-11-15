@@ -1,0 +1,24 @@
+# Scenario: generic DeepSeek Harness worker.
+# Use only after the target worktree has been explicitly approved for
+# unrestricted tool execution. Authentication comes from DSH's normal
+# credential resolution; never put a key in this file.
+
+name: dsh-worker
+description: DeepSeek Harness headless worker
+enabled: true
+working_directory: ${REPO_ROOT}
+launcher: deepseek-harness
+launcher_args:
+  # A normal user-owned DSH profile, not a desktop-managed profile.
+  - --profile
+  - my-worker-profile
+  # Repeat --patch for additional user-owned DSH overlays. Keep provider
+  # routes, aliases, and adapter-specific reasoning controls in these files.
+  - --patch
+  - /absolute/path/to/route-and-reasoning.patch.yml
+  # Explicit opt-in only. Omitting this leaves DSH's normal workspace-write /
+  # ask policy in force.
+  - --permission-mode
+  - danger-full-access
+skills:
+  - agent-manager

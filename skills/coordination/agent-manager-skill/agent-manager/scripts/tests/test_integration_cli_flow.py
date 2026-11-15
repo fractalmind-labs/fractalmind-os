@@ -191,6 +191,25 @@ class CliIntegrationFlowTests(unittest.TestCase):
             self.assertIn('Removed deprecated Codex full-speed Stop hook', output, msg='[stage:start-restore] expected hook cleanup notice')
             self.assertEqual(len(runtime.start_commands), 0, msg='[stage:start-restore] should not create a new tmux session')
 
+    def test_short_start_removes_obsolete_generated_command_script(self):
+        runtime = _FakeRuntime()
+        stale_script = main.write_start_command_script(
+            self.temp_root,
+            'emp-0001',
+            'codex ' + ('x' * 7000),
+        )
+        self.assertTrue(stale_script.exists())
+
+        with ExitStack() as stack:
+            self._patch_common(stack, runtime)
+            self._run_stage_ok(
+                'start-short-command',
+                main.cmd_start,
+                argparse.Namespace(agent='dev', working_dir=None, restore=True, tmux_layout='sessions'),
+            )
+
+        self.assertFalse(stale_script.exists())
+
     def test_codex_restore_rediscover_exact_owner_cwd_when_mapping_is_stale(self):
         runtime = _FakeRuntime()
         stale_id = '019c3eb0-bca0-7ab0-8b93-3b54b5f582dc'

@@ -276,6 +276,28 @@ skills:
         self.assertTrue(cfg.get("launcher_config", {}).get("model_instructions_file", "").endswith("/.codex/main-codex-model.md"))
 
     @patch("agent_config.get_repo_root")
+    def test_resolve_main_reads_env_file(self, mock_get_repo_root):
+        repo_root = self.temp_root
+        mock_get_repo_root.return_value = repo_root
+
+        (repo_root / "agents").mkdir(parents=True, exist_ok=True)
+        (repo_root / "AGENTS.md").write_text(
+            """---
+name: main
+description: Main
+working_directory: ${REPO_ROOT}
+launcher: codex
+env_file: /tmp/agent-manager-main.env
+---
+# Main Agent
+""",
+            encoding="utf-8",
+        )
+
+        cfg = agent_config.resolve_agent("main")
+        self.assertEqual(cfg.get("env_file"), "/tmp/agent-manager-main.env")
+
+    @patch("agent_config.get_repo_root")
     def test_resolve_agent_accepts_runtime_emp_id(self, mock_get_repo_root):
         repo_root = self.temp_root
         mock_get_repo_root.return_value = repo_root

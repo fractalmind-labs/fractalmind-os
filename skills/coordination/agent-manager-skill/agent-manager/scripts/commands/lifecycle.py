@@ -167,16 +167,29 @@ def preempt_main_delivery(deps: Any, *, agent_id: str, launcher: str, message: s
 
 
 def uses_native_enter(launcher: str) -> bool:
-    """Cursor, Grok, and Codex need a real Enter key; a pasted newline does not submit.
+    """Cursor, Grok, Codex, and the DSH bridge need a real Enter key to submit.
 
     These TUIs turn tmux paste-buffer payloads into composer paste chips. The
     send_keys newline fallback then looks successful (the chip UI changed)
     without submitting the turn. Cursor Agent has the same native-Enter
     requirement as Codex/Grok: a pasted newline stays in the composer until
-    a real keypress Enter submits.
+    a real keypress Enter submits. The DSH bridge holds bracketed multi-line
+    pastes until a native Enter, so a pasted newline must not be mistaken for
+    task submission there either.
     """
     lowered = (launcher or '').lower()
-    return 'codex' in lowered or 'grok' in lowered or 'cursor' in lowered
+    return (
+        'codex' in lowered
+        or 'grok' in lowered
+        or 'cursor' in lowered
+        or 'dsh_repl.py' in lowered
+        or 'deepseek-harness' in lowered
+    )
+
+
+def default_dsh_state_file(repo_root: Path, agent_id: str) -> Path:
+    """Return the bridge-owned DSH session state location for one worker."""
+    return repo_root / '.claude' / 'state' / 'agent-manager' / 'dsh' / f'{agent_id}.json'
 
 
 def complete_grok_send_now(
@@ -329,6 +342,7 @@ def cmd_start(args, *, deps: Any):
     build_start_command = deps.build_start_command
     write_system_prompt_file = deps.write_system_prompt_file
     write_start_command_script = deps.write_start_command_script
+    remove_start_command_script = deps.remove_start_command_script
     start_session_with_layout = deps.start_session_with_layout
     start_session = deps.start_session
     wait_for_prompt = deps.wait_for_prompt
@@ -427,6 +441,13 @@ def cmd_start(args, *, deps: Any):
     launcher_args = list(agent_config.get('launcher_args', []) or [])
 
     provider_key = get_provider_key(launcher)
+    if provider_key == 'deepseek-harness' and '--state-file' not in launcher_args:
+        # dsh_repl owns its DSH session id rather than trying to discover the
+        # harness-global session store.  Keep that small state file with the
+        # rest of this workspace's agent-manager runtime data, where a restart
+        # can deterministically resume it.
+        dsh_state = default_dsh_state_file(repo_root, agent_id)
+        launcher_args.extend(['--state-file', str(dsh_state)])
     launcher_exists = getattr(deps, 'launcher_binary_exists', None)
     if provider_key == 'grok':
         exists = True
@@ -546,7 +567,12 @@ def cmd_start(args, *, deps: Any):
         and launcher_config_mode == 'cli_config_kv'
         and launcher_config_flag
     )
-    command = build_start_command(working_dir, launcher, launcher_args)
+    command = build_start_command(
+        working_dir,
+        launcher,
+        launcher_args,
+        env_file=str(agent_config.get('env_file') or ''),
+    )
 
     if use_launcher_config:
         for key, value in launcher_config_overrides.items():
@@ -573,6 +599,8 @@ def cmd_start(args, *, deps: Any):
     if len(command) > 6000:
         command_script = write_start_command_script(repo_root, agent_id, command)
         command = shlex.quote(str(command_script))
+    else:
+        remove_start_command_script(repo_root, agent_id)
 
     if mcp_config_json and not did_provider_restore:
         if mcp_config_mode == 'cli_json' and mcp_config_flag:

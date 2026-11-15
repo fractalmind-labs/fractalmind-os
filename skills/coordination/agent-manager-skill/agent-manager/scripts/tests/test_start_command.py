@@ -42,6 +42,18 @@ class BuildStartCommandTests(unittest.TestCase):
         )
         self.assertIn('export PATH="$HOME/.cursor/bin:$HOME/.local/bin:$HOME/bin:$PATH"', cmd)
 
+    def test_env_file_is_sourced_before_entering_workspace(self):
+        cmd = main.build_start_command(
+            working_dir="/tmp/work dir",
+            launcher="codex",
+            launcher_args=["--model=x"],
+            env_file="/tmp/agent env/credentials.env",
+        )
+
+        self.assertIn("set -a && . '/tmp/agent env/credentials.env' && set +a", cmd)
+        self.assertLess(cmd.index("set -a"), cmd.index("cd '/tmp/work dir'"))
+        self.assertLess(cmd.index("cd '/tmp/work dir'"), cmd.index("codex --model=x"))
+
 
 class LauncherCliConfigTests(unittest.TestCase):
     def test_build_launcher_config_overrides_from_flat_launcher_config(self):
