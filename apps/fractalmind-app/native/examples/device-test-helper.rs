@@ -45,8 +45,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     );
     // Each helper run is a fresh process, like an App start: actions that use
     // device keys unlock the test profile's session first (one store read).
-    const DEVICE_KEY_ACTIONS: [&str; 9] = [
+    // Recovery after import reads the new device's keys too; in the App the
+    // session import_recovery starts is still open, here it is reopened.
+    const DEVICE_KEY_ACTIONS: [&str; 12] = [
         "public",
+        "publicImportedRecovery",
+        "prepareRecovery",
+        "publicPreparedRecovery",
         "signTransaction",
         "signNodeCommand",
         "proveDevice",
