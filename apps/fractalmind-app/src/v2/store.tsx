@@ -19,6 +19,7 @@ const PROFILE_KEY = "fractalmind.app.public-connection.v1";
 const PREFERENCE_KEY = "fractalmind.app.appearance.v1";
 export type Theme = "system" | "light" | "dark";
 export type Prefs = { language: Lang; theme: Theme };
+export type DeviceLapse = { kind: "expired"; atMs: number } | { kind: "replaced" };
 
 function savedProfile() {
   try {
@@ -140,15 +141,20 @@ function useAppState() {
     };
   }, [identity, sessionAddress, organizationId, Math.floor(wallMs / 60000)]);
 
-  /** When this device's every grant in the current generation has run out: the latest expiry.
-   * An expired device cannot renew itself; only recovery with the code restores it. */
-  const deviceExpiredAtMs: number | null = useMemo(() => {
+  /** Why this device has lost its authority, when it has: every grant of the
+   * current generation ran out ("expired", with the latest expiry), or it only
+   * holds grants of an earlier generation because the identity was recovered
+   * since ("replaced"). Neither can renew itself; recovery with the code (or
+   * opening the device a recovery created) is the way back. */
+  const deviceLapse: DeviceLapse | null = useMemo(() => {
     const grants = identity?.grants.value;
     if (!sessionAddress || !grants || !identity) return null;
     const clock = identity.clockMs + BigInt(Math.max(0, wallMs - identity.loadedAtMs));
-    const own = grants.filter((g) => g.device === sessionAddress && !g.revoked && g.generation === identity.human.generation);
-    if (!own.length || own.some((g) => BigInt(g.expires_at_ms) > clock)) return null;
-    return Math.max(...own.map((g) => Number(g.expires_at_ms)));
+    const mine = grants.filter((g) => g.device === sessionAddress && !g.revoked);
+    const own = mine.filter((g) => g.generation === identity.human.generation);
+    if (!own.length) return mine.length ? { kind: "replaced" } : null;
+    if (own.some((g) => BigInt(g.expires_at_ms) > clock)) return null;
+    return { kind: "expired", atMs: Math.max(...own.map((g) => Number(g.expires_at_ms))) };
   }, [identity, sessionAddress, Math.floor(wallMs / 60000)]);
 
   const okrTexts = useOkrTexts(
@@ -214,7 +220,7 @@ function useAppState() {
     refresh: data.refresh,
     reachable: data.reachable,
     permission,
-    deviceExpiredAtMs,
+    deviceLapse,
     okrTexts,
     now,
     wallMs,

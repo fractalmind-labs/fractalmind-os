@@ -13,32 +13,60 @@ import { organizationKind, organizationKindText } from "../organization-create";
 import { useAgentOperatorDirectory } from "./agent-operator-directory";
 const RecoverIdentity = lazy(() => import("../RecoverIdentity"));
 
-/** This device's grant ran out: say so plainly and offer the only way back, recovery with the
- * code (which creates a new device key under its own profile; the expired one is left alone). */
-function DeviceExpired() {
+/** This device lost its authority (its grant ran out, or a recovery replaced
+ * it): say so plainly and offer the way back, recovery with the code. Recovery
+ * creates a new device key under its own profile and ends with opening it.
+ * The recovery window stays open on its own state: the recovery transaction
+ * itself changes why this device has no authority (expired → replaced), and
+ * the window must survive that until the recovered device is opened. */
+function DeviceLapsed() {
   const app = useApp();
   const t = useT();
   const lang = useLang();
   const [recovering, setRecovering] = useState(false);
   const [busy, setBusy] = useState(false);
-  if (app.deviceExpiredAtMs === null) return null;
-  const when = new Date(app.deviceExpiredAtMs).toLocaleDateString(lang === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long", day: "numeric" });
+  const lapse = app.deviceLapse;
+  if (!lapse && !recovering) return null;
+  const when =
+    lapse?.kind === "expired"
+      ? new Date(lapse.atMs).toLocaleDateString(lang === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long", day: "numeric" })
+      : "";
   return (
     <>
-      <div className="note warn" role="alert" style={{ marginBottom: 16 }}>
-        <Icon name="help" />
-        <div>
-          <div className="strong">{t(`这台设备的授权已于 ${when} 过期`, `This device's authorization expired on ${when}`)}</div>
-          <div className="small">{t("现在只能查看，不能批准、操作或管理主机。过期的设备不能给自己续期；用恢复码恢复后，这台设备重新获得 30 天授权，恢复码会换成新的。", "It can only view now: no approving, operating or managing hosts. An expired device cannot renew itself; recovering with your code gives this device 30 days of authority again and replaces the code.")}</div>
-          <button type="button" className="btn primary sm" style={{ marginTop: 10 }} onClick={() => setRecovering(true)}>{t("用恢复码恢复", "Recover with recovery code")}</button>
+      {lapse && (
+        <div className="note warn" role="alert" style={{ marginBottom: 16 }}>
+          <Icon name="help" />
+          <div>
+            {lapse.kind === "expired" ? (
+              <>
+                <div className="strong">{t(`这台设备的授权已于 ${when} 过期`, `This device's authorization expired on ${when}`)}</div>
+                <div className="small">{t("现在只能查看，不能批准、操作或管理主机。过期的设备不能给自己续期；用恢复码恢复后，这台设备重新获得 30 天授权，恢复码会换成新的。", "It can only view now: no approving, operating or managing hosts. An expired device cannot renew itself; recovering with your code gives this device 30 days of authority again and replaces the code.")}</div>
+              </>
+            ) : (
+              <>
+                <div className="strong">{t("这台设备的授权已失效：身份已经用恢复码恢复过", "This device's authorization ended: the identity was recovered with a recovery code")}</div>
+                <div className="small">{t("恢复会让之前所有设备的授权作废。如果是在这台电脑上恢复的，点下面的按钮，选「继续本机恢复流程」，再打开恢复后的设备；否则用最新的恢复码再恢复一次。", "Recovery ends the authority of every earlier device. If you recovered on this computer, use the button below, choose “Continue local recovery” and open the recovered device; otherwise recover again with your latest code.")}</div>
+              </>
+            )}
+            <button type="button" className="btn primary sm" style={{ marginTop: 10 }} onClick={() => setRecovering(true)}>
+              {lapse.kind === "expired" ? t("用恢复码恢复", "Recover with recovery code") : t("恢复或打开恢复后的设备", "Recover or open the recovered device")}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
       {recovering && createPortal(
         <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 200, overflow: "auto", background: "var(--bg)", padding: 24 }}>
           <div style={{ maxWidth: 720, margin: "0 auto" }}>
             <button type="button" className="btn ghost sm" disabled={busy} onClick={() => setRecovering(false)}>{t("返回", "Back")}</button>
             <Suspense fallback={<p>{t("加载身份恢复…", "Loading identity recovery…")}</p>}>
-              <RecoverIdentity t={t} connect={app.connect} onBusyChange={setBusy} />
+              <RecoverIdentity
+                t={t}
+                connect={(profile) => {
+                  setRecovering(false);
+                  app.connect(profile);
+                }}
+                onBusyChange={setBusy}
+              />
             </Suspense>
           </div>
         </div>,
@@ -452,7 +480,7 @@ export function Shell({ route, wide, children }: { route: Route; wide?: boolean;
         <MobileTop />
         <main className={`page ${wide ? "wide" : ""}`} id="main">
           <CtxMini route={route} />
-          <DeviceExpired />
+          <DeviceLapsed />
           {children}
         </main>
       </div>
