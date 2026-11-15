@@ -174,7 +174,11 @@ export async function login(deployment: Deployment, options: LoginOptions): Prom
   // A key that was waiting for funds is reused: without this every retry made a new, empty
   // address, so a network without a faucet (testnet) could never be funded in time.
   const pendingRef = pendingKeyRef(deployment.network, organizationId);
-  const pending = (await loadKey(pendingRef)).key;
+  // So is the key of an earlier request that was never approved (it expired or is still open):
+  // a new request reuses its funded address instead of starting over.
+  const earlier = await loadProfile(deployment.network);
+  const unapproved = earlier && !earlier.grantId && earlier.organizationId === organizationId ? earlier : null;
+  const pending = (unapproved ? (await loadKey(unapproved.keyRef)).key : null) ?? (await loadKey(pendingRef)).key;
   const signer = pending ? Ed25519Keypair.fromSecretKey(pending.signingSecret) : Ed25519Keypair.generate();
   const encryption = pending
     ? { secret: fromBase64(pending.encryptionSecret), publicKey: fromBase64(pending.encryptionPublicKey) }
@@ -204,11 +208,13 @@ export async function login(deployment: Deployment, options: LoginOptions): Prom
   const requestId = requestIds[0]!;
   const pair = await visiblePairing(sdk, requestId);
   const chain = (await sdk.client.client.core.getChainIdentifier()).chainIdentifier;
-  const keyRef = randomUUID();
-  const saved = await saveKey(keyRef, { signingSecret: signer.getSecretKey(), encryptionSecret: toBase64(encryption.secret), encryptionPublicKey: toBase64(encryption.publicKey) });
+  const reusedProfileKey = Boolean(unapproved && (await loadKey(unapproved.keyRef)).key);
+  const keyRef = reusedProfileKey ? unapproved!.keyRef : randomUUID();
+  const saved = reusedProfileKey ? { weaker: Boolean(process.env.FM_KEY_PASSPHRASE) }
+    : await saveKey(keyRef, { signingSecret: signer.getSecretKey(), encryptionSecret: toBase64(encryption.secret), encryptionPublicKey: toBase64(encryption.publicKey) });
   const profile: Profile = { version: 1, network: deployment.network, deployment, address, keyRef, label, organizationId, humanId, requestId, createdAt: new Date().toISOString() };
   await saveProfile(profile);
-  if (pending) await deleteKey(pendingRef);
+  if (pending && !reusedProfileKey) await deleteKey(pendingRef);
   const code = pairingCode(await pairingFingerprint(chain, pair));
   const result: LoginResult = { address, requestId, pairingCode: code, state: 'pending' };
   if (!options.noWait) return { result: await waitForPairing(profile, options.waitSeconds ?? 600, code), weaker: saved.weaker };
