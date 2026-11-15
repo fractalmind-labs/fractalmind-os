@@ -199,7 +199,8 @@ export async function login(deployment: Deployment, options: LoginOptions): Prom
     deviceName: label, platform: platform(),
   });
   request.setSender(address);
-  request.setGasBudget(200_000_000);
+  // A pairing request costs well under 0.01 SUI; a 0.2 SUI budget refused addresses funded with less.
+  request.setGasBudget(50_000_000);
   const submitted = transactionData(await sdk.client.signAndExecuteTransaction({ signer, transaction: request, include: { effects: true, objectTypes: true } }));
   if (!submitted.status.success) throw new Error(`Pairing transaction failed: ${submitted.status.error ?? 'unknown error'}`);
   const requestType = await sdk.client.coreType('identity', 'DevicePairingRequest');
