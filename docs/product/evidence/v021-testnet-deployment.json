@@ -7,12 +7,12 @@
   "sourceCommit": "e9b733c5125adcd8daf329fc6ae546a8510f49dc",
   "toolchain": "sui 1.80.1",
   "publisher": "0x5874b1e59a62fbee32732d97fe9cc012870adebaaea3f75c1915d7e4901f1d91",
-  "kind": "fresh v0.2.0 package graph; the v0.1 testnet lineage 0x685d…df24 is untouched",
+  "kind": "fresh v0.2.0 package graph; the v0.1 testnet lineage 0x685d\u2026df24 is untouched",
   "deployment": {
     "network": "testnet",
     "rpcUrl": "https://fullnode.testnet.sui.io:443",
-    "packageId": "0x4c0cb05c43ef5c45720b1e584ce78f39047b006e63c7e20a0a3cd6615c4dc32c",
-    "okrPackageId": "0x3eebdb2361d0bbcbb1b6e8b6a03fcb2876b595457d28c14b7ba02953876e81bc",
+    "packageId": "0x3ad2fcfc498dbf84f67e254cba33e723291c34a70781056b04a8d6f18af94abe",
+    "okrPackageId": "0x36ba793dc54f74e3c2e8dc4e1392d546feca89a4af98f64763ae32d7a829e187",
     "directPackageId": "0x1977842bde7e0aa412aa39feac5edd3c69c72335942f801c84517387281e3a17",
     "registryId": "0xe4405efce88948122a5ea2e1bf61523b4bad1e4e155dad0c8cef61867f7b7ca2",
     "originalPackageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95",
@@ -73,6 +73,30 @@
       "actualGasMist": "147957140",
       "reason": "#75 M2: okr::assign_agent_manager assigns an OKR to an agent-manager Agent imported with control; links protocol v2",
       "notes": "direct-agent still links protocol v1"
+    },
+    {
+      "date": "2026-11-15",
+      "package": "protocol",
+      "version": 3,
+      "policy": "compatible",
+      "packageId": "0x3ad2fcfc498dbf84f67e254cba33e723291c34a70781056b04a8d6f18af94abe",
+      "originalPackageId": "0xf8e4344e1743203ad5453a16defb4c76a6e82993ff791d9194063c7ae112fe95",
+      "digest": "CbqVxDzwUFGARpmY1XTBSchGBQBvdPj88sUnqPWwNjS1",
+      "actualGasMist": "723118963",
+      "reason": "#121: identity::approve_agent_operator and Agent Operator grants for the fm Agent CLI; agent-request records",
+      "notes": "built from 6be88c2 with sui 1.84.0 (testnet protocol 142)"
+    },
+    {
+      "date": "2026-11-15",
+      "package": "okr",
+      "version": 3,
+      "policy": "compatible",
+      "packageId": "0x36ba793dc54f74e3c2e8dc4e1392d546feca89a4af98f64763ae32d7a829e187",
+      "originalPackageId": "0x120eb48c3b9c2a28451bea22c42b28bd3d3749526c4cc6f86701de0a697a7fe7",
+      "digest": "Dn1PWzFGDFrjtUwo9YxRqypyt1QxkN6VRg1AGXmNB3hX",
+      "actualGasMist": "148988563",
+      "reason": "#121: Agent Operator draft writers; links protocol v3",
+      "notes": "direct-agent unchanged (still links protocol v1)"
     }
   ]
 }
