@@ -56,11 +56,49 @@ export type AgentOperatorDirectory = {
   inactive: AgentOperatorRow[];
 };
 
+/** A public fullnode keeps only recent history, and on testnet a newest-first listing fails
+ * outright ("requested data below earliest available") instead of stopping at the pruned edge.
+ * Oldest-first works over the retained window, which holds everything these pages need
+ * (pairing requests expire in minutes; recent Agent activity), so fall back to it. */
+const PRUNED = /below earliest available/i;
+/** Items newest first. `pages` bounds a newest-first read; the oldest-first fallback reads the
+ * whole retained window (up to MAX_EVENT_PAGES) since its newest items come last. `complete`
+ * says nothing was left unread. */
+async function newestFirst<T, P extends { hasNextPage: boolean; endCursor?: string | null }>(
+  read: (order: "ascending" | "descending", cursor: string | null) => Promise<P>,
+  items: (page: P) => T[],
+  pages: number,
+): Promise<{ items: T[]; complete: boolean }> {
+  const walk = async (order: "ascending" | "descending", maxPages: number) => {
+    const out: T[] = [];
+    let cursor: string | null = null;
+    for (let pageNumber = 0; pageNumber < maxPages; pageNumber++) {
+      const page = await read(order, cursor);
+      out.push(...items(page));
+      if (!page.hasNextPage) return { items: out, complete: true };
+      if (!page.endCursor || page.endCursor === cursor) invalid();
+      cursor = page.endCursor;
+    }
+    return { items: out, complete: false };
+  };
+  try {
+    return await walk("descending", pages);
+  } catch (error) {
+    if (!PRUNED.test(String((error as Error)?.message ?? error))) throw error;
+    const oldest = await walk("ascending", MAX_EVENT_PAGES);
+    return { items: oldest.items.reverse(), complete: oldest.complete };
+  }
+}
+const pageCursor = (order: "ascending" | "descending", cursor: string | null) =>
+  cursor ? (order === "descending" ? { before: cursor } : { after: cursor }) : {};
+
 function invalid(): never {
   throw new AgentOperatorChainError("invalid_source");
 }
+/** Agent Operators run on localnet and testnet; mainnet waits for its own acceptance. */
+export const agentOperatorNetwork = (network: string | undefined) => network === "localnet" || network === "testnet";
 function assertLocalnet(chain: ChainReadSession) {
-  if (chain.profile.network !== "localnet") throw new AgentOperatorChainError("unsupported_network");
+  if (!agentOperatorNetwork(chain.profile.network)) throw new AgentOperatorChainError("unsupported_network");
 }
 
 async function marker(
@@ -112,25 +150,23 @@ function validRequest(request: ReturnType<typeof DevicePairingRequestBcs.parse>,
 async function pendingPairings(chain: ChainReadSession, humanId: string, organizationId: string, nowMs: bigint, chainIdentifier: string) {
   const eventType = await chain.sdk.client.coreType("identity", "DevicePairingCreated");
   const requestIds = new Set<string>();
-  let cursor: string | null = null;
-  for (let pageNumber = 0; pageNumber < MAX_EVENT_PAGES; pageNumber++) {
-    const page = await chain.sdk.client.client.core.listEvents({
+  const listed = await newestFirst(
+    (order, cursor) => chain.sdk.client.client.core.listEvents({
       filter: { eventType },
       limit: 50,
-      order: "descending",
-      ...(cursor ? { before: cursor } : {}),
-    });
-    for (const event of page.events) {
-      if (event.eventType !== eventType) invalid();
-      const created = PairingCreatedBcs.parse(event.bcs);
-      if (created.human_id === humanId && id.test(created.request_id)) requestIds.add(created.request_id);
-      if (requestIds.size > MAX_PAIRINGS) throw new AgentOperatorChainError("directory_too_large");
-    }
-    if (!page.hasNextPage) break;
-    if (!page.endCursor || page.endCursor === cursor) invalid();
-    cursor = page.endCursor;
-    if (pageNumber === MAX_EVENT_PAGES - 1) throw new AgentOperatorChainError("directory_too_large");
+      order,
+      ...pageCursor(order, cursor),
+    }),
+    (page) => page.events,
+    MAX_EVENT_PAGES,
+  );
+  for (const event of listed.items) {
+    if (event.eventType !== eventType) invalid();
+    const created = PairingCreatedBcs.parse(event.bcs);
+    if (created.human_id === humanId && id.test(created.request_id)) requestIds.add(created.request_id);
+    if (requestIds.size > MAX_PAIRINGS) throw new AgentOperatorChainError("directory_too_large");
   }
+  if (!listed.complete) throw new AgentOperatorChainError("directory_too_large");
   const rows: AgentPairing[] = [];
   for (const requestId of requestIds) {
     const request = await chain.sdk.identity.getDevicePairing(requestId);
@@ -163,9 +199,15 @@ async function operatorRows(
     if (metadata === true) invalid();
     const [balance, history] = await Promise.all([
       chain.sdk.client.client.core.getBalance({ owner: grant.device, coinType: "0x2::sui::SUI" }),
-      chain.sdk.client.client.core.listTransactions({
-        filter: { sender: grant.device }, limit: 10, order: "descending", include: { transaction: true },
-      }),
+      // The 10 most recent; with the fallback the whole retained window is read to find them.
+      newestFirst(
+        (order, cursor) => chain.sdk.client.client.core.listTransactions({
+          filter: { sender: grant.device }, limit: 10, order, include: { transaction: true },
+          ...pageCursor(order, cursor),
+        }),
+        (page) => page.transactions,
+        1,
+      ).then((listed) => ({ transactions: listed.items.slice(0, 10) })),
     ]);
     return {
       grant,
