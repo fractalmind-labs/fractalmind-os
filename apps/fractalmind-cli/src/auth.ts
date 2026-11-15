@@ -218,7 +218,11 @@ export async function login(deployment: Deployment, options: LoginOptions): Prom
   if (pending && !reusedProfileKey) await deleteKey(pendingRef);
   const code = pairingCode(await pairingFingerprint(chain, pair));
   const result: LoginResult = { address, requestId, pairingCode: code, state: 'pending' };
-  if (!options.noWait) return { result: await waitForPairing(profile, options.waitSeconds ?? 600, code), weaker: saved.weaker };
+  if (!options.noWait) {
+    // The code must be seen while the request waits, not only once it is decided.
+    process.stderr.write(`Pairing code ${code} for ${address}\nCompare it in the FractalMind App (Team & Agents → Agent operators) and approve there. Waiting up to ${Math.round((options.waitSeconds ?? 600) / 60)} minutes…\n`);
+    return { result: await waitForPairing(profile, options.waitSeconds ?? 600, code), weaker: saved.weaker };
+  }
   return { result, weaker: saved.weaker };
 }
 
