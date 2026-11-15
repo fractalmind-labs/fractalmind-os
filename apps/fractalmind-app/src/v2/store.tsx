@@ -140,6 +140,17 @@ function useAppState() {
     };
   }, [identity, sessionAddress, organizationId, Math.floor(wallMs / 60000)]);
 
+  /** When this device's every grant in the current generation has run out: the latest expiry.
+   * An expired device cannot renew itself; only recovery with the code restores it. */
+  const deviceExpiredAtMs: number | null = useMemo(() => {
+    const grants = identity?.grants.value;
+    if (!sessionAddress || !grants || !identity) return null;
+    const clock = identity.clockMs + BigInt(Math.max(0, wallMs - identity.loadedAtMs));
+    const own = grants.filter((g) => g.device === sessionAddress && !g.revoked && g.generation === identity.human.generation);
+    if (!own.length || own.some((g) => BigInt(g.expires_at_ms) > clock)) return null;
+    return Math.max(...own.map((g) => Number(g.expires_at_ms)));
+  }, [identity, sessionAddress, Math.floor(wallMs / 60000)]);
+
   const okrTexts = useOkrTexts(
     device.session,
     profile,
@@ -203,6 +214,7 @@ function useAppState() {
     refresh: data.refresh,
     reachable: data.reachable,
     permission,
+    deviceExpiredAtMs,
     okrTexts,
     now,
     wallMs,
