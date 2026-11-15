@@ -15,7 +15,7 @@ import {
   isNearExpiry,
   operatorActions,
 } from "../../agent-operators";
-import { type AgentOperatorDirectory, type AgentOperatorRow } from "../../agent-operator-chain";
+import { type AgentOperatorDirectory, type AgentOperatorRow, agentOperatorNetwork } from "../../agent-operator-chain";
 import { useApp } from "../store";
 import { Btn, Dialog, Icon, dateTime, shortId, sui, until, useLang, useT } from "../ui";
 import { useAgentOperatorDirectory } from "../agent-operator-directory";
@@ -138,7 +138,7 @@ function RequestDialog({ request, onClose, done }: { request: AgentOperatorDirec
   function funding() { if (!fundTargetGrantId) throw new AgentOperatorFlowError("invalid_input"); return { kind: "fund", targetGrantId: fundTargetGrantId, grantId, mist: suiMist(fundText) } satisfies AgentOperatorOperation; }
   async function quoteFunding() { try { setBusy(true); setError(null); const result = await (await openFlow()).prepare(funding()); if ("status" in result) setFundReceipt(result); else setFundQuote(result); } catch (e) { setError(failureText(e, t)); } finally { setBusy(false); } }
   async function submitFunding() { if (!fundQuote) return; try { setBusy(true); setError(null); const result = await (await openFlow()).submit(fundQuote); setFundReceipt(result); setFundQuote(null); if (result.status === "confirmed") { app.refresh(); done(); } } catch (e) { setError(failureText(e, t)); } finally { setBusy(false); } }
-  const canSign = Boolean(grantId) && isTauri() && app.profile?.network === "localnet";
+  const canSign = Boolean(grantId) && isTauri() && agentOperatorNetwork(app.profile?.network);
   const fundingStep = receipt?.status === "confirmed" && fund;
   return <Dialog title={t("批准 Agent 授权", "Approve Agent authorization")} sub={t("先在 Agent 终端核对这组配对码。", "First compare this code in the Agent terminal.")} onClose={onClose} footer={fundingStep ? <QuoteActions quote={fundQuote} busy={busy} onQuote={() => void quoteFunding()} onSubmit={() => void submitFunding()} onCancel={onClose} /> : <QuoteActions quote={quote} busy={busy} onQuote={() => void quoteApproval()} onSubmit={() => void submitApproval()} onCancel={onClose} />}>
     <div className="note info"><Icon name="shield" /><div>{t("Agent 永远不能审批、管理主机或改权限；这些仍需你在这台设备上签名。", "An Agent can never approve, manage hosts, or change permissions; you still sign those actions on this device.")}</div></div>
@@ -185,7 +185,7 @@ function OperatorDialog({
 
 function PendingCard({ request, open }: { request: AgentOperatorDirectory["pending"][number]; open: (kind: "approve" | "reject") => void }) {
   const t = useT(); const app = useApp();
-  const allowed = isTauri() && app.profile?.network === "localnet" && Boolean(app.permission?.approve);
+  const allowed = isTauri() && agentOperatorNetwork(app.profile?.network) && Boolean(app.permission?.approve);
   return <article className="card operator-card">
     <div className="row between top"><div><div className="strong">{request.request.device_name}</div><div className="small muted">{request.request.platform}</div></div><span className="chip outline mono">{request.code}</span></div>
     <dl className="kv mt-12"><dt>{t("请求者", "Requester")}</dt><dd><CopyAddress value={request.request.device} /></dd><dt>{t("配对码", "Pairing code")}</dt><dd><code className="mono">{request.code}</code></dd><dt>{t("剩余时间", "Time left")}</dt><dd>{until(Number(request.request.expires_at_ms), t, Number(app.now))}</dd></dl>
@@ -196,7 +196,7 @@ function PendingCard({ request, open }: { request: AgentOperatorDirectory["pendi
 
 function OperatorCard({ row, open }: { row: AgentOperatorRow; open: (kind: "change" | "revoke" | "fund") => void }) {
   const t = useT(); const lang = useLang(); const app = useApp();
-  const allowed = isTauri() && app.profile?.network === "localnet" && Boolean(app.permission?.approve);
+  const allowed = isTauri() && agentOperatorNetwork(app.profile?.network) && Boolean(app.permission?.approve);
   const nearExpiry = isNearExpiry(row.grant.expires_at_ms, app.now);
   return <article className="card operator-card">
     <div className="operator-card-header"><div><div className="strong">{row.label}</div><div className="small muted"><CopyAddress value={row.grant.device} /></div></div><span className={`chip ${nearExpiry ? "warn" : "outline"}`}>{nearExpiry ? t("即将到期", "Expiring soon") : t("有效", "Active")}</span></div>
@@ -216,7 +216,7 @@ export default function AgentOperators() {
   const inactive = directory?.inactive ?? [];
   return <section className="sec agent-operators" aria-label={t("Agent 操作员", "Agent operators")}>
     <div className="sec-h"><div><h2>{t("Agent 操作员", "Agent operators")}</h2><p className="small muted">{t("为 Agent CLI 授权、续期或撤销。授权始终来自链上记录。", "Authorize, renew, or revoke Agent CLI access. Authority always comes from the chain.")}</p></div><Btn label={t("刷新", "Refresh")} icon="refresh" size="sm" onClick={refresh} /></div>
-    {!app.profile ? <div className="note info"><Icon name="help" /><div>{t("连接本地网络后可查看 Agent 操作员。", "Connect to localnet to view Agent operators.")}</div></div> : app.profile.network !== "localnet" ? <div className="note info"><Icon name="help" /><div>{t("此 Alpha 页面只在本地网络运行；不会在测试网或主网发起交易。", "This alpha page runs on localnet only; it will not initiate testnet or mainnet transactions.")}</div></div> : state.kind === "loading" ? <div className="note info"><Icon name="refresh" className="spin" /><div>{t("正在从链上读取 Agent 操作员…", "Reading Agent operators from the chain…")}</div></div> : state.kind === "error" ? <div className="note warn"><Icon name="help" /><div>{t("无法验证链上的 Agent 操作员记录。请刷新后重试。", "Could not verify Agent operator records on-chain. Refresh and try again.")}</div></div> : <>
+    {!app.profile ? <div className="note info"><Icon name="help" /><div>{t("连接本地网络或测试网后可查看 Agent 操作员。", "Connect to localnet or testnet to view Agent operators.")}</div></div> : !agentOperatorNetwork(app.profile.network) ? <div className="note info"><Icon name="help" /><div>{t("此 Alpha 页面只在本地网络和测试网运行；不会在主网发起交易。", "This alpha page runs on localnet and testnet only; it will not initiate mainnet transactions.")}</div></div> : state.kind === "loading" ? <div className="note info"><Icon name="refresh" className="spin" /><div>{t("正在从链上读取 Agent 操作员…", "Reading Agent operators from the chain…")}</div></div> : state.kind === "error" ? <div className="note warn"><Icon name="help" /><div>{t("无法验证链上的 Agent 操作员记录。请刷新后重试。", "Could not verify Agent operator records on-chain. Refresh and try again.")}</div></div> : <>
       <section className="operator-section"><div className="sec-h"><h3>{t("待处理请求", "Pending requests")}</h3><span className="small muted">{pending.length}</span></div>{pending.length ? <div className="operator-grid">{pending.map((request) => <PendingCard key={request.request.id} request={request} open={(kind) => setSelected({ kind, request })} />)}</div> : <p className="small muted">{t("没有待处理的 Agent 配对请求。", "No pending Agent pairing requests.")}</p>}</section>
       <section className="operator-section"><div className="sec-h"><h3>{t("当前操作员", "Active operators")}</h3><span className="small muted">{active.length}</span></div>{active.length ? <div className="operator-grid">{active.map((row) => <OperatorCard key={row.grant.id} row={row} open={(kind) => setSelected({ kind, row })} />)}</div> : <p className="small muted">{t("还没有正在生效的 Agent 操作员。", "No active Agent operators yet.")}</p>}</section>
       {inactive.length > 0 && <details className="operator-inactive"><summary>{t("已撤销 / 已过期", "Revoked / expired")} <span className="small muted">{inactive.length}</span></summary><div className="grid-2 mt-12">{inactive.map((row) => <article className="card" key={row.grant.id}><div className="strong">{row.label}</div><div className="small muted">{actionText(row.grant.actions, t)} · {row.grant.revoked ? t("已撤销", "Revoked") : t("已过期", "Expired")}</div><CopyAddress value={row.grant.device} /></article>)}</div></details>}
