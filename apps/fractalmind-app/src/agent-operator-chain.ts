@@ -59,8 +59,10 @@ export type AgentOperatorDirectory = {
 function invalid(): never {
   throw new AgentOperatorChainError("invalid_source");
 }
+/** Agent Operators run on localnet and testnet; mainnet waits for its own acceptance. */
+export const agentOperatorNetwork = (network: string | undefined) => network === "localnet" || network === "testnet";
 function assertLocalnet(chain: ChainReadSession) {
-  if (chain.profile.network !== "localnet") throw new AgentOperatorChainError("unsupported_network");
+  if (!agentOperatorNetwork(chain.profile.network)) throw new AgentOperatorChainError("unsupported_network");
 }
 
 async function marker(

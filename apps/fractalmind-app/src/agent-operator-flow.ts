@@ -13,7 +13,7 @@ import { ChainReadSession } from "./chain";
 import { DeviceIdentityVerifier } from "./device-identity";
 import { NativeDeviceSigner, type NativeInvoke } from "./native-device";
 import { asDeviceActions, operatorExpiryAt } from "./agent-operators";
-import { isAgentPairing } from "./agent-operator-chain";
+import { isAgentPairing, agentOperatorNetwork } from "./agent-operator-chain";
 import { organizationKeyVersion, wrapOrgKeysForAgent } from "./pairing";
 
 const id = /^0x[0-9a-f]{64}$/;
@@ -36,7 +36,7 @@ function fail(code: AgentOperatorFlowError["code"]): never {
   throw new AgentOperatorFlowError(code);
 }
 function localnet(chain: ChainReadSession) {
-  if (chain.profile.network !== "localnet") fail("unsupported_network");
+  if (!agentOperatorNetwork(chain.profile.network)) fail("unsupported_network");
 }
 function text(value: string) {
   const normalized = value.trim();
@@ -160,7 +160,7 @@ export class AgentOperatorFlow {
         typeof label !== "string" ||
         !request ||
         typeof encryptedKeys !== "string" ||
-        network !== "localnet"
+        !agentOperatorNetwork(network)
       )
         fail("invalid_source");
       // The native overload keeps the owner keyring in the vault; its pure

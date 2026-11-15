@@ -38,7 +38,7 @@ function failureText(error: unknown, t: (zh: string, en: string) => string) {
   const code = error instanceof AgentOperatorFlowError ? error.code : "unavailable";
   return t(
     ({ invalid_input: "请检查填写内容。", invalid_source: "链上数据无法验证。", state_changed: "链上状态已变化，请刷新后重新操作。", unsupported_network: "此页面仅支持本地网络。", invalid_quote: "这份报价已失效，请重新获取。", unavailable: "暂时无法读取或签名，请检查本机与网络。" } as Record<string, string>)[code],
-    ({ invalid_input: "Check the entered values.", invalid_source: "The on-chain data could not be verified.", state_changed: "The on-chain state changed. Refresh and try again.", unsupported_network: "This page is available on localnet only.", invalid_quote: "This quote is no longer valid. Get a new one.", unavailable: "Reading or signing is temporarily unavailable; check this device and the network." } as Record<string, string>)[code],
+    ({ invalid_input: "Check the entered values.", invalid_source: "The on-chain data could not be verified.", state_changed: "The on-chain state changed. Refresh and try again.", unsupported_network: "This page is available on localnet and testnet only.", invalid_quote: "This quote is no longer valid. Get a new one.", unavailable: "Reading or signing is temporarily unavailable; check this device and the network." } as Record<string, string>)[code],
   );
 }
 function CopyAddress({ value }: { value: string }) {
