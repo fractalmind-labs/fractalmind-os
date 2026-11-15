@@ -6,3 +6,35 @@
 a.item { color: inherit; text-decoration: none; }
 a.item:hover { background: var(--hover); }
 .dialog .dialog-b > dialog { position: static; }
+
+/* Agent CLI's human operator surface.  It intentionally uses the existing
+ * prototype cards/sheets rather than creating a second permission UI. */
+.agent-operators { scroll-margin-top: 18px; }
+.agent-operators > .sec-h { align-items: flex-start; }
+.operator-section { margin-top: 18px; }
+.operator-section h3 { font-size: 15px; }
+.operator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; min-width: 0; }
+.operator-card { width: 100%; max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.operator-card-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; min-width: 0; }
+.operator-card-header > :first-child { min-width: 0; }
+.operator-request-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.operator-activity { border-top: 1px solid var(--border); padding-top: 11px; }
+.operator-activity ul { list-style: none; padding: 0; margin: 7px 0 0; display: grid; gap: 6px; }
+.operator-activity li { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 8px; align-items: center; color: var(--text-2); font-size: 11.5px; }
+.operator-activity li span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.operator-activity li span:last-child { color: var(--text-3); }
+.operator-inactive { margin-top: 18px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface-2); }
+.operator-inactive summary { cursor: pointer; font-weight: 650; }
+.operator-second-step { display: block; margin-top: 4px; }
+.agent-operators .check { display: flex; gap: 8px; align-items: flex-start; }
+.agent-operators .check input { width: auto; margin-top: 3px; }
+/* A dialog note must remain inside the phone sheet even when it contains an
+ * uninterrupted localized sentence. */
+.dialog .note { min-width: 0; }
+.dialog .note > div { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; word-break: break-all; }
+@media (max-width: 680px) {
+  .operator-grid { grid-template-columns: minmax(0, 1fr); }
+  .operator-card { overflow: hidden; }
+  .operator-activity li { grid-template-columns: 75px minmax(0, 1fr); }
+  .operator-activity li span:last-child { grid-column: 2; }
+}

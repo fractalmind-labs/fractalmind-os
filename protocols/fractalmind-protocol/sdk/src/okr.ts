@@ -62,6 +62,13 @@ export class OkrApi {
     const tx = this.fm.useTransaction(input.tx);
     return this.call(tx, 'create_draft', [...this.authorized(tx, input), tx.pure.string(input.logicalId), ...this.criteria(tx, input), ...this.body(tx, input), tx.object('0x6')]);
   }
+  /** Bounded Agent Operator writer: it can create an encrypted DRAFT only.
+   * Activation, assignment and every non-draft transition remain human APPROVE
+   * operations in their existing builders. */
+  createDraftByAgent(input: Authorized & Criteria & Body & { logicalId: string }) {
+    const tx = this.fm.useTransaction(input.tx);
+    return this.call(tx, 'create_draft_by_agent', [...this.authorized(tx, input), tx.pure.string(input.logicalId), ...this.criteria(tx, input), ...this.body(tx, input), tx.object('0x6')]);
+  }
   /** @deprecated New protocol approvals require handover.confirmOkr; retained for historical package ABI. */
   activate(input: Mutation & Body & { membershipId: string; bindingId: string; managedAgentId: string; workspaceHash: Uint8Array; boundaryHash: Uint8Array; budgetAsset: string; budgetLimit: U64; expiresAtMs: U64; expectedRecordRevision: U64 }) {
     const tx = this.fm.useTransaction(input.tx);

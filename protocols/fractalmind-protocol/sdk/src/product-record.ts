@@ -43,6 +43,16 @@ export class ProductRecordApi {
     tx.moveCall({ target: `${this.fm.packageId}::product_record::save`, arguments: [tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.pure.u8(PRODUCT_RECORD_KINDS[input.kind]), tx.pure.string(input.logicalId), tx.pure.u64(toBigInt(input.expectedRevision)), tx.pure.u64(toBigInt(input.keyVersion)), bytesArgument(tx, this.fm.packageId, input.encryptedBody), tx.object('0x6')] });
     return tx;
   }
+  /** File an Agent-authored approval request.  The chain fixes kind=approval
+   * and the reserved logical-id namespace; this builder rejects ambiguity
+   * before a transaction is quoted. */
+  saveAgentRequest(input: { organizationId: string; humanId: string; grantId: string; logicalId: string; expectedRevision: bigint | string | number; keyVersion: bigint | string | number; encryptedBody: Uint8Array; tx?: Transaction }): Transaction {
+    if (!input.logicalId.startsWith('agent-request:')) throw new Error('Agent approval request logical ID must start with agent-request:.');
+    if (input.encryptedBody.length < 32 || input.encryptedBody.length > 65536) throw new Error('Encrypted body must be 32..65536 bytes.');
+    const tx = this.fm.useTransaction(input.tx);
+    tx.moveCall({ target: `${this.fm.packageId}::product_record::save_agent_request`, arguments: [tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.pure.u8(PRODUCT_RECORD_KINDS.approval), tx.pure.string(input.logicalId), tx.pure.u64(toBigInt(input.expectedRevision)), tx.pure.u64(toBigInt(input.keyVersion)), bytesArgument(tx, this.fm.packageId, input.encryptedBody), tx.object('0x6')] });
+    return tx;
+  }
   async encryptAndSave(input: { organizationId: string; humanId: string; grantId: string; kind: ProductRecordKind; logicalId: string; expectedRevision: bigint | string | number; keyVersion: bigint | string | number; plaintext: Uint8Array; key: Uint8Array; tx?: Transaction }): Promise<Transaction> {
     if (input.plaintext.length > 65504) throw new Error('Plaintext exceeds the encrypted 64 KiB record capacity.');
     const context = recordContext(input.organizationId, input.kind, input.logicalId, toBigInt(input.expectedRevision) + 1n, input.keyVersion);

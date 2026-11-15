@@ -10,13 +10,14 @@ import { agentName, hostName } from "../display";
 import { Notifications, Palette, useUnread } from "./Palette";
 import { useDialogs } from "./dialogs";
 import { organizationKind, organizationKindText } from "../organization-create";
+import { useAgentOperatorDirectory } from "./agent-operator-directory";
 
 type Nav = { id: PageName; icon: string; zh: string; en: string };
 const NAV: Nav[] = [
   { id: "workbench", icon: "home", zh: "工作台", en: "Workbench" },
   { id: "okrs", icon: "target", zh: "OKR", en: "OKRs" },
   { id: "hosts", icon: "server", zh: "主机与算力", en: "Hosts & compute" },
-  { id: "agents", icon: "users", zh: "团队与 Agents", en: "Team & Agents" },
+  { id: "agents", icon: "users", zh: "成员与 Agent", en: "Members & Agents" },
   { id: "memory", icon: "book", zh: "记忆与成果", en: "Memory & results" },
   { id: "governance", icon: "shield", zh: "治理与审批", en: "Governance" },
 ];
@@ -116,6 +117,7 @@ function Sidebar({ route }: { route: Route }) {
   const t = useT();
   const meta = useOrgMeta();
   const counts = orgCounts(app);
+  const operators = useAgentOperatorDirectory();
   const [menu, setMenu] = useState<DOMRect | null>(null);
   const link = (n: Nav) => {
     const badge =
@@ -123,6 +125,8 @@ function Sidebar({ route }: { route: Route }) {
         <span className="count">{counts.decisions}</span>
       ) : n.id === "hosts" && counts.hostsAttention ? (
         <span className="count soft">{counts.hostsAttention}</span>
+      ) : n.id === "agents" && operators.state.kind === "ready" && operators.state.directory.pending.length ? (
+        <span className="count">{operators.state.directory.pending.length}</span>
       ) : null;
     return (
       <a key={n.id} className="sb-link" href={`#/${n.id}`} aria-current={route.name === n.id ? "page" : undefined}>

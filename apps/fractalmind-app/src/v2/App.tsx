@@ -12,6 +12,7 @@ import { DialogHost } from "./dialogs";
 import { LockScreen, Shell } from "./Shell";
 import { Icon, LogoDefs, useT } from "./ui";
 import Workbench from "./pages/Workbench";
+import { AgentOperatorMock } from "./agent-operator-mock";
 
 const Okrs = lazy(() => import("./pages/Okrs"));
 const Hosts = lazy(() => import("./pages/Hosts"));
@@ -76,6 +77,9 @@ function Root() {
 }
 
 export function App() {
+  // A screenshot fixture is development-only and never receives a connection,
+  // local device profile, signer, or transaction function in a production build.
+  if (import.meta.env.DEV && new URLSearchParams(location.search).get("mock") === "agent-operators") return <AgentOperatorMock />;
   return (
     <>
       <LogoDefs />

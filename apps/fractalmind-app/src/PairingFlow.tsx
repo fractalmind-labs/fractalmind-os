@@ -160,6 +160,9 @@ export default function PairingFlow({
       throw new PairingError("sync_pending");
     if (pairingId) {
       const value = await current.inspect(pairingId);
+      // Agent-marked requests belong exclusively to the Agent 操作员 page.
+      // Do not render them as an ordinary device request even read-only.
+      if (value.agentPairing) throw new PairingError("agent_request");
       if (value.request.organization_id !== org)
         throw new PairingError("invalid_source");
       if (!managing && value.request.device !== current.device.device.address)
@@ -556,7 +559,13 @@ export default function PairingFlow({
                   <code className="long-id">{state.request.device}</code>
                 </dd>
                 <dt>
-                  {t("两端核对指纹", "Fingerprint to compare on both ends")}
+                  {t("6 位配对码", "Six-digit pairing code")}
+                </dt>
+                <dd>
+                  <code>{state.pairingCode}</code>
+                </dd>
+                <dt>
+                  {t("两端核对完整指纹", "Full fingerprint to compare on both ends")}
                 </dt>
                 <dd>
                   <code className="long-id">{state.fingerprint}</code>
@@ -809,6 +818,11 @@ export default function PairingFlow({
                     "密钥版本或组织分隔不满足分享条件。先核对独立组织密钥；不会分享其他组织的密钥。",
                     "Key version or organization isolation does not permit sharing. Check independent organization keys; other organizations' keys will not be shared.",
                   )
+                : error === "agent_request"
+                  ? t(
+                      "这是 Agent 配对请求；请在「成员与 Agent」里的「Agent 操作员」页面处理。普通设备配对不会显示或批准它。",
+                      "This is an Agent pairing request. Handle it under Agent operators in Members & Agents; ordinary device pairing does not show or approve it.",
+                    )
                 : t(
                     "配对未能继续，请查询原交易并重新核对来源。",
                     "Pairing could not continue; query the original transaction and recheck sources.",

@@ -23,12 +23,17 @@ module fractalmind_protocol::identity {
     const E_RECOVERY_USED: u64 = 9005;
     const E_INPUT: u64 = 9006;
     const E_REGISTRY: u64 = 9007;
+    /// An Agent Operator is permanently bounded to READ/OPERATE within one
+    /// organization. Keep this separate from generic bad-input failures so
+    /// callers can distinguish an attempted privilege escalation.
+    const E_AGENT_OPERATOR: u64 = 9008;
     const READ: u8 = 1;
     const OPERATE: u8 = 2;
     const APPROVE: u8 = 3;
     const MANAGE_HOSTS: u8 = 4;
     const WEEK: u64 = 604800000;
     const MAX_TTL: u64 = 31536000000;
+    const AGENT_OPERATOR_MAX_TTL: u64 = 2592000000;
     const MAX_BACKUP: u64 = 65536;
     const PAIRING_TTL: u64 = 600000;
 
@@ -100,11 +105,19 @@ module fractalmind_protocol::identity {
         device_name: String, platform: String, expires_at_ms: u64,
         status: u8, grant_id: Option<ID>,
     }
+    /// New request kind is deliberately a dynamic field: DevicePairingRequest
+    /// is already on chain and must keep its upgrade-compatible layout.
+    public struct AgentPairingKey has copy, drop, store {}
+    /// New grant metadata is likewise a dynamic field so DeviceGrant's stable
+    /// serialized layout is never widened by the Agent CLI feature.
+    public struct AgentOperatorKey has copy, drop, store {}
+    public struct AgentOperator has copy, drop, store { label: String, approved_by: ID }
     public struct DevicePairingCreated has copy, drop { request_id: ID, human_id: ID, device: address }
     public struct DevicePairingResolved has copy, drop { request_id: ID, status: u8, grant_id: Option<ID> }
     public struct IdentityCreated has copy, drop { human_id: ID, recovery_record: ID, device_grant: ID }
     public struct DeviceGranted has copy, drop { human_id: ID, grant_id: ID, device: address, generation: u64 }
     public struct DeviceRevoked has copy, drop { human_id: ID, grant_id: ID, version: u64 }
+    public struct AgentOperatorApproved has copy, drop { human_id: ID, grant_id: ID, org_id: ID, approved_by: ID }
     public struct IdentityRecovered has copy, drop { human_id: ID, old_record: ID, new_record: ID, generation: u64 }
     public struct RecoveryCodeReplaced has copy, drop { human_id: ID, old_record: ID, new_record: ID, version: u64 }
     public struct OrganizationBound has copy, drop { human_id: ID, org_id: ID }
@@ -146,7 +159,8 @@ module fractalmind_protocol::identity {
             human_id: object::id(&human), record_id: object::id(&record), version: 1,
         });
         let grant_id = new_grant(registry, &mut human, device, option::none(), all_actions(),
-            clock::timestamp_ms(clock) + 30 * 86400000, device_encryption_key, encrypted_device_keys, ctx);
+            clock::timestamp_ms(clock) + 30 * 86400000, device_encryption_key, encrypted_device_keys,
+            option::none(), ctx);
         event::emit(IdentityCreated { human_id: object::id(&human), recovery_record: object::id(&record), device_grant: grant_id });
         transfer::share_object(record);
         transfer::share_object(human);
@@ -156,6 +170,21 @@ module fractalmind_protocol::identity {
     public fun create_device_pairing(
         human: &HumanIdentity, org: &Organization, signing_key: vector<u8>, encryption_key: vector<u8>,
         device_name: String, platform: String, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        create_pairing(human, org, signing_key, encryption_key, device_name, platform, false, clock, ctx);
+    }
+    /// Agent requests carry an additive dynamic marker rather than changing the
+    /// existing DevicePairingRequest layout. The requester still proves its
+    /// independent signing-key possession through the transaction sender.
+    public fun create_agent_pairing(
+        human: &HumanIdentity, org: &Organization, signing_key: vector<u8>, encryption_key: vector<u8>,
+        device_name: String, platform: String, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        create_pairing(human, org, signing_key, encryption_key, device_name, platform, true, clock, ctx);
+    }
+    fun create_pairing(
+        human: &HumanIdentity, org: &Organization, signing_key: vector<u8>, encryption_key: vector<u8>,
+        device_name: String, platform: String, agent: bool, clock: &Clock, ctx: &mut TxContext,
     ) {
         let device = signing_address(&signing_key);
         assert!(device == tx_context::sender(ctx), E_PERMISSION);
@@ -168,12 +197,13 @@ module fractalmind_protocol::identity {
         assert!(platform == string::utf8(b"macos") || platform == string::utf8(b"windows")
             || platform == string::utf8(b"ubuntu") || platform == string::utf8(b"ios")
             || platform == string::utf8(b"android"), E_INPUT);
-        let request = DevicePairingRequest {
+        let mut request = DevicePairingRequest {
             id: object::new(ctx), human_id: object::id(human), organization_id: object::id(org),
             generation: human.generation, device, signing_public_key: signing_key,
             encryption_public_key: encryption_key, device_name, platform,
             expires_at_ms: clock::timestamp_ms(clock) + PAIRING_TTL, status: 0, grant_id: option::none(),
         };
+        if (agent) df::add(&mut request.id, AgentPairingKey {}, true);
         event::emit(DevicePairingCreated { request_id: object::id(&request), human_id: request.human_id, device });
         transfer::share_object(request);
     }
@@ -186,27 +216,62 @@ module fractalmind_protocol::identity {
     ) {
         assert_can(human, authorizer, org, APPROVE, clock, ctx);
         assert_pairing(human, org, request, clock);
+        // An agent-marked request may only produce its bounded grant through
+        // approve_agent_operator; normal device approval must never strip that
+        // invariant by selecting broader ordinary-device actions.
+        assert!(!is_agent_pairing(request), E_AGENT_OPERATOR);
         check_actions(&actions);
         // Data access needs read permission; later explicit changes may remove it.
         let read = READ;
         assert!(vector::contains(&actions, &read), E_INPUT);
         check_expiry(expires_at_ms, clock);
         let grant_id = new_grant(registry, human, request.device, option::some(object::id(org)), actions,
-            expires_at_ms, request.encryption_public_key, vector[], ctx);
+            expires_at_ms, request.encryption_public_key, vector[], option::none(), ctx);
         request.status = 1;
         request.grant_id = option::some(grant_id);
         event::emit(DevicePairingResolved { request_id: object::id(request), status: 1, grant_id: request.grant_id });
+    }
+    /// The only Agent-operator approval entry point. It deliberately does not
+    /// accept a caller-selected scope or marker: both come from the checked
+    /// pairing request and approving DeviceGrant respectively.
+    public fun approve_agent_operator(
+        registry: &mut IdentityRegistry, human: &mut HumanIdentity, authorizer: &DeviceGrant,
+        request: &mut DevicePairingRequest, org: &Organization, actions: vector<u8>,
+        expires_at_ms: u64, encrypted_keys: vector<u8>, label: String, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert_can(human, authorizer, org, APPROVE, clock, ctx);
+        assert_pairing(human, org, request, clock);
+        assert!(is_agent_pairing(request), E_AGENT_OPERATOR);
+        check_agent_actions(&actions);
+        check_agent_expiry(expires_at_ms, clock);
+        let label_len = vector::length(string::as_bytes(&label));
+        assert!(label_len > 0 && label_len <= 128, E_INPUT);
+        // This envelope is wrapped to request.encryption_public_key by the
+        // approving human.  Validate its bounded storage just like ordinary
+        // key distribution; the Agent never supplies its own readable data.
+        check_backup(&encrypted_keys);
+        let approved_by = object::id(authorizer);
+        let grant_id = new_grant(registry, human, request.device, option::some(object::id(org)), actions,
+            expires_at_ms, request.encryption_public_key, encrypted_keys,
+            option::some(AgentOperator { label, approved_by }), ctx);
+        request.status = 1;
+        request.grant_id = option::some(grant_id);
+        event::emit(DevicePairingResolved { request_id: object::id(request), status: 1, grant_id: request.grant_id });
+        event::emit(AgentOperatorApproved { human_id: object::id(human), grant_id, org_id: object::id(org), approved_by });
     }
     public fun reject_device_pairing(
         human: &HumanIdentity, authorizer: &DeviceGrant, org: &Organization,
         request: &mut DevicePairingRequest, clock: &Clock, ctx: &TxContext,
     ) {
+        // Rejecting either pairing kind creates no grant, so this intentionally
+        // remains available for AgentPairingKey requests too.
         assert_can(human, authorizer, org, APPROVE, clock, ctx);
         assert_pairing(human, org, request, clock);
         request.status = 2;
         event::emit(DevicePairingResolved { request_id: object::id(request), status: 2, grant_id: option::none() });
     }
     public fun cancel_device_pairing(request: &mut DevicePairingRequest, ctx: &TxContext) {
+        // Requesters may cancel either kind; cancellation only resolves it.
         assert!(request.device == tx_context::sender(ctx), E_PERMISSION);
         assert!(request.status == 0, E_INPUT);
         request.status = 3;
@@ -230,7 +295,7 @@ module fractalmind_protocol::identity {
             assert_can(human, authorizer, org, READ, clock, ctx);
         } else assert_can(human, authorizer, org, APPROVE, clock, ctx);
         new_grant(registry, human, device, option::some(object::id(org)), vector[READ],
-            clock::timestamp_ms(clock) + WEEK, encryption_key, encrypted_keys, ctx);
+            clock::timestamp_ms(clock) + WEEK, encryption_key, encrypted_keys, option::none(), ctx);
     }
 
     public fun change_device_permissions(
@@ -240,8 +305,13 @@ module fractalmind_protocol::identity {
         assert_can(human, authorizer, org, APPROVE, clock, ctx);
         assert!(target.human_id == object::id(human) && target.generation == human.generation && !target.revoked, E_REVOKED);
         assert!(target.org_scope == option::some(object::id(org)), E_SCOPE);
-        check_actions(&actions);
-        check_expiry(expires_at_ms, clock);
+        if (is_agent_operator(target)) {
+            check_agent_actions(&actions);
+            check_agent_expiry(expires_at_ms, clock);
+        } else {
+            check_actions(&actions);
+            check_expiry(expires_at_ms, clock);
+        };
         target.actions = actions;
         target.expires_at_ms = expires_at_ms;
         target.version = target.version + 1;
@@ -269,7 +339,8 @@ module fractalmind_protocol::identity {
     ) {
         assert_root(human, authorizer, clock, ctx);
         check_expiry(expires_at_ms, clock);
-        new_grant(registry, human, device, option::none(), all_actions(), expires_at_ms, encryption_key, encrypted_keys, ctx);
+        new_grant(registry, human, device, option::none(), all_actions(), expires_at_ms, encryption_key, encrypted_keys,
+            option::none(), ctx);
     }
 
     public fun update_recovery_backup(
@@ -339,7 +410,8 @@ module fractalmind_protocol::identity {
         rotate_recovery(registry, human, old, next_signing_key, next_encryption_key, next_backup, ctx);
         event::emit(IdentityRecovered { human_id: object::id(human), old_record: object::id(old), new_record: human.recovery_record, generation: human.generation });
         new_grant(registry, human, device, option::none(), all_actions(),
-            clock::timestamp_ms(clock) + 30 * 86400000, device_encryption_key, encrypted_device_keys, ctx);
+            clock::timestamp_ms(clock) + 30 * 86400000, device_encryption_key, encrypted_device_keys,
+            option::none(), ctx);
     }
 
     public fun replace_recovery_code(
@@ -390,16 +462,20 @@ module fractalmind_protocol::identity {
 
     fun new_grant(
         registry: &mut IdentityRegistry, human: &mut HumanIdentity, device: address, scope: Option<ID>,
-        actions: vector<u8>, expires_at_ms: u64, encryption_key: vector<u8>, encrypted_keys: vector<u8>, ctx: &mut TxContext,
+        actions: vector<u8>, expires_at_ms: u64, encryption_key: vector<u8>, encrypted_keys: vector<u8>,
+        agent_operator: Option<AgentOperator>, ctx: &mut TxContext,
     ): ID {
         assert!(human.registry_id == object::id(registry) && device != @0x0, E_REGISTRY);
         assert!(!table::contains(&registry.recoveries, device), E_INPUT);
         check_encryption_key(&encryption_key);
         check_backup(&encrypted_keys);
-        let grant = DeviceGrant {
+        let mut grant = DeviceGrant {
             id: object::new(ctx), human_id: object::id(human), device, org_scope: scope, actions,
             expires_at_ms, revoked: false, version: 1, generation: human.generation,
             encryption_public_key: encryption_key, encrypted_keys,
+        };
+        if (option::is_some(&agent_operator)) {
+            df::add(&mut grant.id, AgentOperatorKey {}, option::destroy_some(agent_operator));
         };
         let grant_id = object::id(&grant);
         vector::push_back(&mut human.grants, grant_id);
@@ -511,12 +587,29 @@ module fractalmind_protocol::identity {
         let now = clock::timestamp_ms(clock);
         assert!(expires > now && expires - now <= MAX_TTL, E_EXPIRED);
     }
+    fun check_agent_expiry(expires: u64, clock: &Clock) {
+        let now = clock::timestamp_ms(clock);
+        assert!(expires > now && expires - now <= AGENT_OPERATOR_MAX_TTL, E_EXPIRED);
+    }
     fun check_actions(actions: &vector<u8>) {
         assert!(vector::length(actions) > 0 && vector::length(actions) <= 4, E_INPUT);
         let mut i = 0;
         while (i < vector::length(actions)) {
             let action = actions[i];
             assert!(action >= READ && action <= MANAGE_HOSTS, E_INPUT);
+            let mut j = 0;
+            while (j < i) { assert!(actions[j] != action, E_INPUT); j = j + 1; };
+            i = i + 1;
+        };
+    }
+    fun check_agent_actions(actions: &vector<u8>) {
+        assert!(vector::length(actions) > 0 && vector::length(actions) <= 2, E_INPUT);
+        let mut i = 0;
+        while (i < vector::length(actions)) {
+            let action = actions[i];
+            assert!(action >= READ && action <= MANAGE_HOSTS, E_INPUT);
+            assert!(action != APPROVE && action != MANAGE_HOSTS, E_AGENT_OPERATOR);
+            assert!(action == READ || action == OPERATE, E_INPUT);
             let mut j = 0;
             while (j < i) { assert!(actions[j] != action, E_INPUT); j = j + 1; };
             i = i + 1;
@@ -543,6 +636,16 @@ module fractalmind_protocol::identity {
     public fun grant_expiry(grant: &DeviceGrant): u64 { grant.expires_at_ms }
     public fun grant_actions(grant: &DeviceGrant): vector<u8> { grant.actions }
     public fun grant_scope(grant: &DeviceGrant): Option<ID> { grant.org_scope }
+    public fun is_agent_pairing(request: &DevicePairingRequest): bool { df::exists_(&request.id, AgentPairingKey {}) }
+    public fun is_agent_operator(grant: &DeviceGrant): bool { df::exists_(&grant.id, AgentOperatorKey {}) }
+    public fun agent_operator_label(grant: &DeviceGrant): &String {
+        let marker: &AgentOperator = df::borrow(&grant.id, AgentOperatorKey {});
+        &marker.label
+    }
+    public fun agent_operator_approved_by(grant: &DeviceGrant): ID {
+        let marker: &AgentOperator = df::borrow(&grant.id, AgentOperatorKey {});
+        marker.approved_by
+    }
     public fun pairing_status(request: &DevicePairingRequest): u8 { request.status }
     public fun pairing_grant(request: &DevicePairingRequest): Option<ID> { request.grant_id }
     public fun grant_keys(grant: &DeviceGrant): vector<u8> { grant.encrypted_keys }

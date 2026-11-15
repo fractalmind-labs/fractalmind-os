@@ -5,6 +5,7 @@ import { normalizeSuiAddress, toBase64 } from "@mysten/sui/utils";
 import { MemoryTransactionJournal } from "@fractalmind-labs/fractalmind-sdk";
 import type { SelfPayTransactionOutcome } from "@fractalmind-labs/fractalmind-sdk";
 import { DevicePairing, pairingFingerprint } from "../src/pairing";
+import { pairingCode } from "@fractalmind-labs/fractalmind-sdk";
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
 import { ChainReadSession } from "../src/chain";
 
@@ -26,6 +27,7 @@ test("pairing fingerprint binds both independent keys, chain, identity, scope an
   };
   const base = await pairingFingerprint("chainA", request);
   assert.equal(base.length, 64);
+  assert.match(pairingCode(base), /^\d{6}$/);
   assert.equal(
     await pairingFingerprint("chainA", structuredClone(request)),
     base,
