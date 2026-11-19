@@ -212,6 +212,35 @@ func TestPlatformAvailability(t *testing.T) {
 	}
 }
 
+func TestDeepSeekHarnessRuntime(t *testing.T) {
+	f := newFixture(t, "darwin")
+	withHarness := strings.Replace(localConfig, "agents:\n", `runtimes:
+  deepseekHarness:
+    cdpEndpoint: http://127.0.0.1:9224
+agents:
+  harness:
+    workspace: ~/xiaoyi-clawd
+    runtime: deepseekHarness
+    session: session-12345678-1234-1234-1234-123456789abc
+`, 1)
+	cfg, err := Parse([]byte(withHarness), f.platform)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := cfg.Agents["harness"].Runtime; got != RuntimeDeepSeekHarness {
+		t.Fatalf("runtime: %q", got)
+	}
+
+	invalidEndpoint := strings.Replace(withHarness, "http://127.0.0.1:9224", "http://192.168.1.2:9224", 1)
+	if _, err := Parse([]byte(invalidEndpoint), f.platform); err == nil || !strings.Contains(err.Error(), "must use localhost") {
+		t.Fatalf("non-loopback endpoint: %v", err)
+	}
+	invalidSession := strings.Replace(withHarness, "session: session-12345678-1234-1234-1234-123456789abc", "session: main", 1)
+	if _, err := Parse([]byte(invalidSession), f.platform); err == nil || !strings.Contains(err.Error(), "need the DeepSeek Harness session ID") {
+		t.Fatalf("invalid session: %v", err)
+	}
+}
+
 func TestDefaultDirectories(t *testing.T) {
 	env := map[string]string{"XDG_STATE_HOME": "/x/state", "LOCALAPPDATA": `C:\Users\me\AppData\Local`, "APPDATA": `C:\Users\me\AppData\Roaming`}
 	for _, tc := range []struct{ goos, config, data string }{
