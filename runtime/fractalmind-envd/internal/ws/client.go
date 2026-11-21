@@ -72,6 +72,8 @@ type Client struct {
 	signer              wsauth.Signer
 	expectedCoordAddr   string
 	handshakeTimeout    time.Duration
+	pingInterval        time.Duration
+	pongTimeout         time.Duration
 	resolveEndpoint     func(context.Context) (string, string, error)
 	validateConnection  func(context.Context) error
 	observationScope    func(context.Context) (heartbeat.Scope, uint64, error)
@@ -116,6 +118,8 @@ func NewClient(url string, reconnectWait time.Duration) *Client {
 		reconnectWait:    reconnectWait,
 		done:             make(chan struct{}),
 		handshakeTimeout: 15 * time.Second,
+		pingInterval:     30 * time.Second,
+		pongTimeout:      120 * time.Second,
 	}
 }
 
@@ -212,7 +216,9 @@ func (c *Client) Connect() {
 			c.onConnect()
 		}
 
+		stopWatchdog := c.startConnectionWatchdog(conn)
 		c.readLoop(conn)
+		stopWatchdog()
 		conn.Close()
 		stopClose()
 
@@ -223,6 +229,44 @@ func (c *Client) Connect() {
 		log.Printf("[ws] disconnected, reconnecting in %s", c.reconnectWait)
 		c.waitReconnect()
 	}
+}
+
+// startConnectionWatchdog detects half-open WebSockets. A TCP socket can look
+// established after a proxy or network loses the peer. WebSocket control pings
+// require no new application protocol and are answered by compliant peers.
+// Only the reader's pong handler adjusts the read deadline, so writes cannot
+// disguise a broken return path. Closing the connection unblocks readLoop and
+// lets Connect authenticate and register again.
+func (c *Client) startConnectionWatchdog(conn *websocket.Conn) func() {
+	_ = conn.SetReadDeadline(time.Now().Add(c.pongTimeout))
+	firstPong := true // pong handlers run on the single WebSocket reader
+	conn.SetPongHandler(func(string) error {
+		if firstPong {
+			log.Printf("[ws] control pong received; connection watchdog active")
+			firstPong = false
+		}
+		return conn.SetReadDeadline(time.Now().Add(c.pongTimeout))
+	})
+	stop := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(c.pingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-c.done:
+				return
+			case <-ticker.C:
+				if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second)); err != nil {
+					log.Printf("[ws] control ping failed: %v; reconnecting", err)
+					_ = conn.Close()
+					return
+				}
+			}
+		}
+	}()
+	return func() { close(stop) }
 }
 
 // authenticate runs the mutual challenge-response handshake before any command
