@@ -252,6 +252,8 @@ The `grok` provider (aliases: `grok-cli`, `grok-build`) resolves the `grok` exec
 
 Reserved `main` delivery on Cursor or Grok preempts an in-flight TUI turn before `send`, `assign`, `message send`, or inbound drain. Cursor uses tmux `C-c` and submits with a native Enter key (a pasted newline only creates paste chips and leaves the envelope in the composer). Grok uses `Escape` (cancel immediately; a bare Enter while busy only queues a follow-up), submits with a native Enter key, then sends an empty native Enter to send-now. Messages that start with `# FractalBot Heartbeat` are not preempted. Employee agents are unchanged. Cursor/Grok heartbeat/dream/assign also use native Enter so idle delivery actually submits.
 
+Claude Code recipients, including the `claude-code-claudeai` launcher, also require native Enter to submit messages; a pasted newline can remain in the composer. A pane showing the envelope in the composer is not delivery confirmation. Verify that it was submitted and, when necessary, that the recipient processed it.
+
 Reserved `main` agents default to the bundled skill prompt at `agent-manager/.codex/main-codex-model.md` when `launcher: codex` is used and no explicit `launcher_config.model_instructions_file` override is provided in the workspace agent config.
 
 Note: For scheduled jobs, `agent-manager` will best-effort auto-dismiss Codex's first-run/upgrade model selection prompt to keep cron runs non-interactive.

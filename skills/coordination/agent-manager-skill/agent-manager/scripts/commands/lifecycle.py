@@ -167,19 +167,19 @@ def preempt_main_delivery(deps: Any, *, agent_id: str, launcher: str, message: s
 
 
 def uses_native_enter(launcher: str) -> bool:
-    """Cursor, Grok, Codex, and the DSH bridge need a real Enter key to submit.
+    """Claude, Cursor, Grok, Codex, and the DSH bridge need a real Enter key to submit.
 
     These TUIs turn tmux paste-buffer payloads into composer paste chips. The
     send_keys newline fallback then looks successful (the chip UI changed)
-    without submitting the turn. Cursor Agent has the same native-Enter
-    requirement as Codex/Grok: a pasted newline stays in the composer until
+    without submitting the turn. A pasted newline stays in the composer until
     a real keypress Enter submits. The DSH bridge holds bracketed multi-line
     pastes until a native Enter, so a pasted newline must not be mistaken for
     task submission there either.
     """
     lowered = (launcher or '').lower()
     return (
-        'codex' in lowered
+        'claude' in lowered
+        or 'codex' in lowered
         or 'grok' in lowered
         or 'cursor' in lowered
         or 'dsh_repl.py' in lowered
