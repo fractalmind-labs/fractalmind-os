@@ -150,8 +150,40 @@ transports the raw JSON over the existing worker WebSocket as
 `command=signed_command`; the target envd performs strict decoding, signature
 verification, authority resolution, replay reservation, and runtime dispatch.
 
-Legacy clients may continue sending `command`, `agent_id`, and `args` during
-the compatibility period. A request cannot combine `node_command` with those
-legacy fields, which prevents an ambiguous signed-versus-legacy execution
-path. Removing the legacy shape requires separate parity, migration, rollback,
-and production approval evidence.
+Legacy clients send `command`, `agent_id`, and `args`. A request cannot combine
+`node_command` with those legacy fields, which prevents an ambiguous
+signed-versus-legacy execution path. Removing the legacy shape requires separate
+parity, migration, rollback, and production approval evidence.
+
+## Legacy Command Opt-Out
+
+The legacy shape is refused by default, on both the embedded coordinator and the
+target worker, with `error_code=unsigned_command_disabled` (HTTP 410 on the
+coordinator). Signed clients are unaffected.
+
+A deployment that still drives a node through the legacy envelope sets:
+
+```yaml
+security:
+  require_signed_commands: false
+```
+
+on the node that runs the coordinator and on every worker it manages. The key is
+fail-closed: unset, omitted, or `true` keeps the legacy commands refused, so a
+config that never mentions it cannot open the path. When it is `false` the worker
+accepts `status`, `restart`, `logs`, `kill`, and `shell`, and an embedded
+coordinator relays them instead of answering 410.
+
+`shell` has its own switch and is off regardless:
+
+```yaml
+agents:
+  allow_shell: true       # required for `shell`
+  shell_allowlist: []     # empty = any argv[0]; non-empty = allowlisted argv[0] only
+  shell_timeout: 15s      # bounds each execution
+```
+
+This mode removes the authorization the signed envelope provides: any holder of
+the coordinator bearer token can run those commands on the node. Use it only on a
+control plane you fully trust, and prefer the signed path where a runtime
+adapter is configured.

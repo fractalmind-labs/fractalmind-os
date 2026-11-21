@@ -20,6 +20,7 @@ type Config struct {
 	Relay       RelayConfig       `yaml:"relay"`
 	Desktop     DesktopConfig     `yaml:"desktop"`
 	Runtime     RuntimeConfig     `yaml:"runtime"`
+	Security    SecurityConfig    `yaml:"security"`
 
 	// Gateway config is the worker-side transport target.
 	// Workers connect to the coordinator envd WebSocket at this URL.
@@ -112,6 +113,31 @@ type AgentsConfig struct {
 	// ShellTimeout bounds remote shell execution so a stuck child process cannot
 	// block the worker command channel indefinitely. Default: 15s.
 	ShellTimeout string `yaml:"shell_timeout"`
+}
+
+// SecurityConfig controls what a node accepts on its command channel.
+type SecurityConfig struct {
+	// RequireSignedCommands gates whether commands must arrive as a signed
+	// NodeCommand. It defaults to true and is fail-closed: an unset value (nil)
+	// keeps the legacy unsigned commands (status, restart, logs, kill, shell)
+	// rejected, so a node that never mentions this key stays locked down.
+	//
+	// Setting it to false restores the pre-v0.2.0 command surface for
+	// deployments that still drive a node through the legacy envelope. Any
+	// holder of the coordinator bearer token can then run those commands on this
+	// node, so enable it only on a control plane you fully trust.
+	RequireSignedCommands *bool `yaml:"require_signed_commands"`
+}
+
+// RequireSignedCommands reports whether this node accepts only signed
+// NodeCommand intents. An unset value defaults to true so a config that omits
+// the key — or one built in code without going through DefaultConfig — cannot
+// silently open the unsigned command path.
+func (c *Config) RequireSignedCommands() bool {
+	if c == nil || c.Security.RequireSignedCommands == nil {
+		return true
+	}
+	return *c.Security.RequireSignedCommands
 }
 
 type HeartbeatConfig struct {

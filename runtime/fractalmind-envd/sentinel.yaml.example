@@ -34,11 +34,25 @@ agents:
   auto_restart: true
   max_restart_attempts: 3
   # Remote arbitrary shell (bash -c) is OFF by default. Enable deliberately.
+  # `shell` also requires security.require_signed_commands=false, because the
+  # signed NodeCommand path does not carry a shell action.
   allow_shell: false
   # Optional: restrict shell to these argv[0] program names (empty = any when allow_shell=true).
   shell_allowlist: []
   # - "tmux"
   # - "systemctl"
+  # Bound on each remote shell execution. Default 15s.
+  shell_timeout: 15s
+
+# Command-channel admission.
+security:
+  # Signed NodeCommand intents are always accepted. This key decides whether
+  # the legacy unsigned commands (status, restart, logs, kill, shell) are also
+  # accepted, on the worker and on an embedded coordinator.
+  # Default true. Unset or omitted is also true: the node stays fail-closed.
+  # Setting it to false lets anyone holding the coordinator bearer token run
+  # those commands on this node, so enable it only on a trusted control plane.
+  require_signed_commands: true
 
 heartbeat:
   interval: 30s        # Relay nodes include relay_load in P2P heartbeat

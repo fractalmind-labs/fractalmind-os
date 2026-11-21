@@ -194,7 +194,8 @@ func TestHandleSignedCommandPreservesUnknownTransactionForQuery(t *testing.T) {
 func TestHandleCommandRejectsEveryUnsignedOperation(t *testing.T) {
 	for _, operation := range []string{"inventory", "status", "logs", "restart", "kill", "shell", "start", "stop", "assign"} {
 		t.Run(operation, func(t *testing.T) {
-			// Even explicitly enabling the old shell config must not authorize it.
+			// Neither an unset security.require_signed_commands nor explicitly
+			// enabling the old shell config may authorize an unsigned command.
 			cfg := &config.Config{Agents: config.AgentsConfig{AllowShell: true}}
 			marker := t.TempDir() + "/escaped"
 			result := handleCommand(ws.CommandPayload{
@@ -211,6 +212,68 @@ func TestHandleCommandRejectsEveryUnsignedOperation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleCommandLegacyCommandsRequireExplicitOptOut(t *testing.T) {
+	signedRequired := true
+	enforcementOff := false
+	executor := runtimeCommandExecutorFunc(func(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error) {
+		t.Fatal("legacy command reached the signed executor")
+		return runtimeadapter.Response{}, nodecommand.NodeEvent{}, nil
+	})
+
+	legacyConfig := func(allowShell bool) *config.Config {
+		return &config.Config{
+			Agents:   config.AgentsConfig{AllowShell: allowShell, ShellAllowlist: []string{"printf"}},
+			Security: config.SecurityConfig{RequireSignedCommands: &enforcementOff},
+		}
+	}
+
+	t.Run("explicit true still refuses", func(t *testing.T) {
+		cfg := &config.Config{
+			Agents:   config.AgentsConfig{AllowShell: true},
+			Security: config.SecurityConfig{RequireSignedCommands: &signedRequired},
+		}
+		result := handleCommand(ws.CommandPayload{Command: "shell", Args: "printf escaped"}, nil, cfg, executor)
+		if result["success"] != false || result["error_code"] != "unsigned_command_disabled" {
+			t.Fatalf("explicit require_signed_commands=true accepted a legacy command: %+v", result)
+		}
+	})
+
+	t.Run("legacy handler reached", func(t *testing.T) {
+		result := handleCommand(ws.CommandPayload{Command: "restart"}, nil, legacyConfig(true), executor)
+		if result["error"] != "agent_id required" {
+			t.Fatalf("legacy restart did not reach the legacy handler: %+v", result)
+		}
+	})
+
+	t.Run("unknown legacy command", func(t *testing.T) {
+		result := handleCommand(ws.CommandPayload{Command: "inventory"}, nil, legacyConfig(true), executor)
+		if result["success"] != false || result["error"] != "unknown command: inventory" {
+			t.Fatalf("unexpected unknown-command result: %+v", result)
+		}
+	})
+
+	t.Run("shell runs when both switches allow it", func(t *testing.T) {
+		result := handleCommand(ws.CommandPayload{Command: "shell", Args: "printf legacy-ok"}, nil, legacyConfig(true), executor)
+		if result["success"] != true || result["output"] != "legacy-ok" {
+			t.Fatalf("legacy shell result = %+v", result)
+		}
+	})
+
+	t.Run("shell switch stays independent", func(t *testing.T) {
+		result := handleCommand(ws.CommandPayload{Command: "shell", Args: "printf legacy-ok"}, nil, legacyConfig(false), executor)
+		if result["success"] != false || result["error_code"] != "shell_disabled" {
+			t.Fatalf("agents.allow_shell=false did not gate shell: %+v", result)
+		}
+	})
+
+	t.Run("shell allowlist still applies", func(t *testing.T) {
+		result := handleCommand(ws.CommandPayload{Command: "shell", Args: "echo legacy-ok"}, nil, legacyConfig(true), executor)
+		if result["success"] != false || result["error"] != "shell command not in agents.shell_allowlist" {
+			t.Fatalf("shell allowlist did not gate shell: %+v", result)
+		}
+	})
 }
 
 func TestRunShellTimeoutReleasesProcess(t *testing.T) {

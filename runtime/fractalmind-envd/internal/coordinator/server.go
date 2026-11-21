@@ -50,6 +50,10 @@ type Server struct {
 	pingInterval time.Duration
 	done         chan struct{}
 	deviceRead   *DeviceReadAuth
+	// allowUnsignedCommands mirrors security.require_signed_commands=false.
+	// The zero value keeps the legacy commands rejected, so a Server that is
+	// never told otherwise stays fail-closed.
+	allowUnsignedCommands bool
 }
 
 func NewServer(addr string, commandTimeout time.Duration, apiToken string) *Server {
@@ -77,6 +81,14 @@ func (s *Server) SetAuth(signer wsauth.Signer, allowedSigners []string) {
 
 func (s *Server) SetWorkerAuthority(authorize func(context.Context, string, []byte) error) {
 	s.manager.SetWorkerAuthority(authorize)
+}
+
+// SetAllowUnsignedCommands controls whether this coordinator relays the legacy
+// unsigned commands (status, restart, logs, kill, shell). It must mirror the
+// node-side security.require_signed_commands setting: leaving it false keeps
+// the relay's bearer credential from being usable as an execution path.
+func (s *Server) SetAllowUnsignedCommands(allow bool) {
+	s.allowUnsignedCommands = allow
 }
 
 func (s *Server) SetHostObservationAuthority(check func(context.Context, heartbeat.Signed, []byte) error) {
@@ -269,14 +281,19 @@ func (s *Server) handleCommand(w http.ResponseWriter, r *http.Request) {
 
 	// The relay's bearer credential is not execution authority. Reject legacy
 	// commands here too, so older workers cannot remain reachable through it.
+	// An operator who has set security.require_signed_commands=false on the
+	// node can opt this relay into the same mode.
 	switch req.Command {
 	case "signed_command", "signed-command", "node_command":
 	default:
-		writeJSON(w, http.StatusGone, map[string]string{
-			"error":      "commands require a signed node_command",
-			"error_code": "unsigned_command_disabled",
-		})
-		return
+		if !s.allowUnsignedCommands {
+			writeJSON(w, http.StatusGone, map[string]string{
+				"error":      "commands require a signed node_command (set security.require_signed_commands=false to accept legacy commands)",
+				"error_code": "unsigned_command_disabled",
+			})
+			return
+		}
+		log.Printf("[coordinator] relaying legacy unsigned command %q (security.require_signed_commands is false)", req.Command)
 	}
 
 	result, err := s.SendCommand(r.PathValue("id"), req.Command, req.AgentID, req.Args)
