@@ -200,7 +200,7 @@ jobs:
     name: agent-manager (Python ${{ matrix.python-version }})
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.python), 'agent-manager')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
