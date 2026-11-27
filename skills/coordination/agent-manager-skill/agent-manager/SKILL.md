@@ -250,6 +250,19 @@ launcher_args:
 
 The `grok` provider (aliases: `grok-cli`, `grok-build`) resolves the `grok` executable from `$HOME/.local/bin`, `$HOME/.grok/bin`, common user-local paths, and system paths. Model and execution options belong in `launcher_args` (`-m`/`--model`, `--always-approve`/`--yolo`). Grok CLI is a full-screen TUI, so `start` treats process startup as readiness (empty `prompt_patterns`, like cursor/kimi) rather than waiting for a bare `❯` line. System prompt injection uses `--append-system-prompt` unless `AGENTS.md` is already in the working directory. Session restore uses `--resume <id>` when a stored session id exists under `~/.grok/sessions/<urlencoded-cwd>/<id>/`. MCP servers are managed with `grok mcp`, not a launch-time JSON flag. Authentication is inherited from the managed shell (`grok login`, or a shell env such as `XAI_API_KEY`); credentials must never appear in `launcher_args`, agent YAML, pane captures, logs, or error messages. If the CLI is missing, `start` fails with an install/`grok login` hint and does not create a tmux session. Unauthenticated 1.0.4 device-code copy (`Approve in your browser` / `Waiting for approval`) is treated as `blocked`.
 
+**Antigravity CLI provider** (Google Antigravity CLI `agy`):
+
+```yaml
+launcher: agy
+launcher_args:
+  - --model
+  - gemini-4-neon-high
+  # Only for an unattended worker in its own approved worktree.
+  - --dangerously-skip-permissions
+```
+
+The `antigravity` provider (aliases: `agy`, `antigravity-cli`) resolves the `agy` executable from `$HOME/.local/bin`, `$HOME/bin`, Homebrew and system paths. It is separate from the `gemini` provider (Gemini CLI). Model and execution options belong in `launcher_args`; take model ids from the CLI's own model picker rather than guessing them. agy is a full-screen TUI, so `start` treats process startup as readiness (empty `prompt_patterns`). agy has no append-system-prompt flag, so the system prompt is passed as the first interactive turn with `--prompt-interactive "$(cat <prompt file>)"`. Delivery uses a bracketed paste plus a native Enter, because a plain multi-line paste submits each line as its own turn. agy keeps all conversations in `~/.gemini/antigravity-cli/conversations/`; agent-manager finds a worker's conversation through the `conversation_summaries.db` index (top-level rows only), falling back to the workspace stored in the conversation file when the index row has no workspace. Restore passes `--conversation <id>` and skips the system prompt. MCP servers are not configured at launch. Authentication is inherited from the managed shell; credentials must never appear in `launcher_args`, agent YAML, pane captures, logs, or error messages. If the CLI is missing, `start` fails with an install/sign-in hint and does not create a tmux session. The first launch in a new folder shows agy's workspace trust dialog, which `status` reports as `blocked`; approve it once in the pane (agy remembers trusted folders). Quota, balance and `UNAUTHENTICATED` errors are also reported as `blocked`.
+
 Reserved `main` delivery on Cursor or Grok preempts an in-flight TUI turn before `send`, `assign`, `message send`, or inbound drain. Cursor uses tmux `C-c` and submits with a native Enter key (a pasted newline only creates paste chips and leaves the envelope in the composer). Grok uses `Escape` (cancel immediately; a bare Enter while busy only queues a follow-up), submits with a native Enter key, then sends an empty native Enter to send-now. Messages that start with `# FractalBot Heartbeat` are not preempted. Employee agents are unchanged. Cursor/Grok heartbeat/dream/assign also use native Enter so idle delivery actually submits.
 
 Reserved `main` agents default to the bundled skill prompt at `agent-manager/.codex/main-codex-model.md` when `launcher: codex` is used and no explicit `launcher_config.model_instructions_file` override is provided in the workspace agent config.

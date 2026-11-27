@@ -5,6 +5,7 @@ This folder contains ready-to-adapt YAML templates for common `agent-manager` us
 ## Included Scenarios
 
 - `grok-cli-agent.yaml`: xAI Grok Build CLI (`launcher: grok`) in managed tmux
+- `antigravity-cli-agent.yaml`: Google Antigravity CLI (`launcher: agy`) in managed tmux
 - `code-review-agent.yaml`: Automated pull request review and risk triage
 - `documentation-generator-agent.yaml`: Nightly docs refresh and weekly doc audit
 - `test-runner-agent.yaml`: Smoke tests + nightly regression with heartbeat checks

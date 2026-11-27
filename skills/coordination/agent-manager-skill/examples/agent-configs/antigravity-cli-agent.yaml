@@ -1,0 +1,23 @@
+# Scenario: Antigravity CLI Agent
+# Goal: Run Google Antigravity CLI (`agy`) in a managed tmux session.
+# This is the Antigravity provider, not Gemini CLI (`launcher: gemini`).
+
+name: agy-dev
+description: Antigravity CLI coding agent
+enabled: true
+working_directory: ${REPO_ROOT}
+
+# Provider name (aliases: antigravity, antigravity-cli). Do not put API keys here.
+launcher: agy
+launcher_args:
+  - --model
+  # Pick a model id from agy's own model list.
+  - gemini-4-neon-high
+  # Skips tool approval prompts. Use only for an unattended worker
+  # in a workspace that has been explicitly approved.
+  - --dangerously-skip-permissions
+
+skills:
+  - review-pr
+
+schedules: []
