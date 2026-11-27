@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChainReadSession } from "../chain";
-import { readAgentOperatorDirectory, type AgentOperatorDirectory } from "../agent-operator-chain";
+import { agentOperatorNetwork, readAgentOperatorDirectory, type AgentOperatorDirectory } from "../agent-operator-chain";
 import { useApp } from "./store";
 
 export type AgentOperatorDirectoryState =
@@ -17,7 +17,7 @@ export function useAgentOperatorDirectory() {
   const refresh = useCallback(() => setSequence((value) => value + 1), []);
   useEffect(() => {
     let live = true;
-    if (!app.profile || !app.organizationId || app.profile.network !== "localnet") {
+    if (!app.profile || !app.organizationId || !agentOperatorNetwork(app.profile.network)) {
       setState({ kind: "ready", directory: { nowMs: BigInt(app.wallMs), pending: [], active: [], inactive: [] } });
       return () => { live = false; };
     }

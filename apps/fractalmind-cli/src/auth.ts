@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { bcs } from '@mysten/sui/bcs';
 import { requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { normalizeSuiAddress, toBase64 } from '@mysten/sui/utils';
+import { fromBase64, normalizeSuiAddress, toBase64 } from '@mysten/sui/utils';
 import { createDeviceEncryptionKeys, DEVICE_ACTIONS, FractalMindSDK, pairingCode, pairingFingerprint, type DeviceAction } from '@fractalmind-labs/fractalmind-sdk';
 import { deleteKey, loadKey, saveKey } from './keystore.js';
 import { EXIT, FmError } from './output.js';
@@ -153,6 +153,9 @@ async function visiblePairing(sdk: FractalMindSDK, requestId: string) {
   throw new Error(`Pairing request ${requestId} was confirmed but did not become readable.`, { cause: last });
 }
 
+/** Where a login keeps a key whose address is still waiting for funds. */
+export const pendingKeyRef = (network: string, organizationId: string) => `pending:${network}:${organizationId}`;
+
 export async function login(deployment: Deployment, options: LoginOptions): Promise<{ result: LoginResult; weaker: boolean }> {
   const sdk = sdkFor(deployment);
   await sdk.client.client.core.getChainIdentifier();
@@ -168,21 +171,36 @@ export async function login(deployment: Deployment, options: LoginOptions): Prom
   const human = await sdk.identity.getHuman(humanId);
   if (human.network !== deployment.network || !human.organizations.includes(organizationId))
     throw new FmError(EXIT.not_authorized, 'not_authorized', 'The organization is not backed by a valid Human identity.');
-  const signer = Ed25519Keypair.generate();
+  // A key that was waiting for funds is reused: without this every retry made a new, empty
+  // address, so a network without a faucet (testnet) could never be funded in time.
+  const pendingRef = pendingKeyRef(deployment.network, organizationId);
+  // So is the key of an earlier request that was never approved (it expired or is still open):
+  // a new request reuses its funded address instead of starting over.
+  const earlier = await loadProfile(deployment.network);
+  const unapproved = earlier && !earlier.grantId && earlier.organizationId === organizationId ? earlier : null;
+  const pending = (unapproved ? (await loadKey(unapproved.keyRef)).key : null) ?? (await loadKey(pendingRef)).key;
+  const signer = pending ? Ed25519Keypair.fromSecretKey(pending.signingSecret) : Ed25519Keypair.generate();
+  const encryption = pending
+    ? { secret: fromBase64(pending.encryptionSecret), publicKey: fromBase64(pending.encryptionPublicKey) }
+    : createDeviceEncryptionKeys();
   const address = signer.getPublicKey().toSuiAddress();
   if (options.faucet) {
     await requestSuiFromFaucetV2({ host: localFaucet(deployment.network), recipient: address });
     await waitForSpendableFunds(sdk, address);
   }
-  if (await balance(sdk, address) === 0n) return { result: { address, needs_funding: true, state: 'needs_funding' }, weaker: Boolean(process.env.FM_KEY_PASSPHRASE) };
-  const encryption = createDeviceEncryptionKeys();
+  if (await balance(sdk, address) === 0n) {
+    const saved = pending ? { weaker: Boolean(process.env.FM_KEY_PASSPHRASE) }
+      : await saveKey(pendingRef, { signingSecret: signer.getSecretKey(), encryptionSecret: toBase64(encryption.secret), encryptionPublicKey: toBase64(encryption.publicKey) });
+    return { result: { address, needs_funding: true, state: 'needs_funding' }, weaker: saved.weaker };
+  }
   const label = options.label?.trim() || 'FractalMind Agent';
   const request = sdk.identity.createAgentPairing({
     humanId, organizationId, signingPublicKey: signer.getPublicKey().toRawBytes(), encryptionPublicKey: encryption.publicKey,
     deviceName: label, platform: platform(),
   });
   request.setSender(address);
-  request.setGasBudget(200_000_000);
+  // A pairing request costs well under 0.01 SUI; a 0.2 SUI budget refused addresses funded with less.
+  request.setGasBudget(50_000_000);
   const submitted = transactionData(await sdk.client.signAndExecuteTransaction({ signer, transaction: request, include: { effects: true, objectTypes: true } }));
   if (!submitted.status.success) throw new Error(`Pairing transaction failed: ${submitted.status.error ?? 'unknown error'}`);
   const requestType = await sdk.client.coreType('identity', 'DevicePairingRequest');
@@ -191,13 +209,20 @@ export async function login(deployment: Deployment, options: LoginOptions): Prom
   const requestId = requestIds[0]!;
   const pair = await visiblePairing(sdk, requestId);
   const chain = (await sdk.client.client.core.getChainIdentifier()).chainIdentifier;
-  const keyRef = randomUUID();
-  const saved = await saveKey(keyRef, { signingSecret: signer.getSecretKey(), encryptionSecret: toBase64(encryption.secret), encryptionPublicKey: toBase64(encryption.publicKey) });
+  const reusedProfileKey = Boolean(unapproved && (await loadKey(unapproved.keyRef)).key);
+  const keyRef = reusedProfileKey ? unapproved!.keyRef : randomUUID();
+  const saved = reusedProfileKey ? { weaker: Boolean(process.env.FM_KEY_PASSPHRASE) }
+    : await saveKey(keyRef, { signingSecret: signer.getSecretKey(), encryptionSecret: toBase64(encryption.secret), encryptionPublicKey: toBase64(encryption.publicKey) });
   const profile: Profile = { version: 1, network: deployment.network, deployment, address, keyRef, label, organizationId, humanId, requestId, createdAt: new Date().toISOString() };
   await saveProfile(profile);
+  if (pending && !reusedProfileKey) await deleteKey(pendingRef);
   const code = pairingCode(await pairingFingerprint(chain, pair));
   const result: LoginResult = { address, requestId, pairingCode: code, state: 'pending' };
-  if (!options.noWait) return { result: await waitForPairing(profile, options.waitSeconds ?? 600, code), weaker: saved.weaker };
+  if (!options.noWait) {
+    // The code must be seen while the request waits, not only once it is decided.
+    process.stderr.write(`Pairing code ${code} for ${address}\nCompare it in the FractalMind App (Team & Agents → Agent operators) and approve there. Waiting up to ${Math.round((options.waitSeconds ?? 600) / 60)} minutes…\n`);
+    return { result: await waitForPairing(profile, options.waitSeconds ?? 600, code), weaker: saved.weaker };
+  }
   return { result, weaker: saved.weaker };
 }
 

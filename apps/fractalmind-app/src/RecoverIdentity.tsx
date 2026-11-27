@@ -24,6 +24,8 @@ import {
   type RecoveryInspection,
 } from "./recovery";
 import { normalizeDeployment } from "./onboarding";
+import { builtInDeployment } from "./deployments";
+import { matchesTarget } from "./build-target";
 import {
   reconcileRecoveryReceipt,
   type RecoveryReceiptState,
@@ -59,9 +61,15 @@ export default function RecoverIdentity({
   onBusyChange: (busy: boolean) => void;
 }) {
   const [initial] = useState(saved),
-    [deploymentText, setDeploymentText] = useState(
-      initial ? JSON.stringify(initial.deployment, null, 2) : "",
-    );
+    [deploymentText, setDeploymentText] = useState(() => {
+      // An earlier recovery for this build's network resumes with its own
+      // deployment; otherwise the build's deployment is used, so nobody has
+      // to paste JSON to recover on the network the App was built for.
+      const resumed =
+        initial && matchesTarget(initial.deployment) ? initial.deployment : null;
+      const value = resumed ?? builtInDeployment;
+      return value ? JSON.stringify(value, null, 2) : "";
+    });
   const [profile, setProfile] = useState(
     initial?.profile ?? `recovery-${crypto.randomUUID().slice(0, 8)}`,
   );
