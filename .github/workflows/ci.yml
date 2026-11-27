@@ -173,7 +173,8 @@ jobs:
     name: Go (${{ matrix.module }})
     needs: changes
     if: needs.changes.outputs.go != '[]'
-    runs-on: ubuntu-latest
+    # ubuntu-26.04: TestTmuxDiscoveryContinuityLifecycle fails (tmux 3.6a); tracked separately
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -200,7 +201,7 @@ jobs:
     name: agent-manager (Python ${{ matrix.python-version }})
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.python), 'agent-manager')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:

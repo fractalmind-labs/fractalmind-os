@@ -717,6 +717,160 @@ def _find_new_grok_session_id_with_retry(cwd: str, *, before_session_ids: set[st
         time.sleep(0.2)
 
 
+_ANTIGRAVITY_CONVERSATION_ID_RE = _GROK_SESSION_ID_RE
+
+
+def _antigravity_root() -> Path:
+    return Path.home() / '.gemini' / 'antigravity-cli'
+
+
+def _is_antigravity_conversation_id(session_id: str) -> bool:
+    return bool(session_id and _ANTIGRAVITY_CONVERSATION_ID_RE.fullmatch(str(session_id).strip()))
+
+
+def _open_antigravity_db(path: Path):
+    """Open an agy sqlite file without writing to it.
+
+    A running agy keeps its databases open in WAL mode, and then a
+    ``mode=ro`` connection can fail with "unable to open database file".
+    Fall back to a normal connection that refuses writes.
+    """
+    import sqlite3
+
+    try:
+        conn = sqlite3.connect(f"{path.as_uri()}?mode=ro", uri=True, timeout=1.0)
+        conn.execute('SELECT 1 FROM sqlite_master LIMIT 1').fetchall()
+        return conn
+    except Exception:
+        pass
+    conn = sqlite3.connect(str(path), timeout=1.0)
+    conn.execute('PRAGMA query_only = ON')
+    return conn
+
+
+def _protobuf_string(value: str) -> bytes:
+    data = value.encode('utf-8')
+    size = len(data)
+    prefix = bytearray()
+    while True:
+        byte = size & 0x7F
+        size >>= 7
+        if size:
+            prefix.append(byte | 0x80)
+        else:
+            prefix.append(byte)
+            break
+    return bytes(prefix) + data
+
+
+def _antigravity_conversation_has_workspace(conversation_path: Path, workspace_uri: str) -> bool:
+    """Check the conversation's own executor metadata for its workspace.
+
+    The summary index sometimes leaves ``workspace_uris`` empty for a
+    conversation started with ``--prompt-interactive``. The conversation file
+    still stores the workspace as a length-prefixed protobuf string, which is
+    matched exactly so ``/w/a`` never matches ``/w/ab``.
+    """
+    needle = _protobuf_string(workspace_uri)
+    try:
+        conn = _open_antigravity_db(conversation_path)
+        try:
+            rows = conn.execute('SELECT data FROM executor_metadata').fetchall()
+        finally:
+            conn.close()
+    except Exception:
+        return False
+    for (data,) in rows:
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        if isinstance(data, (bytes, bytearray)) and needle in data:
+            return True
+    return False
+
+
+def _read_antigravity_conversations(cwd: str) -> list[tuple[str, str]]:
+    """Return (last_modified, conversation_id) for top-level agy conversations of cwd.
+
+    agy keeps every conversation in one global folder, so ownership comes from
+    the workspace URIs in its summary index, or from the conversation file
+    when the index has none. Rows whose conversation file is gone, and
+    subagent conversations, are ignored.
+    """
+    root = _antigravity_root()
+    index_path = root / 'conversation_summaries.db'
+    if not index_path.is_file():
+        return []
+    workspace_uri = Path(_normalize_path(cwd)).as_uri()
+    try:
+        conn = _open_antigravity_db(index_path)
+        try:
+            rows = conn.execute(
+                'SELECT conversation_id, workspace_uris, last_modified_time '
+                'FROM conversation_summaries WHERE nesting_depth = 0'
+            ).fetchall()
+        finally:
+            conn.close()
+    except Exception:
+        return []
+    found: list[tuple[str, str]] = []
+    for conversation_id, workspace_uris, last_modified in rows:
+        conversation_id = str(conversation_id or '').strip()
+        if not _is_antigravity_conversation_id(conversation_id):
+            continue
+        conversation_path = root / 'conversations' / f'{conversation_id}.db'
+        if not conversation_path.is_file():
+            continue
+        try:
+            uris = json.loads(workspace_uris) if workspace_uris else []
+        except Exception:
+            continue
+        if not isinstance(uris, list):
+            continue
+        if uris:
+            if workspace_uri not in [str(u).rstrip('/') for u in uris]:
+                continue
+        elif not _antigravity_conversation_has_workspace(conversation_path, workspace_uri):
+            continue
+        found.append((str(last_modified or ''), conversation_id))
+    return found
+
+
+def _antigravity_session_exists(cwd: str, session_id: str) -> bool:
+    if not _is_antigravity_conversation_id(session_id):
+        return False
+    wanted = str(session_id).strip()
+    return any(cid == wanted for _, cid in _read_antigravity_conversations(cwd))
+
+
+def _snapshot_antigravity_sessions(cwd: str) -> set[str]:
+    return {cid for _, cid in _read_antigravity_conversations(cwd)}
+
+
+def _find_new_antigravity_session_id(cwd: str, *, before_session_ids: set[str]) -> str:
+    candidates = [
+        (modified, cid)
+        for modified, cid in _read_antigravity_conversations(cwd)
+        if cid not in before_session_ids
+    ]
+    if not candidates:
+        return ""
+    candidates.sort(reverse=True)
+    return candidates[0][1]
+
+
+def _find_new_antigravity_session_id_with_retry(
+    cwd: str, *, before_session_ids: set[str], timeout_s: float = 2.0
+) -> str:
+    deadline = time.time() + max(0.0, float(timeout_s))
+    while True:
+        session_id = _find_new_antigravity_session_id(cwd, before_session_ids=before_session_ids)
+        if session_id:
+            return session_id
+        if time.time() >= deadline:
+            return ""
+        time.sleep(0.2)
+
+
 def _provider_session_exists(provider_key: str, cwd: str, session_id: str, *, agent_id: str = '') -> bool:
     if provider_key == 'droid':
         return _droid_session_exists(cwd, session_id)
@@ -730,6 +884,8 @@ def _provider_session_exists(provider_key: str, cwd: str, session_id: str, *, ag
         return _kimi_code_session_exists(cwd, session_id)
     if provider_key == 'grok':
         return _grok_session_exists(cwd, session_id)
+    if provider_key == 'antigravity':
+        return _antigravity_session_exists(cwd, session_id)
     return False
 
 
@@ -746,6 +902,8 @@ def _snapshot_provider_sessions(provider_key: str, cwd: str) -> set[str]:
         return _snapshot_kimi_code_sessions(cwd)
     if provider_key == 'grok':
         return _snapshot_grok_sessions(cwd)
+    if provider_key == 'antigravity':
+        return _snapshot_antigravity_sessions(cwd)
     return set()
 
 
@@ -774,6 +932,8 @@ def _find_new_provider_session_id_with_retry(
         return _find_new_kimi_code_session_id_with_retry(cwd, before_session_ids=before_paths, timeout_s=timeout_s)
     if provider_key == 'grok':
         return _find_new_grok_session_id_with_retry(cwd, before_session_ids=before_paths, timeout_s=timeout_s)
+    if provider_key == 'antigravity':
+        return _find_new_antigravity_session_id_with_retry(cwd, before_session_ids=before_paths, timeout_s=timeout_s)
     return ""
 
 

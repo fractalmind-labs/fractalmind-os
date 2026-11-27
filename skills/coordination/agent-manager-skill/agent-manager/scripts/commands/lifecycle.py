@@ -1,4 +1,5 @@
 from __future__ import annotations
+from pathlib import Path
 from typing import Any, Callable, Optional, Tuple
 
 from tmux_helper import session_name_for_agent
@@ -167,7 +168,7 @@ def preempt_main_delivery(deps: Any, *, agent_id: str, launcher: str, message: s
 
 
 def uses_native_enter(launcher: str) -> bool:
-    """Cursor, Grok, Codex, and the DSH bridge need a real Enter key to submit.
+    """Cursor, Grok, Codex, Antigravity and the DSH bridge need a real Enter key to submit.
 
     These TUIs turn tmux paste-buffer payloads into composer paste chips. The
     send_keys newline fallback then looks successful (the chip UI changed)
@@ -175,9 +176,13 @@ def uses_native_enter(launcher: str) -> bool:
     requirement as Codex/Grok: a pasted newline stays in the composer until
     a real keypress Enter submits. The DSH bridge holds bracketed multi-line
     pastes until a native Enter, so a pasted newline must not be mistaken for
-    task submission there either.
+    task submission there either. Antigravity (`agy`) submits every pasted
+    newline as its own turn unless the paste is bracketed, which send_keys
+    only does on the native-Enter path.
     """
     lowered = (launcher or '').lower()
+    if Path(lowered).name in {'agy', 'antigravity', 'antigravity-cli'}:
+        return True
     return (
         'codex' in lowered
         or 'grok' in lowered
@@ -449,7 +454,7 @@ def cmd_start(args, *, deps: Any):
         dsh_state = default_dsh_state_file(repo_root, agent_id)
         launcher_args.extend(['--state-file', str(dsh_state)])
     launcher_exists = getattr(deps, 'launcher_binary_exists', None)
-    if provider_key == 'grok':
+    if provider_key in {'grok', 'antigravity'}:
         exists = True
         if callable(launcher_exists):
             exists = bool(launcher_exists(launcher))
@@ -459,16 +464,17 @@ def cmd_start(args, *, deps: Any):
         if not exists:
             help_fn = getattr(deps, 'missing_launcher_help', None)
             if callable(help_fn):
-                print(help_fn('grok'))
+                print(help_fn(provider_key))
             else:
                 from providers import missing_launcher_help as _missing_launcher_help
-                print(_missing_launcher_help('grok'))
+                print(_missing_launcher_help(provider_key))
             return 1
     did_provider_restore = False
+    restored_session_id = ''
     provider_before_sessions: set[str] = set()
 
     track_provider_session = provider_key in {
-        'droid', 'claude', 'claude-code', 'codex', 'opencode', 'kimi-code', 'grok',
+        'droid', 'claude', 'claude-code', 'codex', 'opencode', 'kimi-code', 'grok', 'antigravity',
     }
     if provider_key == 'droid' and 'exec' in launcher_args:
         track_provider_session = False
@@ -495,6 +501,7 @@ def cmd_start(args, *, deps: Any):
                     stored_session_id,
                 )
                 did_provider_restore = True
+                restored_session_id = stored_session_id
             else:
                 if stored_session_id:
                     print(f"⚠️  Stored {provider_key} sessionId not found for cwd; rediscovering exact owner/cwd rollout")
@@ -519,6 +526,7 @@ def cmd_start(args, *, deps: Any):
                         discovered_session_id,
                     )
                     did_provider_restore = True
+                    restored_session_id = discovered_session_id
                     print(f"✅ Rediscovered {provider_key} session for exact owner/cwd rollout: {discovered_session_id}")
 
     system_prompt = build_system_prompt(agent_config, repo_root=repo_root, skills_dir=skills_dir)
@@ -687,7 +695,7 @@ def cmd_start(args, *, deps: Any):
 
     if track_provider_session:
         if did_provider_restore:
-            session_id = load_provider_session_id(repo_root, provider_key, agent_id)
+            session_id = restored_session_id or load_provider_session_id(repo_root, provider_key, agent_id)
             if session_id:
                 save_provider_session_id(repo_root, provider_key, agent_id, session_id=session_id, cwd=working_dir)
         else:

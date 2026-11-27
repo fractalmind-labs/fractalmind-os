@@ -551,7 +551,62 @@ PROVIDERS: Dict[str, Dict] = {
             'context_left_patterns': [],
         },
     },
+    'antigravity': {
+        'name': 'Antigravity CLI',
+        # Google Antigravity CLI (`agy`) is a full-screen TUI. Its idle composer
+        # often shows a placeholder line ("> Auto mode: ...") instead of a bare
+        # `>`, so treat process start + startup_wait as ready, like grok/cursor.
+        'prompt_patterns': [],
+        'startup_wait': 3,
+        'description': 'Google Antigravity CLI (agy)',
+        'launch_command': 'agy',
+        'system_prompt': {
+            # agy has no system-prompt flag. `--prompt-interactive` submits the
+            # text as the first turn of the interactive session, which avoids
+            # the tmux paste fallback (a non-bracketed paste submits each line
+            # as its own turn in agy).
+            'mode': 'cli_append',
+            'flag': '--prompt-interactive',
+        },
+        'agents_md': {
+            # agy loads AGENTS.md / GEMINI.md workspace rules itself.
+            'mode': 'cwd',
+        },
+        'mcp_config': {
+            # MCP servers are managed with `agy mcp`, not a launch-time JSON flag.
+            'mode': 'unsupported',
+        },
+        'session_restore': {
+            'mode': 'cli_optional_arg',
+            'flag': '--conversation',
+        },
+        'runtime': {
+            'busy_patterns': [
+                # Footer while a turn runs (idle footer is "? for shortcuts").
+                'esc to cancel',
+                'Generating...',
+                'Thinking...',
+                'Running command...',
+            ],
+            'blocked_patterns': [
+                # First launch in an untrusted folder.
+                'Do you trust the contents of this project?',
+                'Yes, I trust this folder',
+                # Auth / quota failures named in the agy changelog.
+                'UNAUTHENTICATED',
+                "Your organization's prepaid balance is insufficient",
+                'You have exhausted your quota',
+            ],
+            'stuck_after_seconds': 180,
+            'context_left_patterns': [
+                r'(\d{1,3})%\s*context left',
+            ],
+        },
+    },
 }
+
+
+_ANTIGRAVITY_LAUNCHERS = {'agy', 'antigravity', 'antigravity-cli'}
 
 
 def get_provider_key(launcher: str) -> str:
@@ -567,6 +622,8 @@ def get_provider_key(launcher: str) -> str:
         return 'grok'
     if launcher_lower in {'grok', 'grok-cli', 'grok-build', 'xai-grok-pager'}:
         return 'grok'
+    if Path(launcher_lower).name in _ANTIGRAVITY_LAUNCHERS:
+        return 'antigravity'
     if 'kimi' in launcher_lower:
         return 'kimi-code'
     if 'gemini' in launcher_lower:
@@ -647,6 +704,19 @@ def resolve_launcher_command(launcher: str) -> str:
                 return str(candidate)
         return "grok"
 
+    if launcher.lower() in _ANTIGRAVITY_LAUNCHERS:
+        candidates = [
+            Path(os.path.expanduser("~")) / ".local" / "bin" / "agy",
+            Path(os.path.expanduser("~")) / "bin" / "agy",
+            Path("/opt/homebrew/bin/agy"),
+            Path("/usr/local/bin/agy"),
+            Path("/usr/bin/agy"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+        return "agy"
+
     if launcher.lower() == "opencode":
         candidate = Path(os.path.expanduser("~")) / ".opencode" / "bin" / "opencode"
         if candidate.exists():
@@ -701,6 +771,13 @@ def missing_launcher_help(provider_key: str) -> str:
             "   Install: curl -fsSL https://x.ai/cli/install.sh | bash\n"
             "   Authenticate with `grok login` (or a shell env such as XAI_API_KEY).\n"
             "   Do not put API keys in launcher_args or agent YAML."
+        )
+    if provider_key == "antigravity":
+        return (
+            "❌ Antigravity CLI (agy) not found.\n"
+            "   Install the Google Antigravity CLI so `agy` is on PATH or in ~/.local/bin.\n"
+            "   Sign in by running `agy` once interactively (Google account).\n"
+            "   Do not put API keys or tokens in launcher_args or agent YAML."
         )
     return f"❌ Launcher not found for provider '{provider_key}'"
 
